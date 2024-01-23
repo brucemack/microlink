@@ -1,0 +1,3 @@
+[submodule "gsm-0610-codec"]
+	path = gsm-0610-codec
+	url = https://github.com/brucemack/gsm-0610-codec.git
