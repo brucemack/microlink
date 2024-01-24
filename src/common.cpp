@@ -1,5 +1,5 @@
 /**
- * MicoLink EchoLink Station
+ * MicroLink EchoLink Station
  * Copyright (C) 2024, Bruce MacKinnon KC1FSZ
  *
  * This program is free software: you can redistribute it and/or modify
@@ -18,6 +18,7 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include <sys/time.h>
 #include <cstring>
 #include "common.h"
 
@@ -25,8 +26,49 @@ using namespace std;
 
 namespace kc1fsz {
 
-bool isOnDataPacket(const uint8_t* d, uint32_t len) {
-    return (len > 6 && memcmp(d, "oNDATA", 6) == 0);
+uint32_t time_ms() {
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
+    return ms;
+}
+
+void writeInt32(uint8_t* buf, uint32_t d) {
+    buf[0] = (d >> 24) &0xff;
+    buf[1] = (d >> 16) &0xff;
+    buf[2] = (d >>  8) &0xff;
+    buf[3] = (d      ) &0xff;
+}
+
+uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
+    const uint8_t gsmFrames[4][33],
+    uint8_t* p, uint32_t packetSize) {
+
+    if (packetSize < 144)
+        throw std::invalid_argument("Insufficient space");
+
+    *(p++) = 0xc0;
+    *(p++) = 0x03;
+
+    // Sequence #
+    *(p++) = (seq >> 8) & 0xff;
+    *(p++) = (seq     ) & 0xff;
+
+    // Timestamp
+    *(p++) = 0x00;
+    *(p++) = 0x00;
+    *(p++) = 0x00;
+    *(p++) = 0x00;
+
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+
+    for (uint16_t i = 0; i < 4; i++) {
+        memcpy((void*)(p + (i * 33)), gsmFrames[i], 33);
+    }
+
+    return 144;
 }
 
 /**
@@ -46,11 +88,8 @@ void parseRTPPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
     }
 }
 
-void writeInt32(uint8_t* buf, uint32_t d) {
-    buf[0] = (d >> 24) &0xff;
-    buf[1] = (d >> 16) &0xff;
-    buf[2] = (d >>  8) &0xff;
-    buf[3] = (d      ) &0xff;
+bool isOnDataPacket(const uint8_t* d, uint32_t len) {
+    return (len > 6 && memcmp(d, "oNDATA", 6) == 0);
 }
 
 /**
@@ -73,13 +112,203 @@ uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
     return len;
 }
 
-uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
-    const uint8_t gsmFrames[4][33],
-    uint8_t* packet, uint32_t packetSize) {
-    return 144;
+static uint32_t addPad(uint32_t unpaddedLength,
+    uint8_t* p, uint32_t packetSize) {
+
+    // Yes, this is strange that we're padding in the case
+    // where the unpadded size is already divisible by 4,
+    // but that's how it works!
+    uint32_t padSize = 4 - (unpaddedLength % 4);
+
+    if (packetSize < unpaddedLength + padSize)
+        throw std::invalid_argument("Insufficient space");
+
+    // Move to where the pad needs to be added
+    p += unpaddedLength;
+
+    // Apply standard pad, including the pad length in the final byte
+    for (uint32_t i = 0; i < padSize; i++)
+        *(p++) = 0x00;
+
+    // Back-track and insert the pad length as the very last byte of the 
+    // packet.
+    *(p - 1) = (uint8_t)padSize;
+
+    return padSize;
 }
 
-void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out) {
+uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
+    const char* callSign, 
+    const char* fullName,
+    uint32_t ssrc2,
+    uint8_t* p, uint32_t packetSize) {
+
+    // These are the only variable length fields
+    uint32_t callSignLen = strlen(callSign);
+    uint32_t fullNameLen = strlen(fullName);
+    uint32_t spacesLen = 9;
+
+    // Do the length calculation to make sure we have the 
+    // space we need.
+    //
+    // RTCP header = 8
+    // BYE = 4
+    // SSRC = 4
+    uint32_t unpaddedLength = 8 + 4 + 4;
+    // Token 1 = 2 + Len("CALLSIGN") = 10
+    unpaddedLength += 10;
+    // Token 2 = 2 + Len(callSign) + spaces + Len(fullName)
+    unpaddedLength += 2 + callSignLen + spacesLen + fullNameLen;
+    // Token 3 = 2 + Len("CALLSIGN") = 10
+    unpaddedLength += 2 + 8;
+    // Token 4 = 2 + 8
+    unpaddedLength += 2 + 8;
+    // Token 6 = 2 + Len("E2.3.122") = 8
+    unpaddedLength += 2 + 8;
+    // Token 8 = 2 + 6
+    unpaddedLength += 2 + 6;
+    // Token 8 = 2 + 3
+    unpaddedLength += 2 + 3;
+    // Now we deal with the extra padding required by SDES to bring
+    // the packet up to a 4-byte boundary.
+    uint32_t sdesPadSize = 4 - (unpaddedLength % 4);
+    //if (sdesPadSize == 4) {
+    //    sdesPadSize = 0;
+    //}
+    unpaddedLength += sdesPadSize;
+    // Put in the pad now to make sure it fits
+    uint32_t padSize = addPad(unpaddedLength, p, packetSize);
+    // Calculate the special SDES length
+    uint32_t sdesLength = (unpaddedLength + padSize - 12) / 4;
+
+    // RTCP header
+    *(p++) = 0xc0;
+    *(p++) = 0xc9;
+    // Length
+    *(p++) = 0x00;
+    *(p++) = 0x01;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+
+    // Packet identifier
+    *(p++) = 0xe1;
+    *(p++) = 0xca;
+    // SDES length
+    *(p++) = (sdesLength >> 8) & 0xff;
+    *(p++) = (sdesLength     ) & 0xff;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+
+    // Token 1
+    *(p++) = 0x01;
+    *(p++) = 0x08;
+    memcpy(p, "CALLSIGN", 8);
+    p += 8;
+
+    // Token 2
+    *(p++) = 0x02;
+    *(p++) = (uint8_t)(callSignLen + spacesLen + fullNameLen);
+    memcpy(p, callSign, callSignLen);
+    p += callSignLen;
+    for (uint32_t i = 0; i < spacesLen; i++)
+        *(p++) = ' ';
+    memcpy(p, fullName, fullNameLen);
+    p += fullNameLen;
+
+    // Token 3
+    *(p++) = 0x03;
+    *(p++) = 0x08;
+    memcpy(p, "CALLSIGN", 8);
+    p += 8;
+
+    // Token 4
+    char buf[9];
+    sprintf(buf,"%08X", ssrc2);
+    *(p++) = 0x04;
+    *(p++) = 0x08;
+    memcpy(p, buf, 8);
+    p += 8;
+
+    // Token 6
+    *(p++) = 0x06;
+    *(p++) = 0x08;
+    memcpy(p, "E2.3.122", 8);
+    p += 8;
+
+    // Token 8a
+    *(p++) = 0x08;
+    *(p++) = 0x06;
+
+    *(p++) = 0x01;
+    *(p++) = 0x50;
+    *(p++) = 0x35;
+    *(p++) = 0x31;
+    *(p++) = 0x39;
+    *(p++) = 0x38;
+
+    // Token 8b
+    *(p++) = 0x08;
+    *(p++) = 0x03;
+
+    *(p++) = 0x01;
+    *(p++) = 0x44;
+    *(p++) = 0x30;
+
+    // SDES padding (if needed)
+    for (uint32_t i = 0; i < sdesPadSize; i++)
+        *(p++) = 0x00;
+
+    return unpaddedLength + padSize;
+}
+
+uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
+    uint8_t* p, uint32_t packetSize) {
+
+    // Do the length calculation to make sure we have the 
+    // space we need.
+    //
+    // RTCP header = 8
+    // BYE = 4
+    // SSRC = 4
+    // Reason text length = 1
+    // Reason text = 7
+    uint32_t unpaddedLength = 8 + 4 + 4 + 1 + 7;
+
+    // Put in the pad now to make sure it fits
+    uint32_t padSize = addPad(unpaddedLength, p, packetSize);
+
+    // Now pack the data
+
+    // RTCP header
+    *(p++) = 0xc0;
+    *(p++) = 0xc9;
+    // Length
+    *(p++) = 0x00;
+    *(p++) = 0x01;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+
+    // Packet identifier
+    *(p++) = 0xe1;
+    *(p++) = 0xcb;
+    *(p++) = 0x00;
+    *(p++) = 0x04;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+    // Length
+    *(p++) = 7;
+    memcpy(p, "jan2002", 7);
+    p += 7;
+
+    return unpaddedLength + padSize;
+}
+
+void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out,
+    bool color) {
     
     uint32_t lines = len / 16;
     if (len % 16 != 0) {
@@ -89,8 +318,52 @@ void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out) {
     char buf[16];
 
     for (uint32_t line = 0; line < lines; line++) {
-        sprintf(buf, "%08X | ", line * 16);
+
+        // Position counter
+        sprintf(buf, "%04X | ", line * 16);
         out << buf;
+
+        // Hex section
+        for (uint16_t i = 0; i < 16; i++) {
+            uint32_t k = line * 16 + i;
+            if (k < len) {
+                sprintf(buf, "%02x", (unsigned int)data[k]);
+                out << buf << " ";
+            } else {
+                out << "   ";
+            }
+            if (i == 7) {
+                out << " ";
+            }
+        }
+        // Space between hex and ASCII section
+        out << " ";
+
+        if (color) {   
+            out << "\u001b[36m";
+        }
+
+        // ASCII section
+        for (uint16_t i = 0; i < 16; i++) {
+            uint32_t k = line * 16 + i;
+            if (k < len) {
+                if (isprint((char)data[k]) && data[k] != 32) {
+                    out << (char)data[k];
+                } else {
+                    //out << ".";
+                    out << "\u00b7";
+                }
+            } else {
+                out << " ";
+            }
+            if (i == 7) {
+                out << " ";
+            }
+        }
+
+        if (color) {   
+            out << "\u001b[0m";
+        }
         out << endl;
     }
 }

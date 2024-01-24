@@ -1,5 +1,5 @@
 /**
- * MicoLink EchoLink Station
+ * MicroLink EchoLink Station
  * Copyright (C) 2024, Bruce MacKinnon KC1FSZ
  *
  * This program is free software: you can redistribute it and/or modify

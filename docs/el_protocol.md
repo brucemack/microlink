@@ -1,15 +1,30 @@
-Overview
-========
-
-EchoLink Technical Information 
+EchoLink Protocol Information 
 ==============================
 
-The EchoLink protocol isn't widely documented (at least not that I could see).  The notes here are based on my own investigation of packet captures and a review of TheBridge source code.
+The EchoLink protocol isn't widely documented, or at least not that I could find.  This page attempts to fill in the details. These notes are based on my own investigation of packet captures and review of open source EchoLink implementations.
 
-General Protocol Flow Notes
----------------------------
+Here are the links to the two GitGub projects that I've studied:
 
-As has been documented in several places, there are two distinct message flows being used here: the control flow using a variant of the RTCP protocol on port 5199 and the audio flow using a variant of the RTP protocol on port 5198.  EchoLink is a peer-to-peer technology so it's probably not correct 
+* Echolib: https://github.com/sm0svx/svxlink/tree/master/src/echolib
+* TheBridge: https://github.com/wd5m/thebridge-1.09
+
+The EL protocols draw heavily on VoIP technology, specifically the RTP and RTCP. Documentation of these two standards helps a lot, but should not be taken too literally as the EL standards do things a bit differently in places.
+
+## General Protocol Flow Notes
+
+As has been documented in several places, there are two distinct protocol flows 
+that make up the EL system. 
+* A client/server interaction with the EchoLink directory servers.
+* A peer/peer "QSO" interaction between EchoLink stations.
+
+The topic of EchoLink proxies will be put aside for now - more on this later.
+
+
+
+
+
+
+message flows being used here: the control flow using a variant of the RTCP protocol on port 5199 and the audio flow using a variant of the RTP protocol on port 5198.  EchoLink is a peer-to-peer technology so it's probably not correct 
 to think about "clients" and "servers" in this flow, so instead I will use the terms "Station A" and "Station B," assuming that Station A is the 
 originator of the call. From tracing a QSO using the official EchoLink client I can see the following flow pattern:
 
@@ -98,7 +113,7 @@ Finally, optional padding is added to fill up to the next 4-byte boundary (per S
 
 This visual provides a helpful reference:
 
-![](docs/packet-2.png)
+![](packet-2.png)
 
 Some notes:
 
@@ -158,7 +173,7 @@ And then the usual mechanics of padding out the entire packet to a 32-bit bounda
 
 Here is an example capture:
 
-![](docs/packet-3.png)
+![](packet-3.png)
 
 * There are some UDP header bytes at the start that are not relevant.
 * The red box shows the 4-byte BYE message followed by what is presumed to be a 4-byte SSRC identifier.
@@ -172,7 +187,7 @@ These packets are sent across the same UDP socket as the RTP audio packets. Thes
 
 These packets contain no header information and appear to be plain text with tokens delimited with \r.  The text is also null terminated.  For example:
 
-![](docs/packet-4.png)
+![](packet-4.png)
 
 * The blue bar indicates the start of the packet.  The bytes before are the UDP/IP header which can be ignored for this analysis.
 * The official EchoLink client has 4 additional bytes following the null termination of the text.  These four bytes contain the SSRC, encoded in a 32-bit integer with the most significant byte sent first.
@@ -207,7 +222,7 @@ which is only 32.5 bytes).
 
 The four-bit 0b1101 signature makes it easy to sanity check the RTP packets since you can see them spaced at 33-byte intervals throughout a capture trace:
 
-![packet](docs/packet-1.PNG)
+![packet](packet-1.PNG)
 
 From this example it looks like there is an 0xda at the start of each GSM frame, but that's a coincidence - the "a" part isn't fixed.
 
@@ -221,8 +236,3 @@ An embedded-friendly implementation of this CODEC has been produced for this pro
 Notes on the RTP SSRC Identifier
 --------------------------------
 (To follow)
-
-References
-==========
-
-https://www.echolink.org/

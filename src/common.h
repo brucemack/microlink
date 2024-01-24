@@ -29,6 +29,11 @@
 
 namespace kc1fsz {
 
+/**
+ * @returns The current time in milliseconds-since-epoch
+*/
+uint32_t time_ms();
+
 // trim from start (in place)
 inline void ltrim(std::string &s) {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
@@ -55,11 +60,14 @@ void writeInt32(uint8_t* buf, uint32_t d);
 uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
 
-uint32_t formatRTCPSDESPacket(uint32_t ssrc,
+uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
     const char* callSign, 
-    const char* fullName);
+    const char* fullName,
+    uint32_t ssrc2,
+    uint8_t* packet, uint32_t packetSize);
 
-uint32_t formatRTCPBYEPacket(uint32_t ssrc);
+uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
+    uint8_t* packet, uint32_t packetSize);
 
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
     const uint8_t gsmFrames[4][33],
@@ -68,7 +76,8 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
 /**
  * Produces a pretty hex-dump to aid in debugging.
  */
-void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out);
+void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out,
+    bool useColor = true);
 
 }
 
