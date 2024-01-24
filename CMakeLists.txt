@@ -1,5 +1,5 @@
 # MicroLink EchoLink Station
-# Copyright (C) 2024, Bruce MacKinnon 
+# Copyright (C) 2024, Bruce MacKinnon KC1FSZ
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -24,17 +24,27 @@ add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
 
 file(MAKE_DIRECTORY tmp)
 
-add_executable(el-test-1
-  tests/unit-test-1.cpp
-  src/fixed_math.cpp
-  src/wav_util.cpp
-  src/Parameters.cpp
-  src/Encoder.cpp
-  src/Decoder.cpp
+add_executable(packet-test-1
+  tests/packet-test-1.cpp
+  src/common.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
 )
 
-target_include_directories(gsm-test-1 PUBLIC include)
-target_include_directories(gsm-test-1 PRIVATE src)
+target_include_directories(packet-test-1 PRIVATE src)
+target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
+target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
+
+add_executable(common-test-1
+  tests/common-test-1.cpp
+  src/common.cpp
+)
+
+target_include_directories(common-test-1 PRIVATE src)
+
 
 
 
