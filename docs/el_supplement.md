@@ -190,11 +190,11 @@ The normal RTCP header is followed by an SDES-specific header with 8 bytes:
 * Two bytes: packet length information represented as a 16-bit integer with the most significant byte first.  This length covers
 the entire packet and is represented as the number of 4-byte chunks **minus 12 bytes of header**.  So, for example, if the total 
 length of the packet is 112 bytes we'd see (112 - 12) / 4 = 25 or 0x00 0x19 hex.
-* Four bytes: The SSRC represented as a 23-bit integer with the most significant byte sent first.  This is alway zero for the 
-EchoLink client but non-zero for the ECHOTEST station (see below).
+* Four bytes: The SSRC represented as a 32-bit integer with the most significant byte sent first.  This is alway zero for the 
+official EchoLink client but non-zero for the ECHOTEST station (see below).
 
 The content of this packet is a repeating pattern of variable-length items.  Each item contains an "SDES item type" 
-that indicates the meaning of the item.  
+that indicates its semantic meaning.
 
 Each repeating pattern contains:
 
@@ -212,7 +212,7 @@ However, it doesn't look like EchoLink is following this standard strictly.  It 
 pattern and things will work fine.
 
 Here are some notes about how each of these items is sent by the official EchoLink client.  From what I can tell, EL 
-is using the SDES item types its own way and the official RFC SDES definitions shown above are not relevant.
+is using the SDES item types its own way and the official RFC SDES definitions shown in teh RFC are not relevant.
 
 The items appear in this order:
 
@@ -243,10 +243,10 @@ This visual provides a helpful reference:
 Some notes:
 
 * There are some UDP header bytes at the start of this illustration that are not relevant.
-* The purple box and then four bytes immediately following the purple box have unknown meaning.
+* The purple box contains the RTCP-SDES header.  You can think of this as a "sub-header" inside of the overall RTCP packet.
 * The red boxes show the SDES item type and length.
-* The blue bars represent 32-bit boundaries.  This helpful because it shows how the *last* token is being padded up to the next 
-boundary (none of the other tokens do this).  The extra padding is shown in the green boxes.  The 32-bit boundaries don't 
+* The blue bars represent 32-bit boundaries.  This helpful because it shows how the *last* item is being padded up to the next 
+boundary (none of the other items do this).  The extra padding is shown in the green boxes.  The 32-bit boundaries don't 
 seem to matter otherwise.
 * The entire packet is padded with 4 bytes, with an 04 written in the very last position of the packet, per RTCP standard.
 
@@ -279,7 +279,7 @@ The ECHOTEST station is sending the following items at connection initiation:
 
         thebridge V1.06
 
-The usual mechanics of padding out the last token and then padding the entire packet 
+The usual mechanics of padding out the last item and then padding the entire packet 
 is also observed.
 
 ### RTCP BYE Packet Format
@@ -322,9 +322,8 @@ Here is an example capture:
 This looks like an out-of-band text messaging feature.  These packets are sent across the same UDP socket as the 
 RTP audio packets. These are sent by the client every ~10 seconds which suggests a keep-alive mechanism.
 
-These packets do not conform to any RTP stand format and contain no header information.  They appear to be plain text with 
-tokens delimited with 0x0d (\r).  The text is also null terminated.  The official EchoLink client also includes SSRC information,
-but the ECHOTEST station does not.
+These packets do not conform to any RTP standard format and contain no header information.  They appear to be plain text with 
+tokens delimited with 0x0d (\r).  The text is also null terminated.  The official EchoLink client also includes SSRC information at the end of the packet, but the ECHOTEST station does not.
 
 For example:
 
@@ -338,8 +337,7 @@ contain the SSRC, encoded in a 32-bit integer with the most significant byte sen
 
 Each RTP packet is 144 bytes in length.
 
-Each RTP packet contains a 12-byte RTP header.  The use of this header is very close to the "official" RTP specification.  
-We number the bits from LSB [0] to MSB [7], which is different from some other standards documents.
+Each RTP packet contains a 12-byte RTP header. The use of this header is very close to the "official" RTP specification. We number the bits from LSB [0] to MSB [7], which is different from some other standards documents.
 
 * Byte 0 [7:6] - Version, which is always 3.
 * Byte 0 [5] - Padding, which is always set to 0.
@@ -366,7 +364,7 @@ which is only 32.5 bytes).
 
 The four-bit 0b1101 signature makes it easy to sanity check the RTP packets since you can see them spaced at 33-byte intervals throughout a capture trace:
 
-![packet](packet-1.PNG)
+![](packet-1.png)
 
 From this example it looks like there is a consistent 0xda at the start of each GSM frame, but that's a coincidence - the "a" 
 part can change depending on the audio being encoded.
