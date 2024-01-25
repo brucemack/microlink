@@ -127,11 +127,11 @@ There are a few different messages formats that are used to conduct a peer-to-pe
 four packet types:
 
 * The RTCP traffic (port 5199)
-- SDES Packets
-- BYE Packets
+  - SDES Packets
+  - BYE Packets
 * The RTP traffic (port 5198)
-- oNDATA Packet
-- Audio Packets
+  - oNDATA Packet
+  - Audio Packets
 
 ### RTCP SDES Packet Format
 
