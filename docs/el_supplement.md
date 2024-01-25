@@ -169,14 +169,17 @@ Each entry is made up of these tokens, in order:
 * The IP address of the node in dotted format (xxx.xxx.xxx.xxx)
 
 There is no special delimiter between entries.  The next entry starts
-immediate after the final x0a of the previous entry.
+immediate after the final 0x0a of the previous entry.
 
 ![](dir-1.png)
 
 * The red marker shows the start of an entry.
-* The green marker shows the end of an entry.
-* In this example the callsign is K0PGV-L
+* The green marker shows the end of an entry (after the final 0x0a delimiter).
+* In this example the callsign is KD0PGV-L.
+* The station is ONLINE since 14:08.
 * In this example the IP address is 72.206.115.254.
+
+There is nothing unique about the end of the entire response.  
 
 ## EchoLink QSO Protocol
 
