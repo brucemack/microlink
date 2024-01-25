@@ -26,6 +26,9 @@ using namespace std;
 
 namespace kc1fsz {
 
+// Per Jonathan K1RFD: Make sure this starts with a number and ends with Z.
+const char* VERSION_ID = "0.02MLZ";
+
 uint32_t time_ms() {
     struct timeval tp;
     gettimeofday(&tp, NULL);
@@ -163,8 +166,8 @@ uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
     unpaddedLength += 2 + 8;
     // Token 4 = 2 + 8
     unpaddedLength += 2 + 8;
-    // Token 6 = 2 + Len("E2.3.122") = 8
-    unpaddedLength += 2 + 8;
+    // Token 6 = 2 + Len(VERSION_ID) 
+    unpaddedLength += 2 + strlen(VERSION_ID);
     // Token 8 = 2 + 6
     unpaddedLength += 2 + 6;
     // Token 8 = 2 + 3
@@ -234,8 +237,9 @@ uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
     // Token 6
     *(p++) = 0x06;
     *(p++) = 0x08;
-    memcpy(p, "E2.3.122", 8);
-    p += 8;
+    //memcpy(p, "E2.3.122", 8);
+    memcpy(p, VERSION_ID, strlen(VERSION_ID));
+    p += strlen(VERSION_ID);
 
     // Token 8a
     *(p++) = 0x08;
@@ -256,7 +260,7 @@ uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
     *(p++) = 0x44;
     *(p++) = 0x30;
 
-    // SDES padding (if needed)
+    // SDES padding (as needed)
     for (uint32_t i = 0; i < sdesPadSize; i++)
         *(p++) = 0x00;
 

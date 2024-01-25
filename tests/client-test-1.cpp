@@ -37,6 +37,11 @@
 using namespace std;
 using namespace kc1fsz;
 
+namespace kc1fsz {
+// This is defined in common.cpp
+extern const char* VERSION_ID;
+}
+
 static uint32_t waitForClose(int sock, uint8_t* packet, uint32_t packetSize, uint32_t waitMs) {
     
     uint32_t used = 0;
@@ -169,9 +174,8 @@ static int sendOnline(const char* callSign, const char* password, const char* lo
     (*p++) = 0x0d;
     memcpy(p, "ONLINE", 10);
     p += 6;
-    // Version (MUST START WITH NUMBER AND SHOULD END WITH Z)
-    memcpy(p, "0.02MLZ", 7);
-    p += 7;
+    memcpy(p, VERSION_ID, strlen(VERSION_ID));
+    p += strlen(VERSION_ID);
     (*p++) = '(';
     memcpy(p, local_time_str, 5);
     p += 5;
