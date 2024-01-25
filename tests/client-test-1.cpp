@@ -17,6 +17,11 @@
  *
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
+ * 
+ * =================================================================================
+ * This file is unit-test code only.  None of this should be use for 
+ * real applications!
+ * =================================================================================
  */
 #include <iostream>
 #include <fstream>
@@ -140,7 +145,6 @@ static int sendToDirectoryServer(const char* ipAddr, uint8_t* packet, uint32_t p
     const uint32_t respPacketSize = 256;
     uint8_t respPacket[respPacketSize];
     uint32_t respBytesReceived = waitForClose(sock, respPacket, respPacketSize, 1000);
-    prettyHexDump(respPacket, respBytesReceived, cout);
 
     close(sock);
 
@@ -151,10 +155,69 @@ static int sendToDirectoryServer(const char* ipAddr, uint8_t* packet, uint32_t p
     }
 }
 
-static int sendOnline(const char* callSign, const char* password, const char* loc) {
+static int getDirectory(const char* ipAddr, const char* callSign, uint32_t waitMs) {
 
-    // Get the remote addresses setup
-    const char* addr = "129.213.119.249";
+    const int dirPort = 5200;
+    uint8_t packet[1];
+    packet[0] = 's';
+    uint32_t packetLen = 1;
+
+    struct sockaddr_in remote_addr;
+    memset(&remote_addr, 0, sizeof(sockaddr_in));
+    remote_addr.sin_family = AF_INET;
+    inet_pton(AF_INET, ipAddr, &(remote_addr.sin_addr));
+    remote_addr.sin_port = htons(dirPort);
+
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock < 0) {
+        cout << "Socket failed" << endl;
+        return -1;
+    }
+
+    int rc = connect(sock, (const sockaddr*)&remote_addr, sizeof(sockaddr_in));
+    if (rc < 0) {
+        cout << "Connect failed" << endl;
+        close(sock);
+        return -1;
+    }
+
+    rc = send(sock, (char *)packet, packetLen, 0);
+    if (rc != (int)packetLen) {
+        cout << "Directory send failure" << endl;
+        close(sock);
+        return -1;
+    }
+
+    uint32_t startMs = time_ms();
+    uint8_t respPacket[256];
+    uint32_t respPacketSize = 256;
+    int count = 0;
+
+    // Loop until timeout
+    while (time_ms() - startMs < waitMs) {
+        int rc = recv(sock, respPacket, respPacketSize, 0);
+        if (rc > 0) {
+            count++;
+            prettyHexDump(respPacket, respPacketSize, cout);
+            if (count > 10) {
+                break;
+            }
+        } else if (rc == 0) {
+            cout << "Zero"  << endl;
+            break;
+        } else {
+            cout << "ERROR"  << endl;
+            break;
+        }
+    }
+
+    close(sock);
+
+    return 0;
+}
+
+static int sendOnline(const char* addr,
+    const char* callSign, const char* password, const char* loc) {
 
     time_t t = time(0);
     struct tm tm;
@@ -200,13 +263,27 @@ int main(int, const char**) {
     const char* fullName = "Bruce R. MacKinnon";
     const char* password = "echolink666";
     const char* location = "Wellesley, MA USA";
-
-    // Try to login 
-    sendOnline(callSign, password, location);
+    const char* directoryServerIP = "129.213.119.249";
+    const int rtpPort = 5198;
+    const int rtcpPort = 5199;
 
     int rc;
-    int rtpPort = 5198;
-    int rtcpPort = 5199;
+    // Try to login 
+    rc = sendOnline(directoryServerIP, callSign, password, location);
+    if (rc != 0) {
+        cout << "Login failure" << endl;
+        return -1;
+    }
+
+    // Get directory
+    rc = getDirectory(directoryServerIP, "ECHOTEST", 10000);
+    if (rc != 0) {
+        cout << "Directory failure" << endl;
+        return -1;
+    }
+
+    exit(0);
+
     int rtpSock, rtcpSock;
 
     struct sockaddr_in rtp_local_addr;

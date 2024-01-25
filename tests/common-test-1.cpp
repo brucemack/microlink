@@ -17,6 +17,11 @@
  *
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
+ * 
+ * =================================================================================
+ * This file is unit-test code only.  None of this should be use for 
+ * real applications!
+ * =================================================================================
  */
 #include <iostream>
 #include <fstream>
