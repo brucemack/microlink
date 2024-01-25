@@ -138,11 +138,45 @@ is required to disconnect from the network.
 
 ### Directory Request Message Format
 
-(Format notes to follow)
+The directory request is very simple: connect and send a single "s" to the server.  
 
 ### Directory Response Message Format
 
-(Format notes to follow)
+A large response will be returned from the server. The result is tokenized using 0x0a characters (\n).
+
+* The first token consists of three @ symbols.
+* The second token contains the total number of entires in the directory response.
+* Thereafter, a repeating series of tokens for each directory entry, discussed below.
+
+Here is an example of the start of the response:
+
+![](dir-0.png)
+
+* The @@@ token is underlined in red.
+* The entry count is underlined in green (6250 here).
+
+Each entry is made up of these tokens, in order:
+
+* Callsign
+* Location 
+* Connection status as follows:
+  - Open square bracket (0x5b)
+  - Status (ON or BUSY)
+  - One space (0x20)
+  - The time the last status was reported in UTC HH:MM format
+  - Close square bracket (0x5d)
+* The EchoLink-assigned node number
+* The IP address of the node in dotted format (xxx.xxx.xxx.xxx)
+
+There is no special delimiter between entries.  The next entry starts
+immediate after the final x0a of the previous entry.
+
+![](dir-1.png)
+
+* The red marker shows the start of an entry.
+* The green marker shows the end of an entry.
+* In this example the callsign is K0PGV-L
+* In this example the IP address is 72.206.115.254.
 
 ## EchoLink QSO Protocol
 
