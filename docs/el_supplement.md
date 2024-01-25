@@ -123,6 +123,16 @@ is required to
 
 ## EchoLink QSO Protocol
 
+There are a few different messages formats that are used to conduct a peer-to-peer QSO.  Broadly speaking you need to understand
+four packet types:
+
+* The RTCP traffic (port 5199)
+- SDES Packets
+- BYE Packets
+* The RTP traffic (port 5198)
+- oNDATA Packet
+- Audio Packets
+
 ### RTCP SDES Packet Format
 
 [This wiki](https://en.wikipedia.org/wiki/RTP_Control_Protocol) has some relevant background. Each RTCP packet contains a 4-byte header:
@@ -259,7 +269,7 @@ Here is an example capture:
 * The "07" is the length of the text.
 * You can see that 4 bytes were added to the end of the packet.
 
-### oNDATA Packet Format
+### RTP oNDATA Packet Format
 
 These packets are sent across the same UDP socket as the RTP audio packets. These packets are sent by the client every ~10 seconds which suggests a keep-alive mechanism.
 
@@ -270,7 +280,7 @@ These packets contain no header information and appear to be plain text with tok
 * The blue bar indicates the start of the packet.  The bytes before are the UDP/IP header which can be ignored for this analysis.
 * The official EchoLink client has 4 additional bytes following the null termination of the text.  These four bytes contain the SSRC, encoded in a 32-bit integer with the most significant byte sent first.
         
-### RTP Packet Format 
+### RTP Audio Packet Format 
 
 Each RTP packet is 144 bytes in length.
 
@@ -303,12 +313,11 @@ The four-bit 0b1101 signature makes it easy to sanity check the RTP packets sinc
 
 From this example it looks like there is an 0xda at the start of each GSM frame, but that's a coincidence - the "a" part isn't fixed.
 
-# GSM CODEC
+### Notes on the RTP SSRC Identifier
+
+(To follow)
+
+## GSM CODEC Notes
 
 EchoLink uses GSM 06.10 "full-rate" audio coding. The complete description can be found in the [European Telecommunications Standards Institute specification document](https://www.etsi.org/deliver/etsi_EN/300900_300999/300961/08.00.01_40/en_300961v080001o.pdf).
 
-An embedded-friendly implementation of this CODEC has been produced for this project.
-
-# Notes on the RTP SSRC Identifier
-
-(To follow)
