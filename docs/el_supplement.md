@@ -86,8 +86,8 @@ Nodes can advertise any one of three statuses on the network:
 * OFF
 
 (**I'm not completely sure of this detail**) Connecting to the EchoLink Server, authenticating, and advertising 
-an ONLINE or BUSY status puts the node in "logged in" state for some period of time (**what is the timeout?**).  
-This is significant since other nodes on the network will check this status before accepting a QSO from a 
+an ONLINE or BUSY status puts the node in "logged in" state for some period of time (**what is the 
+timeout?**). This is significant since other nodes on the network will check this status before accepting a QSO from a 
 requesting station. Essentially, the EchoLink server is providing a free authentication service for the rest 
 of the peer-to-peer network. There must be a lot of volunteer hours behind the scenes for this to work 
 reliably.
@@ -99,27 +99,28 @@ There appear to be two message formats supported by the EL network:
 * New/secure, where the server provides an RSA public key and the client encrypts is authentication request.  
 
 Unfortunately, I have not been able to figure out the details of the "secure" exchange yet so all of my research 
-is based on the insecure method. (**I'd be very happy to get some information here.**)
+is based on the insecure method. (**I'd be very happy to get some information here since it would 
+eliminate the security risk of sending clear-text passwords across the network.**)
 
 ### ONLINE/BUSY Status Message Format 
 
 The messages used to authenticate and establish the ONLINE or BUSY status are the same.  Packet format is as follows:
 
 * One byte: 0x63 (lower-case l)
-* The callsign
+* N bytes: The callsign
 * Two bytes: 0xAC 0xAC
-* The password
+* N bytes: The password
 * One byte: 0x0D 
-* The word "ONLINE" or "BUSY" depending on the desired status
-* A string identifying the client/version
-* One byte: Open paren
+* N bytes: The word "ONLINE" or "BUSY" depending on the desired status
+* N bytes: A string identifying the client/version
+* One byte: Open parenthesis
 * 5 bytes: The local time in HH:MM format, following a 24-hour clock.
-* One byte: Close paren
+* One byte: Close parenthesis
 * One byte: 0x0D 
-* The location string
+* N bytes: The location string
 * One byte: 0x0D 
 
-The server response is generally somehing like "OK 2.6" with no header/delimiters/etc.
+The server response is generally something like "OK 2.6" with no header/delimiters/etc.
 
 ### OFF Status Message Format
 
@@ -150,7 +151,7 @@ are used to conduct a peer-to-peer QSO.  Broadly speaking you need to understand
 
 Each are described in their own section below.
 
-### RTCP Packet Formats that Apply to SDES and BYE
+### Common RTCP Packet Format that Applies to SDES and BYE
 
 [This wiki](https://en.wikipedia.org/wiki/RTP_Control_Protocol) has some relevant background. Each RTCP packet contains an 8-byte header:
 
@@ -171,7 +172,7 @@ The RTCP packets are always padded **at the end** in order to achieve a packet l
 very last byte of the (padded) packet contains the number of bytes that were added to achieve the padding goal 
 (and that byte is considered to be part of the pad).  One strange thing is that a four-byte pad is added if 
 the message was already divisible by 4, presumably to avoid corrupting the original message by writing the "0" at 
-the last position.  So presumably the valid packet endings look like one of these:
+the last position.  The valid packet endings look like one of these:
 
 * 0x01
 * 0x00 0x02
@@ -187,7 +188,7 @@ The normal RTCP header is followed by an SDES-specific header with 8 bytes:
 
 * Two bytes: 0xE1 0xCA which seem to indicate that the packet contains SDES information (the top-level PT field notwithstanding).
 * Two bytes: packet length information represented as a 16-bit integer with the most significant byte first.  This length covers
-the entire packet and is represented as the number of 4-byte chunks **minus bytes of header**.  So, for example, if the total 
+the entire packet and is represented as the number of 4-byte chunks **minus 12 bytes of header**.  So, for example, if the total 
 length of the packet is 112 bytes we'd see (112 - 12) / 4 = 25 or 0x00 0x19 hex.
 * Four bytes: The SSRC represented as a 23-bit integer with the most significant byte sent first.  This is alway zero for the 
 EchoLink client but non-zero for the ECHOTEST station (see below).
