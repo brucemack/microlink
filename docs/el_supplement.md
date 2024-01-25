@@ -1,5 +1,7 @@
 # EchoLink Protocol Information 
 
+[By Bruce MacKinnon, KC1FSZ](https://www.qrz.com/db/kc1fsz)
+
 As far as I can tell the EchoLink protocol isn't officially documented. Maybe I'm missing something. This page attempts 
 to fill in the details. My 
 notes are based on examinations of EL packet captures and a review of the various open source EchoLink implementations in GitHub. I 
