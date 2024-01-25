@@ -1,7 +1,8 @@
 EchoLink Protocol Information 
 ==============================
 
-As far as I can tell the EchoLink protocol isn't officially documented. Maybe I'm missing something. This page attempts to fill in the details. My 
+As far as I can tell the EchoLink protocol isn't officially documented. Maybe I'm missing something. This page attempts 
+to fill in the details. My 
 notes are based on examinations of EL packet captures and a review of the various open source EchoLink implementations in GitHub. I 
 am not affiliated with the EchoLink team and I have no inside information.  Please take these notes for what they are 
 worth - just one random ham's observations.  Do your own research.
@@ -15,7 +16,13 @@ Here are the links to the two GitGub projects that I've studied:
 * Echolib: https://github.com/sm0svx/svxlink/tree/master/src/echolib
 * TheBridge: https://github.com/wd5m/thebridge-1.09
 
-The EL protocols draw heavily on VoIP technology, specifically the RTP and RTCP. Documentation of these two standards helps a lot, but should not be taken too literally as the EL standards do things a bit differently in a few places.
+The EL protocols draw heavily on VoIP technology, specifically the RTP and RTCP. Documentation of these two standards helps a lot, but should not be taken too literally as the EL standards do things a bit differently in a few places. Some related standards docs 
+that I would recommend looking at:
+
+* RFC 3550 (RTP): https://datatracker.ietf.org/doc/html/rfc3550
+* RTCP Background: https://en.wikipedia.org/wiki/RTP_Control_Protocol
+* RFC 8852 (RTCP SDES): https://datatracker.ietf.org/doc/rfc8852/
+* GSM 06.10 Full-Rate: https://www.etsi.org/deliver/etsi_EN/300900_300999/300961/08.00.01_40/en_300961v080001o.pdf
 
 ## High-Level Protocol Flow Notes
 
