@@ -377,6 +377,6 @@ part can change depending on the audio being encoded.
 
 EchoLink uses GSM 06.10 "full-rate" audio coding. The complete description can be found in the [European Telecommunications Standards Institute specification document](https://www.etsi.org/deliver/etsi_EN/300900_300999/300961/08.00.01_40/en_300961v080001o.pdf).
 
-** EchoLink Proxy Notes
+## EchoLink Proxy Protocol Notes
 
 (To follow)
