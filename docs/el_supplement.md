@@ -12,7 +12,7 @@ Notes like these may make it possible for others to start tinkering around in Ec
 with caution.** None of us pay when we use EchoLink, so I assume that there are many volunteer hours going on behind the scenes. 
 The last thing anyone needs is an accidental denial-of-service incident on the EL network.
 
-Here are the links to the two GitHub projects that I've studied:
+Here are links to two GitHub projects that I've studied:
 
 * Echolib: https://github.com/sm0svx/svxlink/tree/master/src/echolib
 * TheBridge: https://github.com/wd5m/thebridge-1.09
@@ -118,15 +118,27 @@ The messages used to authenticate and establish the ONLINE or BUSY status are th
 * The location string
 * One byte: 0x0D 
 
+The server response is generally somehing like "OK 2.6" with no header/delimiters/etc.
+
 ### OFF Status Message Format
 
 The message used to set the OFF status has a slightly different format, presumably because no authentication
-is required to 
+is required to disconnect from the netork.
+
+(Format notes to follow)
+
+### Directory Request Message Format
+
+(Format notes to follow)
+
+### Directory Response Message Format
+
+(Format notes to follow)
 
 ## EchoLink QSO Protocol
 
-There are a few different messages formats that are used to conduct a peer-to-peer QSO.  Broadly speaking you need to understand
-four packet types:
+There are a few different packet formats that are used to conduct a peer-to-peer QSO.  Broadly speaking you need to understand
+four packets:
 
 * The RTCP traffic (port 5199)
   - SDES Packets
@@ -171,19 +183,13 @@ Then begins a repeating pattern:
 
 The termination of this pattern requires some specific handling.  From the [RFC 1889](https://www.freesoft.org/CIE/RFC/1889/23.htm) documentation: _"The list of items in each chunk is terminated by one or more null octets, the first of which is interpreted as an item type of zero to denote the end of the list, and the remainder as needed to pad until the next 32-bit boundary. A chunk with zero items (four null octets) is valid but useless."_
 
-The SDES types are as follows (per [TheBridge source code in rtp.h](https://github.com/wd5m/thebridge-1.09/blob/master/inc/rtp.h#L88):
+The SDES types are documented (per [TheBridge source code in rtp.h](https://github.com/wd5m/thebridge-1.09/blob/master/inc/rtp.h#L88). 
+However, it doesn't look like EchoLink is following this standard strictly.  It doesn't matter - just follow the EchoLink 
+pattern and things will work fine.
 
-* 0 - END
-* 1 - CNAME
-* 2 - NAME
-* 3 - EMAIL Address
-* 4 - PHONE
-* 5 - Location 
-* 6 - Tool
-* 7 - Note
-* 8 - PRIV
+Here are some notes about how each of these tokens is set by the official EchoLink client.  From what I can tell, EL is using the SDES types its own way and the official RFC SDES definitions shown above are not relevant.
 
-Here are some notes about how each of these tokens is set by the official EchoLink client (in this order).  From what I can tell, the EchoLink client is using the SDES types its own way and the official RFC SDES definitions shown above are not relevant.
+The tokens appear in this order:
 
 * A type 1 token is sent with the value "CALLSIGN"
 * A type 2 token is sent that contains the FCC callsign (padded with some spaces) and the user's real name.  So in my case I see:
@@ -201,7 +207,7 @@ Here are some notes about how each of these tokens is set by the official EchoLi
 
         01 44 30
 
-Finally, optional padding is added to fill up to the next 4-byte boundary (per SDES termination requirement), and then the entire packet is padded again following the RFC requirement.
+Finally, padding may be added to fill up to the next 4-byte boundary (per SDES termination requirement), and then the entire packet is padded again following the RFC requirement.
 
 This visual provides a helpful reference:
 
