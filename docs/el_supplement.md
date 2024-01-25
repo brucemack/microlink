@@ -120,12 +120,19 @@ The messages used to authenticate and establish the ONLINE or BUSY status are th
 * N bytes: The location string
 * One byte: 0x0D 
 
+Here's an example of an ONLINE packet:
+
+![](packet-5.png)
+
+* Note that there are no headers, length fields, etc.
+* Tokens are delimited by 0xac 0xac or 0x0d.
+
 The server response is generally something like "OK 2.6" with no header/delimiters/etc.
 
 ### OFF Status Message Format
 
 The message used to set the OFF status has a slightly different format, presumably because no authentication
-is required to disconnect from the netork.
+is required to disconnect from the network.
 
 (Format notes to follow)
 
