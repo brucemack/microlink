@@ -88,7 +88,7 @@ static int sendHello(int rtpSock, int rtcpSock,
     }
     
     // Send the initial oNDATA message
-    const char* msg = "oNDATA\rStation KC1FSZ\r\rEchoLink ver 2.3.121\r\rBruce R. MacKinnon\rWellesley, MA USA\r";
+    const char* msg = "oNDATA\rStation KC1FSZ\r\rMicroLink ver 0.02\r\rBruce R. MacKinnon\rWellesley, MA USA\r";
     len = formatOnDataPacket(msg, ssrc2, p, packetSize);
     cout << "RTP oNDATA packet (length=" << len << "):" << endl;
     prettyHexDump(p, len, cout);
@@ -167,8 +167,11 @@ static int sendOnline(const char* callSign, const char* password, const char* lo
     memcpy(p, password, strlen(password));
     p += strlen(password);
     (*p++) = 0x0d;
-    memcpy(p, "ONLINE3.38", 10);
-    p += 10;
+    memcpy(p, "ONLINE", 10);
+    p += 6;
+    // Version (MUST START WITH NUMBER AND SHOULD END WITH Z)
+    memcpy(p, "0.02MLZ", 7);
+    p += 7;
     (*p++) = '(';
     memcpy(p, local_time_str, 5);
     p += 5;
@@ -180,7 +183,9 @@ static int sendOnline(const char* callSign, const char* password, const char* lo
 
     unsigned int packetLen = p - message;
     int rc = sendToDirectoryServer(addr, message, packetLen);
-    cout << "RC = " << rc << endl;
+    
+    cout << "ONLINE Message:" << endl;
+    prettyHexDump(message, packetLen, cout);
 
     return 0;
 }
