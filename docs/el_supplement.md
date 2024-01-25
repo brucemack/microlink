@@ -28,7 +28,7 @@ that I would recommend looking at:
 ## High-Level Protocol Flow Notes
 
 As has been documented in several places, there are two distinct protocol flows that make up the EL system:
-* A client/server interaction with one of the EchoLink server (TCP port 5200).
+* A client/server interaction with one of the EchoLink servers (TCP port 5200).
 * A peer-to-peer "QSO" interaction between EchoLink nodes:
   - UDP port 5198 is used to carry audio traffic (and a bit of out-of-band texting) using the RTP protocol.
   - UDP port 5199 is used to carry session control information using something very similar to the RTCP protocol.
@@ -37,28 +37,28 @@ The topic of EchoLink Proxies will be put aside for now - more on this later.
 
 Before getting into the details I'll provide my understanding of the high-level message flow that is used
 during an EL QSO.  EchoLink is a peer-to-peer technology so it's probably not correct to think about "clients" 
-and "servers" for most in this flow, so instead I will use the terms "Station A" and "Station B," assuming that 
+and "servers" for most in this flow.  Instead I will use the terms "Station A" and "Station B," assuming that 
 Station A is the originator of the call. From tracing a QSO using the official EchoLink client I can see the 
 following flow pattern:
 
-1. Station A logs into the network by interacting with the EchoLink Server over TCP 5200.  This 
+1. Station A logs into the network by interacting with the EchoLink Server over TCP port 5200.  This 
 step may not need to happen on every QSO since the logged-on status persists for some time.
 2. Station A requests the directory information from the EchoLink Server to determine the 
 status of the target node and its current IP address.
 3. Station A sends an RTCP SDES packet with the identification information to Station B on the RTCP port, **but using 
-the socket that is bound to the RTP port on the local side!**.  I suspect we need to originate data using both UDP 
-ports in order for routers to forward return traffic back to both ports.
+the socket that is bound to the RTP port on the local side!**.  I suspect we need to originate data using both local-side 
+UDP ports in order for routers to forward return traffic back to both ports.
 4. Station A sends the same message again to the RTCP port of Station B using the socket that is bound to the RTCP port.
-5. Station A sends an oNDATA packet on the RTP channel.
+5. Station A sends an oNDATA packet to the RTP port of Station B.
 6. Station A appears to wait at this point.  If nothing happens after 5 seconds then a retry happens by returning to step #3.
-7. (**Not completely sure on this**) Station B uses the call-sign provided in the SDES message sent in step 4 to contact
+7. (**Not completely sure on this**) Station B uses the call-sign provided in the RTCP SDES message sent in step 4 to contact
 the EchoLink Server and validate that the Station A user is authorized to use the network.
 8. Station B sends an RTCP SDES packet on the RTCP channel.
 9. Station B sends an oNDATA packet on the RTP channel.
 10. Station A sends the same RTCP SDES packet from step #3/#4.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.)
 11. Station A sends an oNDATA packet on the RTP channel from step #5.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.)
 12. At this point RTP audio packets are moved in both directions.
-13. Periodically (every ~10 seconds) both stations send RTCP SDES and RTP oNDATA packets to each other.
+13. Periodically (every ~10 seconds) both stations send RTCP SDES and RTP oNDATA packets to each other, presumably for keep-alive.
 14. At the end of the QSO, Station A sends an RTCP BYE packet.
 
 ## EchoLink Server Protocol
@@ -70,21 +70,22 @@ there are ~4 active EL Servers that synchronize with each other. An EL node can 
 Nodes initiate the interaction by opening a TCP connection to the EL Server on port TCP 5200.  Data will flow in both 
 directions on this connection. The protocol used on this TCP connection appears to be ad-hoc and is entirely 
 unrelated to VoIP. The protocol is request/response and appears to be "disconnect delimited" - meaning that 
-the server sends a response to the client and then disconnects. This is similar to HTTP/1.1.
+the server sends a response to the client and then disconnects. This is similar to HTTP/1.0.
 
 The server interaction accomplishes a few things:
 
 * Allows a node to authenticate itself and to tell the rest of the network about its status. Your callsign must 
 be pre-validated for this to work. You use your password to authenticate securely.
 * Provides the ability to download the entire directory of EchoLink nodes.
-* (Speculation) There is likely a way that a node can request the status of a specific callsign.
+* (Speculation) There is likely a way that a node can request the status of a specific callsign. (Need to do some 
+more testing here.)
 
-Nodes can establish any one of three statuses on the network:
+Nodes can advertise any one of three statuses on the network:
 * ONLINE
 * BUSY
 * OFF
 
-(**I'm not completely sure of this detail**) Connecting to the EchoLink Server, authenticating, and establishing 
+(**I'm not completely sure of this detail**) Connecting to the EchoLink Server, authenticating, and advertising 
 an ONLINE or BUSY status puts the node in "logged in" state for some period of time (**what is the timeout?**).  
 This is significant since other nodes on the network will check this status before accepting a QSO from a 
 requesting station. Essentially, the EchoLink server is providing a free authentication service for the rest 
@@ -377,3 +378,6 @@ part can change depending on the audio being encoded.
 
 EchoLink uses GSM 06.10 "full-rate" audio coding. The complete description can be found in the [European Telecommunications Standards Institute specification document](https://www.etsi.org/deliver/etsi_EN/300900_300999/300961/08.00.01_40/en_300961v080001o.pdf).
 
+** EchoLink Proxy Notes
+
+(To follow)
