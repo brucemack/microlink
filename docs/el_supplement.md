@@ -1,5 +1,4 @@
-EchoLink Protocol Information 
-==============================
+# EchoLink Protocol Information 
 
 As far as I can tell the EchoLink protocol isn't officially documented. Maybe I'm missing something. This page attempts 
 to fill in the details. My 
@@ -11,12 +10,12 @@ Notes like these may make it possible for others to start tinkering around in Ec
 with caution.** None of us pay when we use EchoLink, so I assume that there are many volunteer hours going on behind the scenes. 
 The last thing anyone needs is an accidental denial-of-service incident on the EL network.
 
-Here are the links to the two GitGub projects that I've studied:
+Here are the links to the two GitHub projects that I've studied:
 
 * Echolib: https://github.com/sm0svx/svxlink/tree/master/src/echolib
 * TheBridge: https://github.com/wd5m/thebridge-1.09
 
-The EL protocols draw heavily on VoIP technology, specifically the RTP and RTCP. Documentation of these two standards helps a lot, but should not be taken too literally as the EL standards do things a bit differently in a few places. Some related standards docs 
+The EL protocols draw heavily on VoIP technology, specifically the RTP and RTCP standards. Documentation of these two standards helps a lot, but should not be taken too literally as the EL standards do things a bit differently in a few places. Some related standards docs 
 that I would recommend looking at:
 
 * RFC 3550 (RTP): https://datatracker.ietf.org/doc/html/rfc3550
@@ -27,7 +26,7 @@ that I would recommend looking at:
 ## High-Level Protocol Flow Notes
 
 As has been documented in several places, there are two distinct protocol flows that make up the EL system:
-* A client/server interaction with the EchoLink Servers (TCP port 5200).
+* A client/server interaction with one of the EchoLink server (TCP port 5200).
 * A peer-to-peer "QSO" interaction between EchoLink nodes:
   - UDP port 5198 is used to carry audio traffic (and a bit of out-of-band texting) using the RTP protocol.
   - UDP port 5199 is used to carry session control information using something very similar to the RTCP protocol.
@@ -50,8 +49,8 @@ ports in order for routers to forward return traffic back to both ports.
 4. Station A sends the same message again to the RTCP port of Station B using the socket that is bound to the RTCP port.
 5. Station A sends an oNDATA packet on the RTP channel.
 6. Station A appears to wait at this point.  If nothing happens after 5 seconds then a retry happens by returning to step #3.
-7. (**Not completely sure on this**) Station B uses the call-sign provided in the SDES message send in step 4 to contact
-the EchoLink Server and validate that the user is authorized to use the network.
+7. (**Not completely sure on this**) Station B uses the call-sign provided in the SDES message sent in step 4 to contact
+the EchoLink Server and validate that the Station A user is authorized to use the network.
 8. Station B sends an RTCP SDES packet on the RTCP channel.
 9. Station B sends an oNDATA packet on the RTP channel.
 10. Station A sends the same RTCP SDES packet from step #3/#4.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.)
@@ -63,20 +62,20 @@ the EchoLink Server and validate that the user is authorized to use the network.
 ## EchoLink Server Protocol
 
 Things start off with an exchange with the EchoLink Server. The EL Server topology is described in detail in the 
-official EL documentation so we won't repeat this information unnecessarily,  The important detail is that 
+official EL documentation so we won't repeat this information unnecessarily. The important detail is that 
 there are ~4 active EL Servers that synchronize with each other. An EL node can interact with any one of them.
 
-Nodes initiate the interaction by opening a TCP connection to the EL Server on port 5200.  Data will flow in both 
+Nodes initiate the interaction by opening a TCP connection to the EL Server on port TCP 5200.  Data will flow in both 
 directions on this connection. The protocol used on this TCP connection appears to be ad-hoc and is entirely 
 unrelated to VoIP. The protocol is request/response and appears to be "disconnect delimited" - meaning that 
-the server sends a response to the client and then disconnects.
+the server sends a response to the client and then disconnects. This is similar to HTTP/1.1.
 
 The server interaction accomplishes a few things:
 
 * Allows a node to authenticate itself and to tell the rest of the network about its status. Your callsign must 
 be pre-validated for this to work. You use your password to authenticate securely.
 * Provides the ability to download the entire directory of EchoLink nodes.
-* (Speculation) There is likely a way that a Node can request the status of a specific callsign.
+* (Speculation) There is likely a way that a node can request the status of a specific callsign.
 
 Nodes can establish any one of three statuses on the network:
 * ONLINE
@@ -87,7 +86,8 @@ Nodes can establish any one of three statuses on the network:
 an ONLINE or BUSY status puts the node in "logged in" state for some period of time (**what is the timeout?**).  
 This is significant since other nodes on the network will check this status before accepting a QSO from a 
 requesting station. Essentially, the EchoLink server is providing a free authentication service for the rest 
-of the peer-to-peer network. This must be a lot of volunteer hours behind the scenes for this to work.
+of the peer-to-peer network. There must be a lot of volunteer hours behind the scenes for this to work 
+reliably.
 
 ### Notes About Password Security
 
@@ -98,7 +98,7 @@ There appear to be two message formats supported by the EL network:
 Unfortunately, I have not been able to figure out the details of the "secure" exchange yet so all of my research 
 is based on the insecure method. (**I'd be very happy to get some information here.**)
 
-### ONLINE/BUSY Message Status Format 
+### ONLINE/BUSY Status Message Format 
 
 The messages used to authenticate and establish the ONLINE or BUSY status are the same.  Packet format is as follows:
 
@@ -116,16 +116,14 @@ The messages used to authenticate and establish the ONLINE or BUSY status are th
 * The location string
 * One byte: 0x0D 
 
+### OFF Status Message Format
 
-
+The message used to set the OFF status has a slightly different format, presumably because no authentication
+is required to 
 
 ## EchoLink QSO Protocol
 
-
-
-
-RTCP SDES Packet Format
------------------------
+### RTCP SDES Packet Format
 
 [This wiki](https://en.wikipedia.org/wiki/RTP_Control_Protocol) has some relevant background. Each RTCP packet contains a 4-byte header:
 
@@ -236,8 +234,7 @@ The ECHOTEST station is sending the following tokens at connection initiation:
 
 The usual mechanics of padding out the last token and then padding the entire packet is observed.
 
-RTCP BYE Packet Format
-----------------------
+### RTCP BYE Packet Format
 
 The EchoLink client sends this RTCP packet when the user presses the disconnect button to drop the connection.  
 
@@ -262,8 +259,7 @@ Here is an example capture:
 * The "07" is the length of the text.
 * You can see that 4 bytes were added to the end of the packet.
 
-oNDATA Packet Format
---------------------
+### oNDATA Packet Format
 
 These packets are sent across the same UDP socket as the RTP audio packets. These packets are sent by the client every ~10 seconds which suggests a keep-alive mechanism.
 
@@ -274,8 +270,7 @@ These packets contain no header information and appear to be plain text with tok
 * The blue bar indicates the start of the packet.  The bytes before are the UDP/IP header which can be ignored for this analysis.
 * The official EchoLink client has 4 additional bytes following the null termination of the text.  These four bytes contain the SSRC, encoded in a 32-bit integer with the most significant byte sent first.
         
-RTP Packet Format 
------------------
+### RTP Packet Format 
 
 Each RTP packet is 144 bytes in length.
 
@@ -308,13 +303,12 @@ The four-bit 0b1101 signature makes it easy to sanity check the RTP packets sinc
 
 From this example it looks like there is an 0xda at the start of each GSM frame, but that's a coincidence - the "a" part isn't fixed.
 
-GSM CODEC
----------
+# GSM CODEC
 
 EchoLink uses GSM 06.10 "full-rate" audio coding. The complete description can be found in the [European Telecommunications Standards Institute specification document](https://www.etsi.org/deliver/etsi_EN/300900_300999/300961/08.00.01_40/en_300961v080001o.pdf).
 
 An embedded-friendly implementation of this CODEC has been produced for this project.
 
-Notes on the RTP SSRC Identifier
---------------------------------
+# Notes on the RTP SSRC Identifier
+
 (To follow)
