@@ -12,10 +12,16 @@ Notes like these may make it possible for others to start tinkering around in Ec
 with caution.** We all love EchoLink but none of us pay when we use it, so I can only assume that there are many volunteer hours 
 going on behind the scenes. The last thing anyone needs is an accidental denial-of-service incident on the EL network.
 
-Here are links to two GitHub projects that I've studied:
+If you have any questions/corrections/concerns on this 
+document please contact me directly (good in QRZ). Don't bother the real 
+EchoLink team since they have plenty to do running a massive 
+telephony network and they don't need to be spending time correcting my errors.
+
+Here are links to some GitHub projects that I've studied:
 
 * Echolib: https://github.com/sm0svx/svxlink/tree/master/src/echolib
 * TheBridge: https://github.com/wd5m/thebridge-1.09
+* Asterisk Interface: https://github.com/hwstar/astsrc-1.4.23-pre/blob/master/asterisk/channels/chan_echolink.c
 
 The EL protocols draw heavily on VoIP technology, specifically the RTP and RTCP standards. Documentation of these two standards helps a lot, but should not be taken too literally as the EL standards do things a bit differently in a few places. Some related standards docs 
 that I would recommend looking at:
@@ -47,7 +53,7 @@ step may not need to happen on every QSO since the logged-on status persists for
 status of the target node and its current IP address.
 3. Station A sends an RTCP SDES packet with the identification information to Station B on the RTCP port, **but using 
 the socket that is bound to the RTP port on the local side!**.  I suspect we need to originate data using both local-side 
-UDP ports in order for routers to forward return traffic back to both ports.
+UDP ports in order for routers/firewalls to forward return traffic from Station B back to Station A on both ports.  This is related to dynamic firewall capability known as [Stateful Packet Inspection](https://en.wikipedia.org/wiki/Stateful_firewall) and/or [UDP Hole Punching](https://en.wikipedia.org/wiki/UDP_hole_punching).
 4. Station A sends the same message again to the RTCP port of Station B using the socket that is bound to the RTCP port.
 5. Station A sends an oNDATA packet to the RTP port of Station B.
 6. Station A appears to wait at this point.  If nothing happens after 5 seconds then a retry happens by returning to step #3.
