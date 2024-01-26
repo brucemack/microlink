@@ -20,9 +20,16 @@ cmake_minimum_required(VERSION 3.13)
 project(radlib C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
-
 file(MAKE_DIRECTORY tmp)
+
+if (TARGET_GROUP STREQUAL pico)
+message("----- PICO build ---------------------------------------------------------------")
+add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
+pico_sdk_init()
+else()
+message("Desktop build!")
+add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
+endif()
 
 add_executable(packet-test-1
   tests/packet-test-1.cpp
@@ -61,8 +68,16 @@ target_include_directories(client-test-1 PRIVATE src)
 target_include_directories(client-test-1 PRIVATE gsm-0610-codec/include)
 target_include_directories(client-test-1 PRIVATE gsm-0610-codec/src)
 
+# ------ exception-test-1 ----------------------------------------------------
 
+add_executable(exception-test-1
+  tests/exception-test-1.cpp
+)
 
-
-
+if (TARGET_GROUP STREQUAL pico)
+pico_enable_stdio_usb(exception-test-1 1)
+pico_enable_stdio_uart(exception-test-1 1)
+target_compile_definitions(exception-test-1 PUBLIC PICO_BUILD=1)
+target_link_libraries(exception-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
+endif()
 
