@@ -17,56 +17,62 @@
 # NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
 
 cmake_minimum_required(VERSION 3.13)
-project(radlib C CXX ASM)
+if (TARGET_GROUP STREQUAL pico)
+include(pico_sdk_import.cmake)
+endif()
+project(microlink C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 file(MAKE_DIRECTORY tmp)
 
 if (TARGET_GROUP STREQUAL pico)
+pico_sdk_init()
+endif()
+
+if (TARGET_GROUP STREQUAL pico)
 message("----- PICO build ---------------------------------------------------------------")
 add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
-pico_sdk_init()
 else()
 message("Desktop build!")
 add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
 endif()
 
-add_executable(packet-test-1
-  tests/packet-test-1.cpp
-  src/common.cpp
-  gsm-0610-codec/src/fixed_math.cpp
-  gsm-0610-codec/src/wav_util.cpp
-  gsm-0610-codec/src/Parameters.cpp
-  gsm-0610-codec/src/Encoder.cpp
-  gsm-0610-codec/src/Decoder.cpp
-)
+#add_executable(packet-test-1
+#  tests/packet-test-1.cpp
+#  src/common.cpp
+#  gsm-0610-codec/src/fixed_math.cpp
+#  gsm-0610-codec/src/wav_util.cpp
+#  gsm-0610-codec/src/Parameters.cpp
+#  gsm-0610-codec/src/Encoder.cpp
+#  gsm-0610-codec/src/Decoder.cpp
+#)
 
-target_include_directories(packet-test-1 PRIVATE src)
-target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
-target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
+#target_include_directories(packet-test-1 PRIVATE src)
+#target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
+#target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
 
-add_executable(common-test-1
-  tests/common-test-1.cpp
-  src/common.cpp
-)
+#add_executable(common-test-1
+#  tests/common-test-1.cpp
+#  src/common.cpp
+#)
 
-target_include_directories(common-test-1 PRIVATE src)
+#target_include_directories(common-test-1 PRIVATE src)
 
 # ------ client-test-1 -------------------------------------------------------
 
-add_executable(client-test-1
-  tests/client-test-1.cpp
-  src/common.cpp
-  gsm-0610-codec/src/fixed_math.cpp
-  gsm-0610-codec/src/wav_util.cpp
-  gsm-0610-codec/src/Parameters.cpp
-  gsm-0610-codec/src/Encoder.cpp
-  gsm-0610-codec/src/Decoder.cpp
-)
+#add_executable(client-test-1
+#  tests/client-test-1.cpp
+#  src/common.cpp
+#  gsm-0610-codec/src/fixed_math.cpp
+#  gsm-0610-codec/src/wav_util.cpp
+#  gsm-0610-codec/src/Parameters.cpp
+#  gsm-0610-codec/src/Encoder.cpp
+#  gsm-0610-codec/src/Decoder.cpp
+#)
 
-target_include_directories(client-test-1 PRIVATE src)
-target_include_directories(client-test-1 PRIVATE gsm-0610-codec/include)
-target_include_directories(client-test-1 PRIVATE gsm-0610-codec/src)
+#target_include_directories(client-test-1 PRIVATE src)
+#target_include_directories(client-test-1 PRIVATE gsm-0610-codec/include)
+#target_include_directories(client-test-1 PRIVATE gsm-0610-codec/src)
 
 # ------ exception-test-1 ----------------------------------------------------
 
@@ -80,4 +86,5 @@ pico_enable_stdio_uart(exception-test-1 1)
 target_compile_definitions(exception-test-1 PUBLIC PICO_BUILD=1)
 target_link_libraries(exception-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
 endif()
+
 
