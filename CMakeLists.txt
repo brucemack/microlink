@@ -37,26 +37,44 @@ message("Desktop build!")
 add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
 endif()
 
-#add_executable(packet-test-1
-#  tests/packet-test-1.cpp
-#  src/common.cpp
-#  gsm-0610-codec/src/fixed_math.cpp
-#  gsm-0610-codec/src/wav_util.cpp
-#  gsm-0610-codec/src/Parameters.cpp
-#  gsm-0610-codec/src/Encoder.cpp
-#  gsm-0610-codec/src/Decoder.cpp
-#)
+# ------ packet-test-1 -------------------------------------------------------
 
-#target_include_directories(packet-test-1 PRIVATE src)
-#target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
-#target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
+add_executable(packet-test-1
+  tests/packet-test-1.cpp
+  src/common.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
+)
 
-#add_executable(common-test-1
-#  tests/common-test-1.cpp
-#  src/common.cpp
-#)
+target_include_directories(packet-test-1 PRIVATE src)
+target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
+target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
 
-#target_include_directories(common-test-1 PRIVATE src)
+# ------ common-test-1 -------------------------------------------------------
+
+add_executable(common-test-1
+  tests/common-test-1.cpp
+  src/common.cpp
+)
+
+target_include_directories(common-test-1 PRIVATE src)
+
+# ------ machine-test-1 -------------------------------------------------------
+
+add_executable(machine-test-1
+  tests/machine-test-1.cpp
+  src/common.cpp
+  src/machines/RootMachine.cpp
+  src/machines/LogonMachine.cpp
+  src/machines/LookupMachine.cpp
+)
+
+target_include_directories(machine-test-1 PRIVATE src)
+target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/include)
+target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/src)
 
 # ------ client-test-1 -------------------------------------------------------
 

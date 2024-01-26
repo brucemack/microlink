@@ -1,6 +1,13 @@
 Overview
 ========
 
+Building on PI PICO
+===================
+
+mkdir build
+cd build
+cmake -DTARGET_GROUP=pico ..
+make <target>
 
 References
 ==========
