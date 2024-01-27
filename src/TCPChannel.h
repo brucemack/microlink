@@ -24,7 +24,17 @@
 namespace kc1fsz {
 
 class TCPChannel {
+public:
 
+    TCPChannel() : _id(0) { }
+    TCPChannel(const TCPChannel& that) : _id(that._id) { }
+    TCPChannel(int id) : _id(id) { }
+    int getId() const { return _id; }
+    bool operator== (const TCPChannel& that) { return _id == that._id; }
+
+private:
+
+    int _id;
 };
 
 }

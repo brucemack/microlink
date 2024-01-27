@@ -11,7 +11,7 @@ public:
 
     static const int TYPE = 100;
 
-    DNSLookupEvent() : Event(TYPE) { }
+    DNSLookupEvent(IPAddress a) : Event(TYPE), addr(a) { }
     
     IPAddress addr;
 };

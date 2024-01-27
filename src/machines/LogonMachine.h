@@ -28,7 +28,7 @@
 #include "../HostName.h"
 #include "../TCPChannel.h"
 #include "../CallSign.h"
-#include "../String.h"
+#include "../FixedString.h"
 
 namespace kc1fsz {
 
@@ -36,7 +36,7 @@ namespace kc1fsz {
  * This state machine is used to manage the process of logging 
  * on to the EchoLink server.
  */
-class LogonMachine : public StateMachine<Event, Context> {
+class LogonMachine : public StateMachine<Context> {
 public:
 
     LogonMachine();
@@ -46,19 +46,33 @@ public:
     virtual bool isDone() const;
     virtual bool isGood() const;
 
-    void setServerName(HostName host);
-    void setCallSign(CallSign cs);
-    void setPassword(String pw);
+    void setServerName(HostName hn) { _serverHostName = hn; }
+    void setCallSign(CallSign cs) { _callSign = cs; }
+    void setPassword(FixedString pw) { _password = pw; }
+    void setLocation(FixedString loc) { _location = loc; }
 
 private:
 
-    enum State { IDLE, DNS_WAIT, CONNECTING, FAILED, SUCCEEDED } _state;
+    enum State { IDLE, DNS_WAIT, CONNECTING, WAITING_FOR_DISCONNECT, FAILED, SUCCEEDED } _state;
 
-    HostName _hostName;
+    HostName _serverHostName;
     CallSign _callSign;
-    String _password;
+    FixedString _password;
+    FixedString _location;
+
     TCPChannel _channel;
+
+    // Here is were we collect the logon response
+    static const uint16_t _logonRespSize = 64;
+    uint8_t _logonResp[_logonRespSize];
+    uint16_t _logonRespPtr;
 };
+
+/**
+ * A utility function for building Logon/ONLINE request messages.
+*/
+uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
+    CallSign cs, FixedString pwd, FixedString loc);
 
 }
 

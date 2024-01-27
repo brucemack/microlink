@@ -18,35 +18,36 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _common_h
-#define _common_h
+#ifndef _Common2_h
+#define _Common2_h
 
-#include <algorithm> 
-#include <cctype>
-#include <locale>
 #include <cstdint>
+#include <string>
 #include <iostream>
 
 namespace kc1fsz {
+
+extern const char* VERSION_ID;
 
 /**
  * @returns The current time in milliseconds-since-epoch
 */
 uint32_t time_ms();
 
+/**
+ * @param targetLimit The actual size of the target buffer.  This 
+ * function will automatically save a space for the null.
+*/
+void strcpyLimited(char* target, const char* source, uint32_t targetLimit);
+
+void memcpyLimited(uint8_t* target, const uint8_t* source, 
+    uint32_t sourceLen, uint32_t targetLimit);
+
 // trim from start (in place)
-inline void ltrim(std::string &s) {
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }));
-}
+void ltrim(std::string &s);
 
 // trim from end (in place)
-inline void rtrim(std::string &s) {
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
+void rtrim(std::string &s);
 
 bool isOnDataPacket(const uint8_t* d, uint32_t len);
 

@@ -13,7 +13,7 @@ namespace kc1fsz {
 /**
  * A state machine used for managing the EL directory lookup.
 */
-class LookupMachine : public StateMachine<Event, Context> {
+class LookupMachine : public StateMachine<Context> {
 public:
 
     LookupMachine() : _state(IDLE) { }

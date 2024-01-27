@@ -33,7 +33,7 @@
 
 namespace kc1fsz {
 
-class RootMachine : public StateMachine<Event, Context> {
+class RootMachine : public StateMachine<Context> {
 public:
 
     RootMachine();
@@ -45,9 +45,9 @@ public:
 
     void setServerName(HostName h);
     void setCallSign(CallSign cs);
-    void setPassword(String s);
+    void setPassword(FixedString s);
     void setTargetCallSign(CallSign target);
-    void setLocation(String loc);
+    void setLocation(FixedString loc);
 
 private:
 

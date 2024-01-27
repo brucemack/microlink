@@ -22,20 +22,21 @@
 #define _StateMachine_h
 
 #include <cstdint>
+#include "Event.h"
 
 namespace kc1fsz {
 
-template<typename E, typename C> class StateMachine {
+template<typename C> class StateMachine {
 public:
 
-    virtual void processEvent(const E* event, C* context) = 0;
+    virtual void processEvent(const Event* event, C* context) = 0;
     virtual void start(C* context) = 0;
     virtual bool isDone() const = 0;
     virtual bool isGood() const = 0;
 
 protected:
 
-    bool isDoneAfterEvent(StateMachine& mach, const E* ev, C* ctx) {
+    bool isDoneAfterEvent(StateMachine& mach, const Event* ev, C* ctx) {
         mach.processEvent(ev, ctx);
         return mach.isDone();
     }

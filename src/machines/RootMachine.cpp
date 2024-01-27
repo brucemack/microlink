@@ -20,6 +20,8 @@
  */
 #include "RootMachine.h"
 
+using namespace std;
+
 namespace kc1fsz {
 
 RootMachine::RootMachine() 
@@ -129,9 +131,12 @@ void RootMachine::setTargetCallSign(CallSign cs) {
     _lookupMachine.setTargetCallSign(cs);
 }
 
-void RootMachine::setPassword(String s) {
+void RootMachine::setPassword(FixedString s) {
     _logonMachine.setPassword(s);
 }
 
+void RootMachine::setLocation(FixedString loc) { 
+    _logonMachine.setLocation(loc); 
+}
 
 }

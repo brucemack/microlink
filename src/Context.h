@@ -26,6 +26,7 @@
 #include "HostName.h"
 #include "TCPChannel.h"
 #include "IPAddress.h"
+#include "StateMachine.h"
 
 namespace kc1fsz {
 
@@ -39,11 +40,22 @@ namespace kc1fsz {
 class Context {
 public:
 
+    Context();
+    virtual ~Context();
+
+    /**
+     * This should be called periodically to allow the Context
+     * to push events back into the state machine (i.e. as
+     * asynchronous events happen).
+    */
+    virtual void applyEvents(StateMachine<Context>* machine) = 0;
+
     virtual uint32_t getTimeMs() { return 0; }
 
     virtual TCPChannel createTCPChannel() { return TCPChannel(); }
     virtual void closeTCPChannel(TCPChannel c) { }
-    virtual void startTCPConnect(TCPChannel c, IPAddress ipAddr) { }
+    virtual void connectTCPChannel(TCPChannel c, IPAddress ipAddr) { }
+    virtual void sendTCPChannel(TCPChannel c, const uint8_t* b, uint16_t len) { }
 
     virtual void startDNSLookup(HostName hostName) { }
 };

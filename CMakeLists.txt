@@ -37,6 +37,15 @@ message("Desktop build!")
 add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
 endif()
 
+# ------ server-test-1 -------------------------------------------------------
+
+add_executable(server-test-1
+  tests/server-test-1.cpp
+  src/common.cpp
+)
+
+target_include_directories(server-test-1 PRIVATE src)
+
 # ------ packet-test-1 -------------------------------------------------------
 
 add_executable(packet-test-1
@@ -66,7 +75,9 @@ target_include_directories(common-test-1 PRIVATE src)
 
 add_executable(machine-test-1
   tests/machine-test-1.cpp
+  tests/TestContext.cpp
   src/common.cpp
+  src/Context.cpp
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/LookupMachine.cpp

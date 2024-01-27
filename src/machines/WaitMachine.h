@@ -7,7 +7,7 @@
 
 namespace kc1fsz {
 
-class WaitMachine : public StateMachine<Event, Context> {
+class WaitMachine : public StateMachine<Context> {
 public:
 
     virtual void processEvent(const Event* ev, Context* ctx);

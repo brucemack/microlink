@@ -8,7 +8,7 @@
 
 namespace kc1fsz {
 
-class QSOFlowMachine : public StateMachine<Event, Context> {
+class QSOFlowMachine : public StateMachine<Context> {
 public:
 
     virtual void processEvent(const Event* ev, Context* context);

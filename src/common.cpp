@@ -19,7 +19,13 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include <sys/time.h>
+#include <cctype>
+#include <algorithm> 
+#include <locale>
+#include <iostream>
+#include <algorithm>
 #include <cstring>
+
 #include "common.h"
 
 using namespace std;
@@ -28,6 +34,32 @@ namespace kc1fsz {
 
 // Per Jonathan K1RFD: Make sure this starts with a number and ends with Z.
 const char* VERSION_ID = "0.02MLZ";
+
+void strcpyLimited(char* target, const char* source, uint32_t limit) {
+    uint32_t len = std::min(limit - 1, (uint32_t)std::strlen(source));
+    memcpy(target, source, len);
+    target[len] = 0;
+}
+
+void memcpyLimited(uint8_t* target, const uint8_t* source, 
+    uint32_t sourceLen, uint32_t targetLimit) {
+    uint32_t len = std::min(targetLimit, sourceLen);
+    memcpy(target, source, len);
+}
+
+// trim from start (in place)
+void ltrim(std::string &s) {
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }));
+}
+
+// trim from end (in place)
+void rtrim(std::string &s) {
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
 
 uint32_t time_ms() {
     struct timeval tp;
@@ -368,7 +400,7 @@ void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out,
         if (color) {   
             out << "\u001b[0m";
         }
-        out << endl;
+        out << std::endl;
     }
 }
 

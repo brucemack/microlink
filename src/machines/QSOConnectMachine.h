@@ -9,7 +9,7 @@
 
 namespace kc1fsz {
 
-class QSOConnectMachine : public StateMachine<Event, Context> {
+class QSOConnectMachine : public StateMachine<Context> {
 public:
 
     virtual void processEvent(const Event* ev, Context* context);
