@@ -48,7 +48,7 @@ public:
      * to push events back into the state machine (i.e. as
      * asynchronous events happen).
     */
-    virtual void applyEvents(StateMachine<Context>* machine) = 0;
+    virtual void applyEvents(StateMachine<Context>* machine) { }
 
     virtual uint32_t getTimeMs() { return 0; }
 

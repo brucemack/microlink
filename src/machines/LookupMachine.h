@@ -23,17 +23,27 @@ public:
     virtual bool isDone() const;
     virtual bool isGood() const;
 
-    void setServerName(HostName h);
-    void setTargetCallSign(CallSign cs);
-    IPAddress getTargetAddress() const;
+    void setServerName(HostName hn) { _serverHostName = hn; }
+    void setTargetCallSign(CallSign cs) { _targetCallSign = cs; }
+    IPAddress getTargetAddress() const { return _targetAddr; }
 
 private:
 
-    enum State { IDLE, DNS_WAIT, CONNECT_WAIT, DISCONNECT_WAIT, FAILED, SUCCEEDED } _state;
+    enum State { IDLE, DNS_WAIT, CONNECTING, WAITING_FOR_DISCONNECT, 
+        FAILED, SUCCEEDED } _state;
 
     HostName _serverHostName;
     CallSign _targetCallSign;
-    IPAddress _targetAddress;
+    IPAddress _targetAddr;
+    bool _foundTarget;
+
+    TCPChannel _channel;
+
+    bool _headerSeen;
+    // A place to accumulate characters while trying to 
+    // build a complete directory entry.
+    uint8_t _saveArea[64];
+    uint32_t _saveAreaPtr;
 };
 
 }

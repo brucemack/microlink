@@ -29,6 +29,8 @@ namespace kc1fsz {
 
 extern const char* VERSION_ID;
 
+uint32_t parseIP4Address(const char* dottedAddr);
+
 /**
  * @returns The current time in milliseconds-since-epoch
 */

@@ -1,7 +1,7 @@
 #ifndef _HostName_h
 #define _HostName_h
 
-//#include "common.h"
+#include "common.h"
 
 namespace kc1fsz {
 
@@ -17,7 +17,7 @@ public:
     }
 
     void setName(const char* n) {
-        //strcpyLimited(_name, n, 32);
+        strcpyLimited(_name, n, 32);
     }
 
     const char* c_str() const {

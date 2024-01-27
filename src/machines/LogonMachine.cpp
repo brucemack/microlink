@@ -99,7 +99,7 @@ void LogonMachine::processEvent(const Event* ev, Context* ctx) {
         }
         // If we get a disconnect then move forward
         else if (ev->getType() == TCPDisconnectEvent::TYPE) {
-            const TCPConnectEvent* evt = (TCPConnectEvent*)ev;
+            const TCPDisconnectEvent* evt = (TCPDisconnectEvent*)ev;
             if (evt->getChannel() == _channel) {
                 // Parse the response to make sure we got what we expected
                 if (_logonRespPtr >= 1 && _logonResp[0] == 'O' && _logonResp[1] == 'K') {

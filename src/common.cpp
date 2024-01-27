@@ -35,6 +35,34 @@ namespace kc1fsz {
 // Per Jonathan K1RFD: Make sure this starts with a number and ends with Z.
 const char* VERSION_ID = "0.02MLZ";
 
+uint32_t parseIP4Address(const char* dottedAddr) {
+    uint32_t result = 0;
+    char acc[8];
+    uint32_t accLen = 0;
+    const char *p = dottedAddr;
+    uint32_t octets = 4;
+    while (true) {
+        if (*p == '.' || *p == 0) {
+            acc[accLen] = 0;
+            // Shift up
+            result <<= 8;
+            // Accumulate LSB
+            result |= (uint8_t)atoi(acc);
+            accLen = 0;
+            // Count octets
+            octets++;
+            if (octets == 4 || *p == 0) {
+                break;
+            }
+        }
+        else {
+            acc[accLen++] = *p;
+        }
+        p++;
+    }
+    return result;
+}
+
 void strcpyLimited(char* target, const char* source, uint32_t limit) {
     uint32_t len = std::min(limit - 1, (uint32_t)std::strlen(source));
     memcpy(target, source, len);

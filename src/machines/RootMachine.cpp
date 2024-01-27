@@ -55,7 +55,7 @@ void RootMachine::processEvent(const Event* ev, Context* ctx) {
     // In this state we are waiting for the EL Server to lookup the 
     // target callsign.
     else if (_state == LOOKUP) {
-        if (isDoneAfterEvent(_logonMachine, ev, ctx)) {
+        if (isDoneAfterEvent(_lookupMachine, ev, ctx)) {
             if (_lookupMachine.isGood()) {
                 // Transfer the target address that we got from the EL Server
                 // into the connect machine.
