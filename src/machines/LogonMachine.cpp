@@ -55,15 +55,24 @@ void LogonMachine::processEvent(const Event* ev, Context* ctx) {
     }
 }
 
-void LogonMachine::setServerName(HostName h) {
-    _hostName = h;
-}
 bool LogonMachine::isDone() const {
     return _state == FAILED || _state == SUCCEEDED;
 }
 
 bool LogonMachine::isGood() const {
     return _state == SUCCEEDED;
+}
+
+void LogonMachine::setServerName(HostName h) {
+    _hostName = h;
+}
+
+void LogonMachine::setCallSign(CallSign cs) {
+    _callSign = cs;
+}
+
+void LogonMachine::setPassword(String pw) {
+    _password = pw;
 }
 
 }

@@ -55,6 +55,8 @@ private:
     enum State { IDLE, DNS_WAIT, CONNECTING, FAILED, SUCCEEDED } _state;
 
     HostName _hostName;
+    CallSign _callSign;
+    String _password;
     TCPChannel _channel;
 };
 

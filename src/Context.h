@@ -39,13 +39,13 @@ namespace kc1fsz {
 class Context {
 public:
 
-    uint32_t getTimeMs();
+    virtual uint32_t getTimeMs() { return 0; }
 
-    virtual TCPChannel createTCPChannel();
-    void closeTCPChannel(TCPChannel c);
-    void startTCPConnect(TCPChannel c, IPAddress ipAddr);
+    virtual TCPChannel createTCPChannel() { return TCPChannel(); }
+    virtual void closeTCPChannel(TCPChannel c) { }
+    virtual void startTCPConnect(TCPChannel c, IPAddress ipAddr) { }
 
-    void startDNSLookup(HostName hostName);
+    virtual void startDNSLookup(HostName hostName) { }
 };
 
 }

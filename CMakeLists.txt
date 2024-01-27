@@ -70,6 +70,9 @@ add_executable(machine-test-1
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/LookupMachine.cpp
+  src/machines/QSOConnectMachine.cpp
+  src/machines/QSOFlowMachine.cpp
+  src/machines/WaitMachine.cpp
 )
 
 target_include_directories(machine-test-1 PRIVATE src)

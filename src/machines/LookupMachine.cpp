@@ -33,7 +33,8 @@ bool LookupMachine::isDone() const {
 }
 
 bool LookupMachine::isGood() const {
-    return _state == SUCCEEDED;
+    return 
+    _state == SUCCEEDED;
 }
 
 void LookupMachine::setServerName(HostName h) {

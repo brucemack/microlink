@@ -20,9 +20,9 @@ public:
 private:
 
     enum State { IDLE, OPEN } _state;
+    uint32_t _targetTime;
 };
 
 }
 
 #endif
-

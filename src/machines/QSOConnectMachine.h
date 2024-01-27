@@ -26,6 +26,11 @@ public:
 private:
 
     enum State { IDLE, OPEN } _state;
+
+    CallSign _callSign;
+    IPAddress _targetAddr;
+    UDPChannel _rtpChannel;
+    UDPChannel _rtcpChannel;
 };
 
 }

@@ -23,6 +23,10 @@ public:
 private:
 
     enum State { IDLE, OPEN } _state;
+
+    CallSign _callSign;
+    UDPChannel _rtpChannel;
+    UDPChannel _rtcpChannel;
 };
 
 }
