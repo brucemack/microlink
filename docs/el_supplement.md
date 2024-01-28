@@ -60,7 +60,7 @@ UDP ports in order for routers/firewalls to forward return traffic from Station 
 7. Station B uses the call-sign provided in the RTCP SDES message sent in step 4 to contact
 the EchoLink Server and validate that the Station A user is authorized to use the network. (I'm told that Station B also 
 maintains a cache of recently-validated stations to reduce the number of validation calls.  Presumably there is a reasonable
-time-to-live on this caching mechanism to that invalid callsigns will not be allowed to stay on the network for long.)
+time-to-live on this caching mechanism so that invalid callsigns will not be allowed to stay on the network for long.)
 8. Station B sends an RTCP SDES packet on the RTCP channel.
 9. Station B sends an oNDATA packet on the RTP channel.
 10. Station A sends the same RTCP SDES packet from step #3/#4.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.  This would be highly relevant for stateful routers/NATs/firewalls in order 
@@ -195,26 +195,33 @@ There is nothing unique about the end of the entire response.
 ### Single Callsign Authentication Request Message Format
 
 This request provides an efficient way for a node to check the status of an individual 
-callsign **without requesting the entire directory.**  This would be used for link/conference
+callsign **without requesting the entire directory.**  This would be used for repeater/link/conference
 nodes in order to validate a QSO request from a new peer.  Stations should use this to 
 reduce the load on the EchoLink Server.
 
 The format of the request is as follows:
 
-* One byte: v
+* One byte: 0x76 (v)
 * N bytes: The callsign
 * One byte: 0x0d (\n) delimiter
-* N bytes: The IP address of the inbound request
+* N bytes: The IP address of the inbound request being validated
 * One byte: 0x0d (\n) delimiter
 
 There are no other headers or delimiters.  The client sends this message and waits.
+
+Here's an example of a request:
+
+![](packet-6.png)
+
+* There are some TCP header bytes at the start of this illustration that are not relevant.
+* The red mark indicates the beginning of the request.
 
 ### Single Call Authentication Response Message Format
 
 The server response is very simple.  Either:
 
-* A one byte 0x30 ("0") indicating that the callsign is not authorized.
-* A one byte 0x31 ("1") indicating that the callsign is not authorized.
+* A one byte 0x31 (1) indicating that the callsign is authorized.
+* A one byte 0x30 (0) indicating that the callsign is not authorized.
 
 There are no other headers or delimiters.  The server disconnects immediately after sending this response.
 
