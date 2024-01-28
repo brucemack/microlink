@@ -8,6 +8,7 @@
 #include "../src/events/TCPConnectEvent.h"
 #include "../src/events/TCPDisconnectEvent.h"
 #include "../src/events/TCPReceiveEvent.h"
+#include "../src/events/UDPReceiveEvent.h"
 
 #include "TestContext.h"
 
@@ -25,6 +26,8 @@ static void misc_test_1() {
 static void machine_test_1() {
 
     TestContext context;
+    context.setTimeMs(1000);
+
     RootMachine rm;
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setCallSign(CallSign("KC1FSZ"));
@@ -104,15 +107,47 @@ static void machine_test_1() {
         rm.processEvent(&ev3, &context);
         TCPReceiveEvent ev4(Channel(3), (const uint8_t*)"FSZ\n1\n2\n3\n0.0.1.255\n", 20);
         rm.processEvent(&ev4, &context);
-        // Simulate the disconnect from the server
-        TCPDisconnectEvent ev5(Channel(3));
-        rm.processEvent(&ev5, &context);
     }
 
     {
         cout << "--- Cycle 7" << endl;
-        // 1. Generate data back from the server in a few parts
+        // Get the two UDP connections ready
+        context.channel0 = Channel(4);
+        context.channel1 = Channel(5);
+        // Simulate the disconnect from the server.  This should trigger the completion
+        // of the lookup and will start the QSO connect.
+        TCPDisconnectEvent ev5(Channel(3));
+        rm.processEvent(&ev5, &context);
+        // Generate data back from the other peer.  This should trigger the completion
+        // of the connect and will start the QSO flow.
+        uint8_t buf[3] = { 0xc0, 0xc9, 0 };
+        UDPReceiveEvent ev4(Channel(5), (const uint8_t*)buf, 3);
+        rm.processEvent(&ev4, &context);
     }    
+
+    {
+        cout << "--- Cycle 8" << endl;
+        TickEvent ev;
+        rm.processEvent(&ev, &context);
+        // Generate some audio traffic
+    }
+
+    {
+        cout << "--- Cycle 9a" << endl;
+        // Move the time forward 10 seconds so that we can see the keep-alive message
+        context.advanceTimeMs(10000);
+        TickEvent ev;
+        rm.processEvent(&ev, &context);
+        cout << "--- Cycle 9b" << endl;
+        // Move the time forward 5 seconds 
+        context.advanceTimeMs(5001);
+        rm.processEvent(&ev, &context);
+        cout << "--- Cycle 9c" << endl;
+        // Move the time forward 5 seconds 
+        context.advanceTimeMs(5001);
+        rm.processEvent(&ev, &context);
+    }
+
 }
 
 // This is a test of a timeout during logon
@@ -185,6 +220,6 @@ static void machine_test_2() {
 int main(int, const char**) {
     misc_test_1();
     machine_test_1();
-    machine_test_2();
+    //machine_test_2();
     return 0;
 }

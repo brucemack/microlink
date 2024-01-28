@@ -18,14 +18,82 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include "../common.h"
+#include "../events/UDPReceiveEvent.h"
+
+#include "QSOConnectMachine.h"
 #include "QSOFlowMachine.h"
+
+using namespace std;
 
 namespace kc1fsz {
 
-void QSOFlowMachine::processEvent(const Event* ev, Context* context) {
-}
+// TODO: CONSOLIDATE
+static const uint32_t RTP_PORT = 5198;
+static const uint32_t RTCP_PORT = 5199;
 
 void QSOFlowMachine::start(Context* ctx) {
+    _lastKeepAliveMs = 0;
+    _state = OPEN;
+}
+
+void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
+    // In this state we are waiting for the reciprocal RTCP message
+    if (_state == OPEN) {
+        if (ev->getType() == UDPReceiveEvent::TYPE) {
+
+            const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
+
+            if (evt->getChannel() == _rtcpChannel) {
+                
+                cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
+                prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+
+                if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
+                }
+
+            }
+            else if (evt->getChannel() == _rtpChannel) {
+
+                cout << "QSOConnectMachine: GOT RTP DATA" << endl;
+                prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+
+                if (isRTPPacket(evt->getData(), evt->getDataLen())) {
+                } 
+                else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
+                }
+            }
+        }
+
+        // Always check to make sure it's not time for keep-alive
+        if (ctx->getTimeMs() > _lastKeepAliveMs + 10000) {
+
+            _lastKeepAliveMs = ctx->getTimeMs();
+
+            const uint16_t packetSize = 128;
+            uint8_t packet[packetSize];
+            // Make the SDES message and send
+            uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
+            ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+
+            // Make the initial oNDATA message for the RTP port
+            const uint16_t bufferSize = 64;
+            char buffer[bufferSize];
+            buffer[0] = 0;
+            strcatLimited(buffer, "oNDATA\r", bufferSize);
+            strcatLimited(buffer, _callSign.c_str(), bufferSize);
+            strcatLimited(buffer, "\r", bufferSize);
+            strcatLimited(buffer, "MicroLink V ", bufferSize);
+            strcatLimited(buffer, VERSION_ID, bufferSize);
+            strcatLimited(buffer, "\r", bufferSize);
+            strcatLimited(buffer, _fullName.c_str(), bufferSize);
+            strcatLimited(buffer, "\r", bufferSize);
+            strcatLimited(buffer, _location.c_str(), bufferSize);
+            strcatLimited(buffer, "\r", bufferSize);
+            packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
+            ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
+        }
+    }
 }
 
 bool QSOFlowMachine::isDone() const {
@@ -34,18 +102,6 @@ bool QSOFlowMachine::isDone() const {
 
 bool QSOFlowMachine::isGood() const {
     return false;
-}
-
-void QSOFlowMachine::setCallSign(CallSign cs) {
-    _callSign = cs;
-}
-
-void QSOFlowMachine::setRTCPChannel(Channel c) {
-    _rtcpChannel = c;
-}
-
-void QSOFlowMachine::setRTPChannel(Channel c) {
-        _rtcpChannel = c;
 }
 
 }

@@ -62,6 +62,8 @@ void rtrim(std::string &s);
 
 bool isOnDataPacket(const uint8_t* d, uint32_t len);
 
+bool isRTCPPacket(const uint8_t* d, uint32_t len);
+
 bool isRTPPacket(const uint8_t* d, uint32_t len);
 
 void parseRTPPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,

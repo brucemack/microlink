@@ -26,6 +26,7 @@
 #include "../StateMachine.h"
 #include "../IPAddress.h"
 #include "../CallSign.h"
+#include "../FixedString.h"
 #include "../Channel.h"
 
 namespace kc1fsz {
@@ -38,17 +39,26 @@ public:
     virtual bool isDone() const;
     virtual bool isGood() const;
 
-    void setCallSign(CallSign cs);
-    void setRTCPChannel(Channel c);
-    void setRTPChannel(Channel c);
+    void setCallSign(CallSign cs) { _callSign = cs; }
+    void setFullName(FixedString fn) { _fullName = fn; }
+    void setLocation(FixedString l) { _location = l; }
+    void setTargetAddress(IPAddress addr) { _targetAddr = addr; }
+    void setRTCPChannel(Channel c) { _rtcpChannel = c; }
+    void setRTPChannel(Channel c)  { _rtpChannel = c; }
+    void setSSRC(uint32_t s) { _ssrc = s; }
 
 private:
 
     enum State { IDLE, OPEN } _state;
 
     CallSign _callSign;
+    FixedString _fullName;
+    FixedString _location;
+    IPAddress _targetAddr;
     Channel _rtpChannel;
     Channel _rtcpChannel;
+    uint32_t _ssrc;
+    uint32_t _lastKeepAliveMs;
 };
 
 }

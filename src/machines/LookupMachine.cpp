@@ -46,12 +46,8 @@ void LookupMachine::start(Context* ctx) {
 }
 
 void LookupMachine::processEvent(const Event* ev, Context* ctx) {
-
-    // In this state we are doing nothing waiting to be started
-    if (_state == IDLE) {
-    }
     // In this state we are waiting for the DNS resolution to complete
-    else if (_state == DNS_WAIT) {
+    if (_state == DNS_WAIT) {
         // Look for good completion
         if (ev->getType() == DNSLookupEvent::TYPE) {
             const DNSLookupEvent* evt = (DNSLookupEvent*)ev;
@@ -66,6 +62,7 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
             _state = FAILED;
         }
     }
+    // In this state we are waiting to connect to the EL Server
     else if (_state == CONNECTING) {
         if (ev->getType() == TCPConnectEvent::TYPE) {
             const TCPConnectEvent* evt = (TCPConnectEvent*)ev;
@@ -85,11 +82,11 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
             _state = FAILED;
         }
     }
+    // In this state we are waiting for the EL Server to drop
     else if (_state == WAITING_FOR_DISCONNECT) {
 
         // If we get data then accept it
         if (ev->getType() == TCPReceiveEvent::TYPE) {
-
             const TCPReceiveEvent* evt = (TCPReceiveEvent*)ev;
 
             if (!_foundTarget) {
@@ -149,6 +146,7 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
                                 if (_targetCallSign == possibleCallSign) {
                                     _foundTarget = true;
                                     _targetAddr = parseIP4Address(possibleIpAddr);
+                                    // TODO: CONSIDER INITIATING A DISCONNECT
                                 }
                             }
                         }
@@ -210,8 +208,7 @@ bool LookupMachine::isDone() const {
 }
 
 bool LookupMachine::isGood() const {
-    return 
-    _state == SUCCEEDED;
+    return _state == SUCCEEDED;
 }
 
 }

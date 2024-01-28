@@ -16,7 +16,7 @@ namespace kc1fsz {
 class UDPReceiveEvent : public Event {
 public:
 
-    static const int TYPE = 103;
+    static const int TYPE = 105;
 
     UDPReceiveEvent(Channel c, const uint8_t* data, uint32_t len) 
         : Event(TYPE), _channel(c) {

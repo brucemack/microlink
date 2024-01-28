@@ -54,9 +54,9 @@ public:
     void setLocation(FixedString l) { _location = l; }
     void setTargetAddress(IPAddress addr) { _targetAddr = addr; }
 
-    Channel getRTCPChannel() const;
-    Channel getRTPChannel() const;
-    uint32_t getSSCR() const;
+    Channel getRTCPChannel() const { return _rtcpChannel; }
+    Channel getRTPChannel() const  { return _rtpChannel; }
+    uint32_t getSSRC() const { return _ssrc; }
 
 private:
 

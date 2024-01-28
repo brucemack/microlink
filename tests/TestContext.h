@@ -12,6 +12,8 @@ public:
 
     void setTimeMs(uint32_t ms) { _timeMs = ms; }
 
+    void advanceTimeMs(uint32_t ms) { _timeMs += ms; }
+
     Channel createTCPChannel();
 
     void connectTCPChannel(Channel c, IPAddress ipAddr);

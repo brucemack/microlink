@@ -57,10 +57,10 @@ void RootMachine::processEvent(const Event* ev, Context* ctx) {
     else if (_state == LOOKUP) {
         if (isDoneAfterEvent(_lookupMachine, ev, ctx)) {
             if (_lookupMachine.isGood()) {
-                cout << "Look lookup" << endl;
                 // Transfer the target address that we got from the EL Server
-                // into the connect machine.
+                // into the connect machine and the QSO machine.
                 _connectMachine.setTargetAddress(_lookupMachine.getTargetAddress());
+                _qsoMachine.setTargetAddress(_lookupMachine.getTargetAddress());
                 _connectMachine.start(ctx);
                 _state = CONNECT; 
                 // Number of connect tries
@@ -79,6 +79,8 @@ void RootMachine::processEvent(const Event* ev, Context* ctx) {
                 // so transfer them over to the QSO machine.
                 _qsoMachine.setRTCPChannel(_connectMachine.getRTCPChannel());
                 _qsoMachine.setRTPChannel(_connectMachine.getRTPChannel());
+                _qsoMachine.setSSRC(_connectMachine.getSSRC());
+                _qsoMachine.start(ctx);
                 _state = QSO;
             } 
             // If the connection fails then retry it a few times
@@ -138,11 +140,13 @@ void RootMachine::setPassword(FixedString s) {
 
 void RootMachine::setFullName(FixedString n) {
     _connectMachine.setFullName(n);
+    _qsoMachine.setFullName(n);
 }
 
 void RootMachine::setLocation(FixedString loc) { 
     _logonMachine.setLocation(loc); 
     _connectMachine.setLocation(loc);
+    _qsoMachine.setLocation(loc);
 }
 
 }

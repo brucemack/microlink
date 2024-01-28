@@ -143,6 +143,11 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
     return 144;
 }
 
+// TODO ADD MORE TO THIS
+bool isRTCPPacket(const uint8_t* d, uint32_t len) {
+    return (len > 2 && d[0] == 0xc0 && d[1] == 0xc9);
+}
+
 /**
  * The EL RTP implementation uses 144-byte packets.
  */
