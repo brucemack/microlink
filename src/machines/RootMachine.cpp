@@ -57,6 +57,7 @@ void RootMachine::processEvent(const Event* ev, Context* ctx) {
     else if (_state == LOOKUP) {
         if (isDoneAfterEvent(_lookupMachine, ev, ctx)) {
             if (_lookupMachine.isGood()) {
+                cout << "Look lookup" << endl;
                 // Transfer the target address that we got from the EL Server
                 // into the connect machine.
                 _connectMachine.setTargetAddress(_lookupMachine.getTargetAddress());
@@ -135,8 +136,13 @@ void RootMachine::setPassword(FixedString s) {
     _logonMachine.setPassword(s);
 }
 
+void RootMachine::setFullName(FixedString n) {
+    _connectMachine.setFullName(n);
+}
+
 void RootMachine::setLocation(FixedString loc) { 
     _logonMachine.setLocation(loc); 
+    _connectMachine.setLocation(loc);
 }
 
 }

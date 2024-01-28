@@ -1,6 +1,7 @@
 #ifndef _FixedString_h
 #define _FixedString_h
 
+#include <cstring>
 #include "common.h"
 
 namespace kc1fsz {

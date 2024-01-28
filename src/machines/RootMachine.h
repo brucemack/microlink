@@ -47,6 +47,7 @@ public:
     void setCallSign(CallSign cs);
     void setPassword(FixedString s);
     void setTargetCallSign(CallSign target);
+    void setFullName(FixedString n);
     void setLocation(FixedString loc);
 
 private:

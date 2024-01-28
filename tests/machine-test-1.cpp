@@ -44,10 +44,10 @@ static void machine_test_1() {
         // 1. Generate the completion of the DNS 
         // 2. See the TCP open
         // 3. See the TCP connect
-        context.channel = TCPChannel(2);
+        context.tcpChannel = TCPChannel(2);
         DNSLookupEvent ev(IPAddress(8));
         rm.processEvent(&ev, &context);
-        assert(context.channel.getId() == 2);
+        assert(context.tcpChannel.getId() == 2);
         assert(context.ipAddr.getAddr() == 8);
     }
 
@@ -78,10 +78,10 @@ static void machine_test_1() {
     {
         cout << "--- Cycle 4" << endl;
         // 1. Generate DNS response
-        context.channel = TCPChannel(3);
+        context.tcpChannel = TCPChannel(3);
         DNSLookupEvent ev(IPAddress(8));
         rm.processEvent(&ev, &context);
-        assert(context.channel.getId() == 3);
+        assert(context.tcpChannel.getId() == 3);
         assert(context.ipAddr.getAddr() == 8);
     }
 
@@ -104,8 +104,14 @@ static void machine_test_1() {
         rm.processEvent(&ev3, &context);
         TCPReceiveEvent ev4(TCPChannel(3), (const uint8_t*)"FSZ\n1\n2\n3\n0.0.1.255\n", 20);
         rm.processEvent(&ev4, &context);
+        TCPDisconnectEvent ev5(TCPChannel(3));
+        rm.processEvent(&ev5, &context);
     }
-    
+
+    {
+        cout << "--- Cycle 7" << endl;
+        // 1. Generate data back from the server in a few parts
+    }    
 }
 
 // This is a test of a timeout during logon
@@ -133,10 +139,10 @@ static void machine_test_2() {
         // 1. Generate the completion of the DNS 
         // 2. See the TCP open
         // 3. See the TCP connect
-        context.channel = TCPChannel(2);
+        context.tcpChannel = TCPChannel(2);
         DNSLookupEvent ev(IPAddress(8));
         rm.processEvent(&ev, &context);
-        assert(context.channel.getId() == 2);
+        assert(context.tcpChannel.getId() == 2);
         assert(context.ipAddr.getAddr() == 8);
     }
 

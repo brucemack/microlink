@@ -25,9 +25,6 @@
 #include <string>
 #include <iostream>
 
-#include "CallSign.h"
-#include "FixedString.h"
-
 namespace kc1fsz {
 
 extern const char* VERSION_ID;
@@ -42,8 +39,17 @@ uint32_t time_ms();
 /**
  * @param targetLimit The actual size of the target buffer.  This 
  * function will automatically save a space for the null.
-*/
+ */
 void strcpyLimited(char* target, const char* source, uint32_t targetLimit);
+
+/**
+ * Appends the characters in the source string to the target string, being
+ * careful not to overrun.
+ * 
+ * @param targetLimit The actual size of the target buffer.  This 
+ * function will automatically save a space for the null.
+ */
+void strcatLimited(char* target, const char* source, uint32_t targetLimit);
 
 void memcpyLimited(uint8_t* target, const uint8_t* source, 
     uint32_t sourceLen, uint32_t targetLimit);
@@ -63,21 +69,14 @@ void parseRTPPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
 
 void writeInt32(uint8_t* buf, uint32_t d);
 
-uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
-    uint8_t* packet, uint32_t packetSize);
-
-uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
-    CallSign callSign, 
-    FixedString fullName,
-    uint32_t ssrc2,
-    uint8_t* packet, uint32_t packetSize);
-
 uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
 
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
     const uint8_t gsmFrames[4][33],
     uint8_t* packet, uint32_t packetSize);
+
+uint32_t addRTCPPad(uint32_t unpaddedLength, uint8_t* p, uint32_t packetSize);
 
 /**
  * Produces a pretty hex-dump to aid in debugging.

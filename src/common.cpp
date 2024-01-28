@@ -64,9 +64,18 @@ uint32_t parseIP4Address(const char* dottedAddr) {
 }
 
 void strcpyLimited(char* target, const char* source, uint32_t limit) {
-    uint32_t len = std::min(limit - 1, (uint32_t)std::strlen(source));
-    memcpy(target, source, len);
-    target[len] = 0;
+    if (limit > 1) {
+        uint32_t len = std::min(limit - 1, (uint32_t)std::strlen(source));
+        memcpy(target, source, len);
+        target[len] = 0;
+    }
+}
+
+void strcatLimited(char* target, const char* source, uint32_t targetLimit) {
+    uint32_t existingLen = std::min((uint32_t)std::strlen(target), targetLimit);
+    if (existingLen < targetLimit) {
+        strcpyLimited(target + existingLen, source, targetLimit - existingLen);
+    }
 }
 
 void memcpyLimited(uint8_t* target, const uint8_t* source, 
@@ -155,27 +164,7 @@ bool isOnDataPacket(const uint8_t* d, uint32_t len) {
     return (len > 6 && memcmp(d, "oNDATA", 6) == 0);
 }
 
-/**
- * Writes a data packet.
- */
-uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
-    uint8_t* packet, uint32_t packetSize) {
-    // Data + 0 +  32-bit ssrc
-    uint32_t len = strlen(msg) + 1 + 4;
-    if (len > packetSize) {
-        throw std::invalid_argument("Insufficient space");
-    }
-    uint32_t ptr = 0;
-    memcpy(packet + ptr,(const uint8_t*) msg, strlen(msg));
-    ptr += strlen(msg);
-    packet[ptr] = 0;
-    ptr++;
-    writeInt32(packet + ptr, ssrc);
-
-    return len;
-}
-
-static uint32_t addPad(uint32_t unpaddedLength,
+uint32_t addRTCPPad(uint32_t unpaddedLength,
     uint8_t* p, uint32_t packetSize) {
 
     // Yes, this is strange that we're padding in the case
@@ -200,133 +189,6 @@ static uint32_t addPad(uint32_t unpaddedLength,
     return padSize;
 }
 
-uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
-    const char* callSign, 
-    const char* fullName,
-    uint32_t ssrc2,
-    uint8_t* p, uint32_t packetSize) {
-
-    // These are the only variable length fields
-    uint32_t callSignLen = strlen(callSign);
-    uint32_t fullNameLen = strlen(fullName);
-    uint32_t spacesLen = 9;
-
-    // Do the length calculation to make sure we have the 
-    // space we need.
-    //
-    // RTCP header = 8
-    // BYE = 4
-    // SSRC = 4
-    uint32_t unpaddedLength = 8 + 4 + 4;
-    // Token 1 = 2 + Len("CALLSIGN") = 10
-    unpaddedLength += 10;
-    // Token 2 = 2 + Len(callSign) + spaces + Len(fullName)
-    unpaddedLength += 2 + callSignLen + spacesLen + fullNameLen;
-    // Token 3 = 2 + Len("CALLSIGN") = 10
-    unpaddedLength += 2 + 8;
-    // Token 4 = 2 + 8
-    unpaddedLength += 2 + 8;
-    // Token 6 = 2 + Len(VERSION_ID) 
-    unpaddedLength += 2 + strlen(VERSION_ID);
-    // Token 8 = 2 + 6
-    unpaddedLength += 2 + 6;
-    // Token 8 = 2 + 3
-    unpaddedLength += 2 + 3;
-    // Now we deal with the extra padding required by SDES to bring
-    // the packet up to a 4-byte boundary.
-    uint32_t sdesPadSize = 4 - (unpaddedLength % 4);
-    //if (sdesPadSize == 4) {
-    //    sdesPadSize = 0;
-    //}
-    unpaddedLength += sdesPadSize;
-    // Put in the pad now to make sure it fits
-    uint32_t padSize = addPad(unpaddedLength, p, packetSize);
-    // Calculate the special SDES length
-    uint32_t sdesLength = (unpaddedLength + padSize - 12) / 4;
-
-    // RTCP header
-    *(p++) = 0xc0;
-    *(p++) = 0xc9;
-    // Length
-    *(p++) = 0x00;
-    *(p++) = 0x01;
-    // SSRC
-    writeInt32(p, ssrc);
-    p += 4;
-
-    // Packet identifier
-    *(p++) = 0xe1;
-    *(p++) = 0xca;
-    // SDES length
-    *(p++) = (sdesLength >> 8) & 0xff;
-    *(p++) = (sdesLength     ) & 0xff;
-    // SSRC
-    writeInt32(p, ssrc);
-    p += 4;
-
-    // Token 1
-    *(p++) = 0x01;
-    *(p++) = 0x08;
-    memcpy(p, "CALLSIGN", 8);
-    p += 8;
-
-    // Token 2
-    *(p++) = 0x02;
-    *(p++) = (uint8_t)(callSignLen + spacesLen + fullNameLen);
-    memcpy(p, callSign, callSignLen);
-    p += callSignLen;
-    for (uint32_t i = 0; i < spacesLen; i++)
-        *(p++) = ' ';
-    memcpy(p, fullName, fullNameLen);
-    p += fullNameLen;
-
-    // Token 3
-    *(p++) = 0x03;
-    *(p++) = 0x08;
-    memcpy(p, "CALLSIGN", 8);
-    p += 8;
-
-    // Token 4
-    char buf[9];
-    sprintf(buf,"%08X", ssrc2);
-    *(p++) = 0x04;
-    *(p++) = 0x08;
-    memcpy(p, buf, 8);
-    p += 8;
-
-    // Token 6
-    *(p++) = 0x06;
-    *(p++) = 0x08;
-    //memcpy(p, "E2.3.122", 8);
-    memcpy(p, VERSION_ID, strlen(VERSION_ID));
-    p += strlen(VERSION_ID);
-
-    // Token 8a
-    *(p++) = 0x08;
-    *(p++) = 0x06;
-
-    *(p++) = 0x01;
-    *(p++) = 0x50;
-    *(p++) = 0x35;
-    *(p++) = 0x31;
-    *(p++) = 0x39;
-    *(p++) = 0x38;
-
-    // Token 8b
-    *(p++) = 0x08;
-    *(p++) = 0x03;
-
-    *(p++) = 0x01;
-    *(p++) = 0x44;
-    *(p++) = 0x30;
-
-    // SDES padding (as needed)
-    for (uint32_t i = 0; i < sdesPadSize; i++)
-        *(p++) = 0x00;
-
-    return unpaddedLength + padSize;
-}
-
 uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint8_t* p, uint32_t packetSize) {
 
@@ -341,7 +203,7 @@ uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint32_t unpaddedLength = 8 + 4 + 4 + 1 + 7;
 
     // Put in the pad now to make sure it fits
-    uint32_t padSize = addPad(unpaddedLength, p, packetSize);
+    uint32_t padSize = addRTCPPad(unpaddedLength, p, packetSize);
 
     // Now pack the data
 

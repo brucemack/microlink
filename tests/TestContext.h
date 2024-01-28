@@ -18,9 +18,16 @@ public:
 
     void sendTCPChannel(TCPChannel c, const uint8_t* b, uint16_t len);
 
+    UDPChannel createUDPChannel(uint32_t localPort);
+
+    void sendUDPChannel(UDPChannel c, IPAddress targetAddr, uint32_t targetPort, 
+        const uint8_t* b, uint16_t len);
+
     void startDNSLookup(HostName hostName);
 
-    TCPChannel channel;
+    TCPChannel tcpChannel;
+    UDPChannel udpChannel0;
+    UDPChannel udpChannel1;
     IPAddress ipAddr;
     HostName hostName;
     uint8_t data[256];

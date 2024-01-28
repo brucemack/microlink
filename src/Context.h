@@ -59,7 +59,8 @@ public:
     virtual void sendTCPChannel(TCPChannel c, const uint8_t* b, uint16_t len) { }
 
     virtual UDPChannel createUDPChannel(uint32_t localPort) { return UDPChannel(); }
-    virtual void sendUDPChannel(UDPChannel c, const uint8_t* b, uint16_t len) { }
+    virtual void sendUDPChannel(UDPChannel c, IPAddress targetAddr, uint32_t targetPort, 
+        const uint8_t* b, uint16_t len) { }
 
     virtual void startDNSLookup(HostName hostName) { }
 };

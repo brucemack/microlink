@@ -3,7 +3,6 @@
 
 #include <cstdint>
 
-#include "../common.h"
 #include "../Event.h"
 
 namespace kc1fsz {

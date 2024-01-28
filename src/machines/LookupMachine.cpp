@@ -148,7 +148,6 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
 
                                 if (_targetCallSign == possibleCallSign) {
                                     _foundTarget = true;
-                                    cout << possibleIpAddr << endl;
                                     _targetAddr = parseIP4Address(possibleIpAddr);
                                 }
                             }
@@ -185,8 +184,8 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
         else if (ev->getType() == TCPDisconnectEvent::TYPE) {
             const TCPConnectEvent* evt = (TCPConnectEvent*)ev;
             if (evt->getChannel() == _channel) {
-                // Parse the response to make sure we got what we expected
-                if (true) {
+                // TODO: Close channel
+                if (_foundTarget) {
                     _state = SUCCEEDED;
                 } else {
                     // TODO: MESSAGE
@@ -198,6 +197,8 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
             }
         }
         else if (_isTimedOut(ctx)) {
+                // TODO: Close channel
+
             // TODO: NEED MESSAGE
             _state = FAILED;
         }
