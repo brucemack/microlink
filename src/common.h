@@ -25,6 +25,9 @@
 #include <string>
 #include <iostream>
 
+#include "CallSign.h"
+#include "FixedString.h"
+
 namespace kc1fsz {
 
 extern const char* VERSION_ID;
@@ -64,8 +67,8 @@ uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
 
 uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
-    const char* callSign, 
-    const char* fullName,
+    CallSign callSign, 
+    FixedString fullName,
     uint32_t ssrc2,
     uint8_t* packet, uint32_t packetSize);
 

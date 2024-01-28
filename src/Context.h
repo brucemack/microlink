@@ -25,6 +25,7 @@
 
 #include "HostName.h"
 #include "TCPChannel.h"
+#include "UDPChannel.h"
 #include "IPAddress.h"
 #include "StateMachine.h"
 
@@ -56,6 +57,9 @@ public:
     virtual void closeTCPChannel(TCPChannel c) { }
     virtual void connectTCPChannel(TCPChannel c, IPAddress ipAddr) { }
     virtual void sendTCPChannel(TCPChannel c, const uint8_t* b, uint16_t len) { }
+
+    virtual UDPChannel createUDPChannel(uint32_t localPort) { return UDPChannel(); }
+    virtual void sendUDPChannel(UDPChannel c, const uint8_t* b, uint16_t len) { }
 
     virtual void startDNSLookup(HostName hostName) { }
 };

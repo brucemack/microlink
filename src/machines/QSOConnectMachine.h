@@ -22,15 +22,19 @@ public:
 
     UDPChannel getRTCPChannel() const;
     UDPChannel getRTPChannel() const;
+    uint32_t getSSCR() const;
 
 private:
 
-    enum State { IDLE, OPEN } _state;
+    static uint32_t _ssrcCounter;
+
+    enum State { IDLE, CONNECTING, SUCCEEDED, FAILED } _state;
 
     CallSign _callSign;
     IPAddress _targetAddr;
     UDPChannel _rtpChannel;
     UDPChannel _rtcpChannel;
+    uint32_t _ssrc;
 };
 
 }
