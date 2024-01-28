@@ -10,7 +10,9 @@ worth - just one random ham's observations.  Do your own research.
 
 Notes like these may make it possible for others to start tinkering around in EchoLink space. If you do so, **please proceed
 with caution.** We all love EchoLink but none of us pay when we use it, so I can only assume that there are many volunteer hours 
-going on behind the scenes. The last thing anyone needs is an accidental denial-of-service incident on the EL network.
+going on behind the scenes. The last thing anyone needs is an accidental denial-of-service incident on the EL network. I
+would strongly encourage anyone attempting to implement their own EchoLink hardware/software to reach out to the 
+EchoLink team first to discuss your idea.
 
 If you have any questions/corrections/concerns on this 
 document please contact me directly (good in QRZ). Don't bother the real 
@@ -74,11 +76,15 @@ the latest oNDATA message on the bottom of the screen.
 
 ## EchoLink Server Protocol
 
+> [!IMPORTANT] 
+> The EchoLink Server is a shared resource maintained by 
+> a team of volunteers. Use it carefully.
+
 Things start off with an exchange with the EchoLink Server. The EL Server topology is described in detail in the 
 official EL documentation so we won't repeat this information unnecessarily. The important detail is that 
-there are ~4 active EL Servers that synchronize with each other. An EL node can interact with any one of them.
+there are ~4 active EL Servers that synchronize with each other. An EL node can interact with any one of the servers.  Known servers are naeast.echolink.org, nasouth.echolink.org, servers.echolink.org, backup.echolink.org.
 
-Nodes initiate the interaction by opening a TCP connection to the EL Server on port TCP 5200.  Data will flow in both 
+Nodes initiate the interaction by opening a TCP connection to the EL Server on TCP port 5200.  Data will flow in both 
 directions on this connection. The protocol used on this TCP connection appears to be ad-hoc and is entirely 
 unrelated to VoIP. The protocol is request/response and appears to be "disconnect delimited" - meaning that 
 the server sends a response to the client and then disconnects. This is similar to HTTP/1.0.
