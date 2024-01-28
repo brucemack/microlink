@@ -107,7 +107,7 @@ reliably.
 
 There appear to be two message formats supported by the EL network:
 * Old/insecure, wherein the password is transmitted to the server in plain text.
-* New/secure, where the server provides an RSA public key and the client encrypts is authentication request.  
+* New/secure, where the server provides an RSA public key and the client encrypts its authentication request.  
 
 Unfortunately, I have not been able to figure out the details of the "secure" exchange yet so all of my research 
 is based on the insecure method. (**I'd be very happy to get some information here since it would 
@@ -156,7 +156,7 @@ The directory request is very simple: connect and send a single "s" to the serve
 A large response will be returned from the server. The result is tokenized using 0x0a characters (\n).
 
 * The first token consists of three @ symbols.
-* The second token contains the total number of entires in the directory response.
+* The second token contains the total number of entries in the directory response.
 * Thereafter, a repeating series of tokens for each directory entry, discussed below.
 
 Here is an example of the start of the response:
@@ -180,7 +180,7 @@ Each entry is made up of these tokens, in order:
 * The IP address of the node in dotted format (xxx.xxx.xxx.xxx)
 
 There is no special delimiter between entries.  The next entry starts
-immediate after the final 0x0a of the previous entry.
+immediately after the final 0x0a of the previous entry.
 
 ![](dir-1.png)
 
@@ -303,7 +303,7 @@ However, it doesn't look like EchoLink is following this standard strictly.  It 
 pattern and things will work fine.
 
 Here are some notes about how each of these items is sent by the official EchoLink client.  From what I can tell, EL 
-is using the SDES item types its own way and the official RFC SDES definitions shown in teh RFC are not relevant.
+is using the SDES item type its own way and the official SDES definitions shown in the RFC document are not relevant.
 
 The items appear in this order:
 
@@ -336,7 +336,7 @@ Some notes:
 * There are some UDP header bytes at the start of this illustration that are not relevant.
 * The purple box contains the RTCP-SDES header.  You can think of this as a "sub-header" inside of the overall RTCP packet.
 * The red boxes show the SDES item type and length.
-* The blue bars represent 32-bit boundaries.  This helpful because it shows how the *last* item is being padded up to the next 
+* The blue bars represent 32-bit boundaries.  This is helpful because it shows how the *last* item is being padded up to the next 
 boundary (none of the other items do this).  The extra padding is shown in the green boxes.  The 32-bit boundaries don't 
 seem to matter otherwise.
 * The entire packet is padded with 4 bytes, with an 04 written in the very last position of the packet, per RTCP standard.
@@ -379,8 +379,8 @@ The official EchoLink client sends this RTCP packet when the user presses the di
 button to drop the connection.  
 
 A standard RTCP header is sent which matches the RTCP-RR format. It's a bit strange because the official RTCP document 
-suggest that the "packet type" (PT) field be set to 0xCB to indicate a BYE packet, but EchoLink doesn't seem to 
-work like that.  The EchoLink BYE packet has the usual 0xC9 value and the BYE is encoded in the body of the 
+suggests that the "packet type" (PT) field be set to 0xCB to indicate a BYE packet, but EchoLink doesn't seem to 
+work like that.  No worries - just follow the EchoLink standard.  The EchoLink BYE packet has the usual 0xC9 value and the BYE is encoded in the body of the 
 RTCP packet (immediately after the RTCP header).
 
 Following the RTCP header, these 4 bytes are sent:
@@ -428,7 +428,7 @@ contain the SSRC, encoded in a 32-bit integer with the most significant byte sen
 
 Each RTP packet is 144 bytes in length.
 
-Each RTP packet contains a 12-byte RTP header. The use of this header is very close to the "official" RTP specification. We number the bits from LSB [0] to MSB [7], which is different from some other standards documents.
+Each RTP packet contains a 12-byte RTP header. The use of this header is very close to the "official" RTP specification. We number the bits from LSB [0] to MSB [7], which is different from some other standard documents.
 
 * Byte 0 [7:6] - Version, which is always 3.
 * Byte 0 [5] - Padding, which is always set to 0.
