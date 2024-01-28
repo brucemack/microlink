@@ -57,14 +57,19 @@ UDP ports in order for routers/firewalls to forward return traffic from Station 
 4. Station A sends the same message again to the RTCP port of Station B using the socket that is bound to the RTCP port.
 5. Station A sends an oNDATA packet to the RTP port of Station B.
 6. Station A appears to wait at this point.  If nothing happens after 5 seconds then a retry happens by returning to step #3.
-7. (**Not completely sure on this**) Station B uses the call-sign provided in the RTCP SDES message sent in step 4 to contact
-the EchoLink Server and validate that the Station A user is authorized to use the network.
+7. Station B uses the call-sign provided in the RTCP SDES message sent in step 4 to contact
+the EchoLink Server and validate that the Station A user is authorized to use the network. (I'm told that Station B also 
+maintains a cache of recently-validated stations to reduce the number of validation calls.  Presumably there is a reasonable
+time-to-live on this caching mechanism to that invalid callsigns will not be allowed to stay on the network for long.)
 8. Station B sends an RTCP SDES packet on the RTCP channel.
 9. Station B sends an oNDATA packet on the RTP channel.
-10. Station A sends the same RTCP SDES packet from step #3/#4.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.)
-11. Station A sends an oNDATA packet on the RTP channel from step #5.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.)
+10. Station A sends the same RTCP SDES packet from step #3/#4.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.  This would be highly relevant for stateful routers/NATs/firewalls in order 
+to keep two-way UDP traffic flowing.)
+11. Station A sends an oNDATA packet on the RTP channel from step #5.  This text can be changed during the QSO.  (I suspect this is actually the first of a repeating cycle that will continue throughout the life of the connection.)
 12. At this point RTP audio packets are moved in both directions.
-13. Periodically (every ~10 seconds) both stations send RTCP SDES and RTP oNDATA packets to each other, presumably for keep-alive.
+13. Periodically (every ~10 seconds) both stations send RTCP SDES and RTP oNDATA packets to each other, presumably for keep-alive. The
+text in the oNDATA packets can be changed during the course of QSO as needed.  The official EchoLink client displays
+the latest oNDATA message on the bottom of the screen.
 14. At the end of the QSO, Station A sends an RTCP BYE packet.
 
 ## EchoLink Server Protocol
@@ -83,8 +88,8 @@ The server interaction accomplishes a few things:
 * Allows a node to authenticate itself and to tell the rest of the network about its status. Your callsign must 
 be pre-validated for this to work. You use your password to authenticate securely.
 * Provides the ability to download the entire directory of EchoLink nodes.
-* (Speculation) There is likely a way that a node can request the status of a specific callsign. (Need to do some 
-more testing here.)
+* Provides the ability to authenticate the status of a single callsign for the purposes of approving
+inbound connection requests.
 
 Nodes can advertise any one of three statuses on the network:
 * ONLINE
@@ -186,6 +191,35 @@ immediate after the final 0x0a of the previous entry.
 * In this example the IP address is 72.206.115.254.
 
 There is nothing unique about the end of the entire response.  
+
+### Single Callsign Authentication Request Message Format
+
+This request provides an efficient way for a node to check the status of an individual 
+callsign **without requesting the entire directory.**  This would be used for link/conference
+nodes in order to validate a QSO request from a new peer.  Stations should use this to 
+reduce the load on the EchoLink Server.
+
+The format of the request is as follows:
+
+* One byte: v
+* N bytes: The callsign
+* One byte: 0x0d (\n) delimiter
+* N bytes: The IP address of the inbound request
+* One byte: 0x0d (\n) delimiter
+
+There are no other headers or delimiters.  The client sends this message and waits.
+
+### Single Call Authentication Response Message Format
+
+The server response is very simple.  Either:
+
+* A one byte 0x30 ("0") indicating that the callsign is not authorized.
+* A one byte 0x31 ("1") indicating that the callsign is not authorized.
+
+There are no other headers or delimiters.  The server disconnects immediately after sending this response.
+
+Since the IP address is included in the request, it is likely that the server checks this too as an 
+added security check.
 
 ## EchoLink QSO Protocol
 
