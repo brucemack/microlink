@@ -38,7 +38,6 @@ namespace kc1fsz {
 void LookupMachine::start(Context* ctx) {
     _foundTarget = false;
     _targetAddr = 0;
-    cout << "Start" << endl;
     // Launch the DNS resolution process
     ctx->startDNSLookup(_serverHostName);
     // We give the lookup 5 seconds to complete
