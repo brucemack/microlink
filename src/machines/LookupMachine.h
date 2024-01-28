@@ -37,7 +37,7 @@ private:
     IPAddress _targetAddr;
     bool _foundTarget;
 
-    TCPChannel _channel;
+    Channel _channel;
 
     bool _headerSeen;
     // A place to accumulate characters while trying to 

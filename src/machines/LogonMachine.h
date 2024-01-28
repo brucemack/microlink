@@ -26,7 +26,7 @@
 #include "../StateMachine.h"
 
 #include "../HostName.h"
-#include "../TCPChannel.h"
+#include "../Channel.h"
 #include "../CallSign.h"
 #include "../FixedString.h"
 
@@ -60,7 +60,7 @@ private:
     FixedString _password;
     FixedString _location;
 
-    TCPChannel _channel;
+    Channel _channel;
 
     // Here is were we collect the logon response
     static const uint16_t _logonRespSize = 64;

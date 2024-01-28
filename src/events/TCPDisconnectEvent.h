@@ -2,7 +2,7 @@
 #define _TCPDisconnectEvent_h
 
 #include "../Event.h"
-#include "../TCPChannel.h"
+#include "../Channel.h"
 
 namespace kc1fsz {
 
@@ -11,12 +11,12 @@ public:
 
     static const int TYPE = 102;
 
-    TCPDisconnectEvent(TCPChannel c) : Event(TYPE), _channel(c) { }
-    TCPChannel getChannel() const { return _channel; }
+    TCPDisconnectEvent(Channel c) : Event(TYPE), _channel(c) { }
+    Channel getChannel() const { return _channel; }
 
 private: 
 
-    TCPChannel _channel;
+    Channel _channel;
 };
 
 }

@@ -12,22 +12,21 @@ public:
 
     void setTimeMs(uint32_t ms) { _timeMs = ms; }
 
-    TCPChannel createTCPChannel();
+    Channel createTCPChannel();
 
-    void connectTCPChannel(TCPChannel c, IPAddress ipAddr);
+    void connectTCPChannel(Channel c, IPAddress ipAddr);
 
-    void sendTCPChannel(TCPChannel c, const uint8_t* b, uint16_t len);
+    void sendTCPChannel(Channel c, const uint8_t* b, uint16_t len);
 
-    UDPChannel createUDPChannel(uint32_t localPort);
+    Channel createUDPChannel(uint32_t localPort);
 
-    void sendUDPChannel(UDPChannel c, IPAddress targetAddr, uint32_t targetPort, 
+    void sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
         const uint8_t* b, uint16_t len);
 
     void startDNSLookup(HostName hostName);
 
-    TCPChannel tcpChannel;
-    UDPChannel udpChannel0;
-    UDPChannel udpChannel1;
+    Channel channel0;
+    Channel channel1;
     IPAddress ipAddr;
     HostName hostName;
     uint8_t data[256];

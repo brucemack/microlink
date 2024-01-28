@@ -24,8 +24,7 @@
 #include <cstdint>
 
 #include "HostName.h"
-#include "TCPChannel.h"
-#include "UDPChannel.h"
+#include "Channel.h"
 #include "IPAddress.h"
 #include "StateMachine.h"
 
@@ -53,13 +52,14 @@ public:
 
     virtual uint32_t getTimeMs() { return 0; }
 
-    virtual TCPChannel createTCPChannel() { return TCPChannel(); }
-    virtual void closeTCPChannel(TCPChannel c) { }
-    virtual void connectTCPChannel(TCPChannel c, IPAddress ipAddr) { }
-    virtual void sendTCPChannel(TCPChannel c, const uint8_t* b, uint16_t len) { }
+    virtual Channel createTCPChannel() { return Channel(); }
+    virtual void closeTCPChannel(Channel c) { }
+    virtual void connectTCPChannel(Channel c, IPAddress ipAddr) { }
+    virtual void sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) { }
 
-    virtual UDPChannel createUDPChannel(uint32_t localPort) { return UDPChannel(); }
-    virtual void sendUDPChannel(UDPChannel c, IPAddress targetAddr, uint32_t targetPort, 
+    virtual Channel createUDPChannel(uint32_t localPort) { return Channel(); }
+    virtual void closeUDPChannel(Channel c) { }
+    virtual void sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
         const uint8_t* b, uint16_t len) { }
 
     virtual void startDNSLookup(HostName hostName) { }

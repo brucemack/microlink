@@ -1,5 +1,5 @@
-#ifndef _TCPReceiveEvent_h
-#define _TCPReceiveEvent_h
+#ifndef _UDPReceiveEvent_h
+#define _UDPReceiveEvent_h
 
 #include <cstdint>
 #include <algorithm>
@@ -13,12 +13,12 @@ namespace kc1fsz {
 /**
  * IMPORTANT: Each event is limited to 256 bytes of data!
 */
-class TCPReceiveEvent : public Event {
+class UDPReceiveEvent : public Event {
 public:
 
     static const int TYPE = 103;
 
-    TCPReceiveEvent(Channel c, const uint8_t* data, uint32_t len) 
+    UDPReceiveEvent(Channel c, const uint8_t* data, uint32_t len) 
         : Event(TYPE), _channel(c) {
         memcpyLimited(_data, data, len, _dataSize);
         _dataLen = std::min(len, _dataSize);

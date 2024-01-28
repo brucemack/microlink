@@ -18,13 +18,23 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _UDPChannel_h
-#define _UDPChannel_h
+#ifndef _Channel_h
+#define _Channel_h
 
 namespace kc1fsz {
 
-class UDPChannel {
+class Channel {
+public:
 
+    Channel() : _id(0) { }
+    Channel(const Channel& that) : _id(that._id) { }
+    Channel(int id) : _id(id) { }
+    int getId() const { return _id; }
+    bool operator== (const Channel& that) { return _id == that._id; }
+
+private:
+
+    int _id;
 };
 
 }
