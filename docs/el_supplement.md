@@ -296,7 +296,7 @@ that indicates its semantic meaning.
 Each repeating pattern contains:
 
 * One byte: SDES item type.
-* One byte: item length information.
+* One byte: item length information. It's possible for this length to be zero, in which case there is no item content.
 * N bytes: Variable-length content, without any special termination.
 
 The termination of this repeating pattern requires some specific handling.  From 
@@ -320,6 +320,7 @@ The items appear in this order:
 
 * A type 3 item is sent with the value "CALLSIGN" again.
 * A type 4 item is sent with the ASCII (HEX) representation of the SSRC identifier being used by the EchoLink client for this session.  This would always be exactly 8 characters since the SSCR is a 32-bit integer.
+* A type 5 item with the value "PING" has been observed in RTCP traffic when the official EchoLink client is being used in SysOp mode (i.e. repeater/link).  More on this below.
 * A type 6 item with a text description of the client version.  EchoLink is currently sending "E2 3 121".
 * A type 8 item with an unknown meaning. The values sent by the official EchoLink client are consistent over time.  I see these bytes 
 being sent (in hex), which spells "<01>P5198." This is likely a reference to the UDP port number that is used for RTP traffic.
@@ -379,6 +380,12 @@ The ECHOTEST station is sending the following items at connection initiation:
 The usual mechanics of padding out the last item and then padding the entire packet 
 is also observed.
 
+#### PING Packets using RCRP SDES Format
+
+(To be filled in)
+
+These are returned by the remote side, so this might be part of the protcol, presumably to measure round-trip time.
+
 ### RTCP BYE Packet Format
 
 The official EchoLink client sends this RTCP packet when the user presses the disconnect 
@@ -414,6 +421,19 @@ Here is an example capture:
 * The "07" is the length of the text.
 * You can see that 4 bytes were added to the end of the packet.
 
+### RTCP OVER Packet Format
+
+(More detail needed here, but I'm guessing this allows stations to signal the engagement/disengagement of the PTT button.)
+
+A standard RTCP header is sent which matches the RTCP-RR format.  Following the RTCP header, these bytes are sent:
+
+* Two bytes: 0xe1 0xcc 
+* Two bytes: 0x00 0x02 which are length-related.  This follows the (total length - 12) / 4 convention.
+* Four bytes: the SSRC
+* Four bytes: the word "OVER"
+
+![](packet-7.png)
+
 ### RTP oNDATA Packet Format
 
 This looks like an out-of-band text messaging feature.  These packets are sent across the same UDP socket as the 
@@ -429,7 +449,7 @@ For example:
 * The blue bar indicates the start of the packet.  The bytes before are the UDP/IP header which can be ignored for this analysis.
 * The official EchoLink client sends 4 additional bytes **following the null termination of the free text.**  These four bytes 
 contain the SSRC, encoded in a 32-bit integer with the most significant byte sent first.
-        
+
 ### RTP Audio Packet Format 
 
 Each RTP packet is 144 bytes in length.
@@ -473,6 +493,17 @@ part can change depending on the audio being encoded.
 ## GSM CODEC Notes
 
 EchoLink uses GSM 06.10 "full-rate" audio coding. The complete description can be found in the [European Telecommunications Standards Institute specification document](https://www.etsi.org/deliver/etsi_EN/300900_300999/300961/08.00.01_40/en_300961v080001o.pdf).
+
+Some speeds and feeds:
+* The GSM FR spec defines a 8kHz audio sampling rate with 13 bits of PCM resolution.
+* Audio PCM samples are grouped in 160 sample segments. So that implies one segment every 20ms.
+* Each 160 sample segment is encoded into a 32.5 byte frame of parameters which is usually padded to 33 bytes.  So we get a 33 byte frame out of the encoder every 20ms.
+* 33 bytes every 20ms is the same as 13,200 bits per second - that is the fundamental "baud rate" of GSM FR.
+* EchoLink packs 4 33 byte frames into each RTP packet. So that means that EchoLink needs to deliver an RTP packet every 80ms (4x20ms), or 12.5 frames per second.  
+
+Note that the official EchoLink client is smart enough to stop generating RTP frames 
+during periods of silence.  So the receiver needs to keep careful track of the 
+decode frequency and 
 
 ## EchoLink Proxy Protocol Notes
 
