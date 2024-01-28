@@ -503,7 +503,7 @@ Some speeds and feeds:
 
 Note that the official EchoLink client is smart enough to stop generating RTP frames 
 during periods of silence.  So the receiver needs to keep careful track of the 
-decode frequency and 
+decode frequency and not drive the audio decoding rate by the arrival of packets.  
 
 ## EchoLink Proxy Protocol Notes
 
