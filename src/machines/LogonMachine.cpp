@@ -37,8 +37,7 @@ using namespace std;
 
 namespace kc1fsz {
 
-//static const uint32_t ELS_PORT = 5200;
-static const uint32_t ELS_PORT = 80;
+static const uint32_t ELS_PORT = 5200;
 
 LogonMachine::LogonMachine(CommContext* ctx, UserInfo* userInfo) 
 :   _state(IDLE),

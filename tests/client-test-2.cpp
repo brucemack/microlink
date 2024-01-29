@@ -44,12 +44,14 @@ int main(int, const char**) {
 
     TestUserInfo info;
     RootMachine rm(&context, &info);
-    //rm.setServerName(HostName("naeast.echolink.org"));
-    rm.setServerName(HostName("www.google.com"));
+    rm.setServerName(HostName("naeast.echolink.org"));
+    //rm.setServerName(HostName("www.google.com"));
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString("XYZ123"));
+    //rm.setPassword(FixedString("XYZ123"));
+    rm.setPassword(FixedString("echolink666"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
-    rm.setTargetCallSign(CallSign("W1TKZ-L"));
+    //rm.setTargetCallSign(CallSign("W1TKZ-L"));
+    rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
     rm.start();
 

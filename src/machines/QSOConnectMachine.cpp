@@ -40,6 +40,9 @@ QSOConnectMachine::QSOConnectMachine(CommContext* ctx, UserInfo* userInfo)
 
 void QSOConnectMachine::start() {  
 
+    cout << "HALT" << endl;
+    exit(0);
+
     // Get UDP connections created
     _rtpChannel = _ctx->createUDPChannel(RTP_PORT);
     _rtcpChannel = _ctx->createUDPChannel(RTCP_PORT);

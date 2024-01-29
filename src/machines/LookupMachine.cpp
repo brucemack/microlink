@@ -31,14 +31,14 @@
 
 #include "CommContext.h"
 #include "LookupMachine.h"
+#include "UserInfo.h"
 
 using namespace std;
 
 namespace kc1fsz {
 
 // TODO: CONSOLIDATE
-//static const uint32_t ELS_PORT = 5200;
-static const uint32_t ELS_PORT = 80;
+static const uint32_t ELS_PORT = 5200;
 
 LookupMachine::LookupMachine(CommContext* ctx, UserInfo* userInfo)
 :   _state(IDLE),
@@ -47,13 +47,20 @@ LookupMachine::LookupMachine(CommContext* ctx, UserInfo* userInfo)
 }
 
 void LookupMachine::start() {
+    _channel = Channel(0, false);
     _foundTarget = false;
     _targetAddr = 0;
+    _saveAreaPtr = 0;
+    _headerSeen = false;
     // Launch the DNS resolution process
     _ctx->startDNSLookup(_serverHostName);
     // We give the lookup 5 seconds to complete
     _setTimeoutMs(time_ms() + 5000);
     _state = DNS_WAIT;
+}
+
+void LookupMachine::cleanup() {
+    _ctx->closeTCPChannel(_channel);
 }
 
 void LookupMachine::processEvent(const Event* ev) {
@@ -64,10 +71,14 @@ void LookupMachine::processEvent(const Event* ev) {
             const DNSLookupEvent* evt = (DNSLookupEvent*)ev;
             // Start the process of opening the TCP connection
             _channel = _ctx->createTCPChannel();
-            _ctx->connectTCPChannel(_channel, evt->addr, ELS_PORT);
-            // We give the connect 1 second to complete
-            _setTimeoutMs(time_ms() + 1000);
-            _state = CONNECTING;
+            if (!_channel.isGood()) {
+                _state = FAILED;
+            } else {
+                _ctx->connectTCPChannel(_channel, evt->addr, ELS_PORT);
+                // We give the connect 1 second to complete
+                _setTimeoutMs(time_ms() + 1000);
+                _state = CONNECTING;
+            }
         }
         else if (_isTimedOut()) {
             _state = FAILED;
@@ -85,8 +96,6 @@ void LookupMachine::processEvent(const Event* ev) {
             _ctx->sendTCPChannel(_channel, buf, 1);
             // We give the directory 15 seconds to complete
             _setTimeoutMs(time_ms() + 15000);
-            _saveAreaPtr = 0;
-            _headerSeen = false;
             _state = WAITING_FOR_DISCONNECT;            
         } 
         else if (_isTimedOut()) {
@@ -99,6 +108,8 @@ void LookupMachine::processEvent(const Event* ev) {
         // If we get data then accept it
         if (ev->getType() == TCPReceiveEvent::TYPE) {
             const TCPReceiveEvent* evt = (TCPReceiveEvent*)ev;
+
+            //prettyHexDump(evt->getData(), evt->getDataLen(), cout);
 
             if (!_foundTarget) {
 
@@ -118,7 +129,7 @@ void LookupMachine::processEvent(const Event* ev) {
 
                     // Hunt for the delimiters in the work area
                     uint16_t delimCount = 0;
-                    uint16_t delimPoints[5];
+                    uint16_t delimPoints[4];
                     bool fullRecordSeen = false;
                     uint32_t workAreaUsed = 0;
 
@@ -128,7 +139,7 @@ void LookupMachine::processEvent(const Event* ev) {
                         }
                         // Check to see if we've seen a complete set of delimiters that we can process
                         if ((!_headerSeen && delimCount == 2) ||
-                            (_headerSeen && delimCount == 5)) {
+                            (_headerSeen && delimCount == 4)) {
                             fullRecordSeen = true;
                         }
                         workAreaUsed++;
@@ -139,7 +150,7 @@ void LookupMachine::processEvent(const Event* ev) {
                             // Make sure the callsign and the IP address are under 31
                             // character to avoid any overflows
                             if (delimPoints[0] <= 31 && 
-                                (delimPoints[4] - delimPoints[3]) <= 31) {
+                                (delimPoints[3] - delimPoints[2]) <= 31) {
                                 // Grab the callsign ad IP and see if it's what
                                 // we're looking for.
                                 char possibleCallSign[32];
@@ -150,9 +161,9 @@ void LookupMachine::processEvent(const Event* ev) {
                                 possibleCallSign[delimPoints[0]] = 0;
 
                                 memcpyLimited((uint8_t*)possibleIpAddr, 
-                                    workArea + delimPoints[3] + 1,
-                                    delimPoints[4] - delimPoints[3], 31);
-                                possibleIpAddr[delimPoints[4] - delimPoints[3]] = 0;
+                                    workArea + delimPoints[2] + 1,
+                                    delimPoints[3] - delimPoints[2], 31);
+                                possibleIpAddr[delimPoints[3] - delimPoints[2]] = 0;
 
                                 if (_targetCallSign == possibleCallSign) {
                                     _foundTarget = true;
@@ -193,11 +204,11 @@ void LookupMachine::processEvent(const Event* ev) {
         else if (ev->getType() == TCPDisconnectEvent::TYPE) {
             const TCPConnectEvent* evt = (TCPConnectEvent*)ev;
             if (evt->getChannel() == _channel) {
-                // TODO: Close channel
                 if (_foundTarget) {
+                    _userInfo->setStatus("Lookup successful");
                     _state = SUCCEEDED;
                 } else {
-                    // TODO: MESSAGE
+                    _userInfo->setStatus("Lookup unsuccessful");
                     _state = FAILED;
                 }
             } else {

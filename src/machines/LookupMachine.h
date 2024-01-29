@@ -22,6 +22,7 @@ public:
 
     virtual void processEvent(const Event* ev);
     virtual void start();
+    virtual void cleanup();
     virtual bool isDone() const;
     virtual bool isGood() const;
 

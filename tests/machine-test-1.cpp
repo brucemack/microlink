@@ -105,9 +105,11 @@ static void machine_test_1() {
         rm.processEvent(&ev);
         TCPReceiveEvent ev2(Channel(3), (const uint8_t*)"XXXX", 4);
         rm.processEvent(&ev2);
-        TCPReceiveEvent ev3(Channel(3), (const uint8_t*)"\n1\n2\n3\n1.2.3.4\nKC1", 15 + 3);
+        //TCPReceiveEvent ev3(Channel(3), (const uint8_t*)"\n1\n2\n3\n1.2.3.4\nKC1", 15 + 3);
+        TCPReceiveEvent ev3(Channel(3), (const uint8_t*)"\n1\n2\n1.2.3.4\nKC1", 15 + 1);
         rm.processEvent(&ev3);
-        TCPReceiveEvent ev4(Channel(3), (const uint8_t*)"FSZ\n1\n2\n3\n0.0.1.255\n", 20);
+        //TCPReceiveEvent ev4(Channel(3), (const uint8_t*)"FSZ\n1\n2\n3\n0.0.1.255\n", 20);
+        TCPReceiveEvent ev4(Channel(3), (const uint8_t*)"FSZ\n1\n2\n0.0.1.255\n", 18);
         rm.processEvent(&ev4);
     }
 
