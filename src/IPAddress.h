@@ -15,6 +15,7 @@ public:
 
 private:
 
+    // IMPORTANT: This is stored in network byte order!
     uint32_t _addr;
 };
 

@@ -27,6 +27,7 @@
 #include <arpa/inet.h>
 #include <string.h>
 
+#include <cassert>
 #include <iostream>
 #include <algorithm>
 
@@ -142,9 +143,9 @@ void SocketContext::startDNSLookup(HostName hostName) {
     // TODO: UPGRADE FOR IP6
     const struct hostent* remoteHost = gethostbyname(hostName.c_str());
     if (remoteHost->h_addrtype == AF_INET && remoteHost->h_length == 4) {
-        uint32_t addr = ntohl(*(uint32_t*)remoteHost->h_addr_list[0]);
+        uint32_t addr_nl = *(uint32_t*)remoteHost->h_addr_list[0];
         _dnsResultPending = true;
-        _dnsResult = IPAddress(addr);
+        _dnsResult = IPAddress(addr_nl);
     }
 }
 
@@ -170,13 +171,15 @@ void SocketContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port
     struct sockaddr_in remote_addr;
     memset(&remote_addr, 0, sizeof(sockaddr_in));
     remote_addr.sin_family = AF_INET;
-    remote_addr.sin_addr.s_addr = htonl(ipAddr.getAddr());
+    // Address is already in NL order
+    remote_addr.sin_addr.s_addr = ipAddr.getAddr();
     remote_addr.sin_port = htons(port);
 
     // Launch a non-blocking connect    
     int rc = connect(c.getId(), (const sockaddr*)&remote_addr, sizeof(sockaddr_in));
     if (rc == 0) {
-        cout << "IMMEDIATE CONNECT?" << endl;
+        // TODO: CONSIDER THIS CASE
+        assert(false);
     }
     else if (rc == -1 && errno == EINPROGRESS) {
         SocketTracker tr;

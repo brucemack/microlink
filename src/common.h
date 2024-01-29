@@ -29,7 +29,15 @@ namespace kc1fsz {
 
 extern const char* VERSION_ID;
 
+/**
+ * Converts the dotted-decimal IP address into a 32-bit integer in NETWORK order
+ */
 uint32_t parseIP4Address(const char* dottedAddr);
+
+/**
+ * @param addrNetworkOrder IP4 address
+ */
+void formatIP4Address(uint32_t addrNetworkOrder, char* dottedAddr, uint32_t dottedAddrSize);
 
 /**
  * @returns The current time in milliseconds-since-epoch

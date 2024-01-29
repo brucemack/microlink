@@ -167,6 +167,7 @@ void LookupMachine::processEvent(const Event* ev) {
 
                                 if (_targetCallSign == possibleCallSign) {
                                     _foundTarget = true;
+                                    // In network byte order!
                                     _targetAddr = parseIP4Address(possibleIpAddr);
                                     // TODO: CONSIDER INITIATING A DISCONNECT
                                 }

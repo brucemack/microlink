@@ -34,6 +34,7 @@
 using namespace std;
 using namespace kc1fsz;
 
+/*
 static void test_packets() {
 
     const uint32_t packetSize = 256;
@@ -80,6 +81,15 @@ static void test_packets() {
         prettyHexDump(p, l, cout);
     }
 }
+*/
+
+static void test_ip_addr() {
+    uint32_t addr = parseIP4Address("1.2.3.4");
+    cout << std::hex << addr << endl;
+    char buf[64];
+    formatIP4Address(addr, buf, 64);
+    cout << buf << endl;
+}
 
 int main(int, const char**) {
 
@@ -87,5 +97,6 @@ int main(int, const char**) {
     //    48, 15, 16, 17, 18, 19 };
     //prettyHexDump(test, 20, cout);
 
-    test_packets();
+    //test_packets();
+    test_ip_addr();
 }

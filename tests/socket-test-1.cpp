@@ -15,7 +15,10 @@ public:
 
         if (ev->getType() == DNSLookupEvent::TYPE) {
             const DNSLookupEvent* evt = (const DNSLookupEvent*)ev;
-            cout << "ADDR: " << evt->addr.getAddr() << endl;
+            cout << "ADDR: " << std::hex << evt->addr.getAddr() << endl;
+            char buf[64];
+            formatIP4Address(evt->addr.getAddr(), buf, 64);
+            cout << "ADDR: " << buf << endl;
         }
     }
 };
@@ -26,7 +29,7 @@ int main(int,const char**) {
     SocketContext ctx;
     
     {
-        ctx.startDNSLookup(HostName("naeast.echolink.org"));
+        ctx.startDNSLookup(HostName("www.google.com"));
         ctx.poll(&evp);
     }
 

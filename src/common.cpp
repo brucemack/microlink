@@ -19,6 +19,8 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include <sys/time.h>
+#include <arpa/inet.h>
+
 #include <cctype>
 #include <algorithm> 
 #include <locale>
@@ -69,7 +71,11 @@ uint32_t parseIP4Address(const char* dottedAddr) {
         }
         p++;
     }
-    return result;
+    return htonl(result);
+}
+
+void formatIP4Address(uint32_t addr_nl, char* dottedAddr, uint32_t dottedAddrSize) {
+    inet_ntop(AF_INET, &addr_nl, dottedAddr, dottedAddrSize);
 }
 
 void strcpyLimited(char* target, const char* source, uint32_t limit) {

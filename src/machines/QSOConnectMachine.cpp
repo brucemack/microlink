@@ -22,6 +22,7 @@
 #include "../CommContext.h"
 #include "../events/UDPReceiveEvent.h"
 
+#include "UserInfo.h"
 #include "QSOConnectMachine.h"
 
 using namespace std;
@@ -39,6 +40,13 @@ QSOConnectMachine::QSOConnectMachine(CommContext* ctx, UserInfo* userInfo)
 }
 
 void QSOConnectMachine::start() {  
+
+    char addr[32];
+    formatIP4Address(_targetAddr.getAddr(), addr, 32);
+    char message[64];
+    sprintf(message, "Connecting to %s", addr);
+
+    _userInfo->setStatus(message);
 
     cout << "HALT" << endl;
     exit(0);
