@@ -163,7 +163,7 @@ A large response will be returned from the server. The result is tokenized using
 
 * The first token consists of three @ symbols.
 * The second token contains the total number of entries in the directory response.
-* Thereafter, a repeating series of tokens for each directory entry, discussed below.
+* Thereafter, a repeating series of four tokens for each directory entry, discussed below.
 
 Here is an example of the start of the response:
 
@@ -172,11 +172,11 @@ Here is an example of the start of the response:
 * The @@@ token is underlined in red.
 * The entry count is underlined in green (6250 here).
 
-Each entry is made up of these tokens, in order:
+Each entry is made up of these four tokens, in order:
 
 * Callsign
-* Location 
-* Connection status as follows:
+* Location/Connection status as follows:
+  - Location 
   - Open square bracket (0x5b)
   - Status (ON or BUSY)
   - One space (0x20)
