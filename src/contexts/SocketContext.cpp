@@ -37,6 +37,7 @@
 #include "../events/TCPConnectEvent.h"
 #include "../events/TCPDisconnectEvent.h"
 #include "../events/TCPReceiveEvent.h"
+#include "../events/UDPReceiveEvent.h"
 
 #include "SocketContext.h"
 
@@ -69,14 +70,17 @@ void SocketContext::poll(EventProcessor* ep) {
         tv.tv_sec = 0;
         tv.tv_usec = 1000;
 
-        auto cleanup = [&readfds, &writefds, &highestFd](const SocketTracker& t) { 
-            return t.pendingDelete;
-        };
-
         auto setupSelect = [&readfds, &writefds, &highestFd](const SocketTracker& t) { 
-            if (t.connectPending) {
-                FD_SET(t.fd, &writefds);
-            } else {
+            if (t.deletePending) {
+                return;
+            }
+            if (t.type == SocketTracker::Type::TCP) {
+                if (t.connectRequested && t.connectWaiting) {
+                    FD_SET(t.fd, &writefds);
+                } else if (t.connectRequested) {
+                    FD_SET(t.fd, &readfds);
+                }
+            } else if (t.type == SocketTracker::Type::UDP) {
                 FD_SET(t.fd, &readfds);
             }
             if (t.fd > highestFd) {
@@ -86,46 +90,64 @@ void SocketContext::poll(EventProcessor* ep) {
 
         // A lambda that is used to process the results of the call to select()
         auto processSelect = [&readfds, &writefds, &ep](SocketTracker& t) { 
-            if (t.pendingDelete) {
+            if (t.deletePending) {
                 return;
             }
-            // If the channel is waiting for a connect and we see write ready
-            // then notify that the connection is a success.
-            if (t.connectPending) {
-                if (FD_ISSET(t.fd, &writefds)) {
-                    // No longer waiting on the connection - now normal
-                    t.connectPending = false;
-                    // Generate an event
-                    TCPConnectEvent ev(Channel(t.fd));
-                    ep->processEvent(&ev);
-                } 
+
+            // The handling of the socket events depends on the type of socket
+
+            if (t.type == SocketTracker::Type::TCP) {
+                // If the channel is waiting for a connect and we see write ready
+                // then notify that the connection is a success.
+                if (t.connectWaiting) {
+                    if (FD_ISSET(t.fd, &writefds)) {
+                        // No longer waiting on the connection - now normal
+                        t.connectWaiting = false;
+                        // Generate an event
+                        TCPConnectEvent ev(Channel(t.fd));
+                        ep->processEvent(&ev);
+                    } 
+                }
+                // If the channel is connected and we see that read ready then 
+                // pull some data off the socket and generate a data event.
+                else {
+                    if (FD_ISSET(t.fd, &readfds)) {
+                        char buffer[256];
+                        int rc = recv(t.fd, buffer, 256, 0);
+                        // Got any bytes?
+                        if (rc > 0) {
+                            // Generate an event
+                            TCPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
+                            ep->processEvent(&ev);
+                        } 
+                        // Check if the other side has dropped?
+                        else if (rc == 0) {
+                            // Ask for cleanup on next pass
+                            t.deletePending = true;
+                            // Generate an event
+                            TCPDisconnectEvent ev(Channel(t.fd));
+                            ep->processEvent(&ev);
+                        }
+                    }
+                }
             }
-            // If the channel is connected and we see that read ready then 
-            // pull some data off the socket and generate a data event.
-            else {
+            else if ( t.type == SocketTracker::Type::UDP) {
+                // For UDP it's just about receiving data
                 if (FD_ISSET(t.fd, &readfds)) {
                     char buffer[256];
+                    // TODO: INCLUDE SOURCE ADDRESS
                     int rc = recv(t.fd, buffer, 256, 0);
                     // Got any bytes?
                     if (rc > 0) {
                         // Generate an event
-                        TCPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
+                        UDPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
                         ep->processEvent(&ev);
                     } 
-                    // Check if the other side has dropped?
-                    else if (rc == 0) {
-                        // Ask for cleanup on next pass
-                        t.pendingDelete = true;
-                        // Generate an event
-                        TCPDisconnectEvent ev(Channel(t.fd));
-                        ep->processEvent(&ev);
-                    }
                 }
             }
         }; 
 
-        // Purge any dead activity
-        std::remove_if(_tracker.begin(), _tracker.end(), cleanup);
+        _cleanupTracker();
 
         // Prepare for select by looking at each tracker entry 
         std::for_each(_tracker.begin(), _tracker.end(), setupSelect);
@@ -137,6 +159,16 @@ void SocketContext::poll(EventProcessor* ep) {
             std::for_each(_tracker.begin(), _tracker.end(), processSelect);
         }
     }
+}
+
+void SocketContext::_cleanupTracker() {
+
+    auto cleanup = [](const SocketTracker& t) { 
+        return t.deletePending;
+    };
+
+    // Purge any dead activity
+    std::remove_if(_tracker.begin(), _tracker.end(), cleanup);
 }
 
 void SocketContext::startDNSLookup(HostName hostName) {
@@ -152,12 +184,15 @@ void SocketContext::startDNSLookup(HostName hostName) {
 Channel SocketContext::createTCPChannel() {
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
-        cout << "ERROR CREATING" << endl;
         return Channel(0, false);
     }
     // Make non-blocking
     fcntl(fd, F_SETFL, O_NONBLOCK); 
-    // TODO: ERROR CHECKING
+    // Setup the tracker
+    SocketTracker t;
+    t.type = SocketTracker::Type::TCP;
+    t.fd = fd;
+    _tracker.push_back(t);
     // The channel ID maps directly to the fd
     return Channel(fd);
 }
@@ -184,7 +219,8 @@ void SocketContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port
     else if (rc == -1 && errno == EINPROGRESS) {
         SocketTracker tr;
         tr.fd = c.getId();
-        tr.connectPending = true;
+        tr.connectRequested = true;
+        tr.connectWaiting = true;
         _tracker.push_back(tr);
     } else {
         cout << "Connect failed" << endl;
@@ -203,7 +239,34 @@ void SocketContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {
 }
 
 Channel SocketContext::createUDPChannel(uint32_t localPort) {
-    return Channel(0);
+
+    int fd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0) {
+        return Channel(0, false);
+    }
+
+    struct sockaddr_in local_addr;
+    memset(&local_addr, 0, sizeof(sockaddr_in));
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    local_addr.sin_port = htons(localPort);
+
+    int rc = bind(fd, (struct sockaddr*)&local_addr, sizeof(sockaddr_in));
+    if (rc < 0) {
+        close(fd);
+        return Channel(0, false);
+    }
+
+    // Sockets non-blocking
+    fcntl(fd, F_SETFL, O_NONBLOCK); 
+
+    // Setup the tracker
+    SocketTracker t;
+    t.type = SocketTracker::Type::UDP;
+    t.fd = fd;
+    _tracker.push_back(t);
+
+    return Channel(fd);
 }
 
 void SocketContext::closeUDPChannel(Channel c) {  
@@ -224,6 +287,22 @@ void SocketContext::_closeChannel(Channel c) {
 void SocketContext::sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
     const uint8_t* b, uint16_t len) {
 
+    cout << "UDP Send" << endl;
+    prettyHexDump(b, len, cout);
+
+    struct sockaddr_in remote_addr;
+    memset(&remote_addr, 0, sizeof(sockaddr_in));
+    remote_addr.sin_family = AF_INET;
+    remote_addr.sin_addr.s_addr = targetAddr.getAddr();
+    remote_addr.sin_port = htons(targetPort);
+
+    sendto(c.getId(), b, len, 0, (const struct sockaddr*)&remote_addr, sizeof(sockaddr_in));
+}
+
+int SocketContext::getLiveChannelCount() const {
+    // Effectively const
+    ((SocketContext*)this)->_cleanupTracker();
+    return _tracker.size();
 }
 
 }

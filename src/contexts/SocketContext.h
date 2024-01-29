@@ -57,18 +57,24 @@ public:
     virtual void sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
         const uint8_t* b, uint16_t len);
 
+    int getLiveChannelCount() const;
+
 private:
 
     void _closeChannel(Channel c);
+    void _cleanupTracker();
 
     bool _dnsResultPending;
     IPAddress _dnsResult;
 
     // This data structure is used to keep track of active sockets
     struct SocketTracker {
-        bool connectPending = false;
+        enum Type { NONE, TCP, UDP };
+        Type type = Type::NONE;
+        bool connectRequested = false;
+        bool connectWaiting = false;
+        bool deletePending = false;
         int fd = 0;
-        bool pendingDelete = false;
     };
 
     std::vector<SocketTracker> _tracker;
