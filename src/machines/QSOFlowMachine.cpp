@@ -20,6 +20,7 @@
  */
 #include "../common.h"
 #include "../events/UDPReceiveEvent.h"
+#include "../events/TickEvent.h"
 
 #include "QSOConnectMachine.h"
 #include "QSOFlowMachine.h"
@@ -32,10 +33,17 @@ namespace kc1fsz {
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
 
-void QSOFlowMachine::start(Context* ctx) {
-    _lastKeepAliveMs = 0;
-    _state = OPEN;
+QSOFlowMachine::QSOFlowMachine(UserInfo* userInfo) 
+:   _userInfo(userInfo) {
 }
+
+void QSOFlowMachine::start(Context* ctx) {
+    _lastKeepAliveSentMs = 0;
+    _lastKeepAliveRecvMs = ctx->getTimeMs();
+    _state = OPEN;
+    _frameQueueWritePtr = 0;
+}    _frameQueueReadPtr = 0;
+
 
 void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
     // In this state we are waiting for the reciprocal RTCP message
@@ -48,6 +56,8 @@ void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
                 
                 cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
                 prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+               
+               _lastKeepAliveRecvMs = ctx->getTimeMs();
 
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
                 }
@@ -57,18 +67,43 @@ void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
 
                 cout << "QSOConnectMachine: GOT RTP DATA" << endl;
                 prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+               _lastKeepAliveRecvMs = ctx->getTimeMs();
 
-                if (isRTPPacket(evt->getData(), evt->getDataLen())) {
+                if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
+
+                    // TODO: MAKE THIS MORE EFFICIENT
+                    // Unload the GSM frames from the RTP packet
+                    uint8_t gsmFrames[4][33];
+                    uint16_t remoteSeq = 0;
+                    uint32_t remoteSSRC = 0;
+                    parseRTPAudioPacket(evt->getData(), &remoteSeq, &remoteSSRC, gsmFrames);
+
+                    // Load frames into the queue for future decode on the audio clock
+                    for (int i = 0; i < 4; i++) {
+                        memcpy(_frameQueue[_frameQueueWritePtr], gsmFrames[i], 33);
+                        if (++_frameQueueWritePtr == _frameQueueDepth) {
+                            _frameQueueWritePtr = 0;
+                        }
+                    }
                 } 
                 else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
+                    // Make sure the message is null-terminated one way or the other
+                    char temp[64];
+                    memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
+                    temp[std::min((uint32_t)63, evt->getDataLen())] = 0;
+                    // Here we skip past the oNDATA\r part when we report the message
+                    _userInfo->setOnData(temp + 7);
                 }
             }
         }
+        else if (ev->getType() == TickEvent::TYPE) {
+            _audioTick();
+        }
 
         // Always check to make sure it's not time for keep-alive
-        if (ctx->getTimeMs() > _lastKeepAliveMs + 10000) {
+        if (ctx->getTimeMs() > _lastKeepAliveSentMs + 10000) {
 
-            _lastKeepAliveMs = ctx->getTimeMs();
+            _lastKeepAliveSentMs = ctx->getTimeMs();
 
             const uint16_t packetSize = 128;
             uint8_t packet[packetSize];
@@ -93,17 +128,25 @@ void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
             packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
             ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
         }
+
+        // Always check to make sure the other side is still there
+        if (ctx->getTimeMs() > _lastKeepAliveRecvMs + 30000) {
+            // Wrap up
+            // TODO: ADD CLEANUP STATE
+            _state = SUCCEEDED;
+        }
     }
 }
 
 bool QSOFlowMachine::isDone() const {
-    return false;
+    return (_state == SUCCEEDED);
 }
 
 bool QSOFlowMachine::isGood() const {
-    return false;
+    return (_state == SUCCEEDED);
+}
+
+void QSOFlowMachine::_audioTick() {
 }
 
 }
-
-

@@ -46,6 +46,17 @@ add_executable(server-test-1
 
 target_include_directories(server-test-1 PRIVATE src)
 
+# ------ socket-test-1 -------------------------------------------------------
+
+add_executable(socket-test-1
+  tests/socket-test-1.cpp
+  tests/TestContext.cpp
+  src/contexts/SocketContext.cpp
+  src/common.cpp
+)
+
+target_include_directories(socket-test-1 PRIVATE src)
+
 # ------ packet-test-1 -------------------------------------------------------
 
 add_executable(packet-test-1

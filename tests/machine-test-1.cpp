@@ -11,6 +11,7 @@
 #include "../src/events/UDPReceiveEvent.h"
 
 #include "TestContext.h"
+#include "TestUserInfo.h"
 
 using namespace std;
 using namespace kc1fsz;
@@ -28,7 +29,8 @@ static void machine_test_1() {
     TestContext context;
     context.setTimeMs(1000);
 
-    RootMachine rm;
+    TestUserInfo info;
+    RootMachine rm(&info);
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString("XYZ123"));
@@ -112,14 +114,14 @@ static void machine_test_1() {
     {
         cout << "--- Cycle 7" << endl;
         // Get the two UDP connections ready
+        // RTP is setup first, RTCP second
         context.channel0 = Channel(4);
         context.channel1 = Channel(5);
         // Simulate the disconnect from the server.  This should trigger the completion
         // of the lookup and will start the QSO connect.
         TCPDisconnectEvent ev5(Channel(3));
         rm.processEvent(&ev5, &context);
-        // Generate data back from the other peer.  This should trigger the completion
-        // of the connect and will start the QSO flow.
+        // Generate oNDATA packet back from the other peer.  
         uint8_t buf[3] = { 0xc0, 0xc9, 0 };
         UDPReceiveEvent ev4(Channel(5), (const uint8_t*)buf, 3);
         rm.processEvent(&ev4, &context);
@@ -130,6 +132,10 @@ static void machine_test_1() {
         TickEvent ev;
         rm.processEvent(&ev, &context);
         // Generate some audio traffic
+        // oNDATA Message
+        UDPReceiveEvent ev4(Channel(4), (const uint8_t*)"oNDATA\rHello World!\rTest\r", 25);
+        rm.processEvent(&ev4, &context);
+
     }
 
     {
@@ -146,8 +152,15 @@ static void machine_test_1() {
         // Move the time forward 5 seconds 
         context.advanceTimeMs(5001);
         rm.processEvent(&ev, &context);
+        cout << "--- Cycle 9d" << endl;
+        // Move the time forward 20 seconds - this should trigger an end
+        context.advanceTimeMs(20000);
+        rm.processEvent(&ev, &context);
     }
 
+    // We get all the way to the end
+    assert(rm.isDone());
+    assert(rm.isGood());
 }
 
 // This is a test of a timeout during logon
@@ -157,7 +170,8 @@ static void machine_test_2() {
     TestContext context;
     context.setTimeMs(1000);
 
-    RootMachine rm;
+    TestUserInfo info;
+    RootMachine rm(&info);
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString("XYZ123"));

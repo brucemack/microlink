@@ -40,8 +40,7 @@ namespace kc1fsz {
 class Context {
 public:
 
-    Context();
-    virtual ~Context();
+    virtual ~Context() { }
 
     /**
      * This should be called periodically to allow the Context
@@ -52,6 +51,10 @@ public:
 
     virtual uint32_t getTimeMs() { return 0; }
 
+    // ------ Request Methods -------------------------------------------------
+
+    virtual void startDNSLookup(HostName hostName) { }
+
     virtual Channel createTCPChannel() { return Channel(); }
     virtual void closeTCPChannel(Channel c) { }
     virtual void connectTCPChannel(Channel c, IPAddress ipAddr) { }
@@ -61,8 +64,6 @@ public:
     virtual void closeUDPChannel(Channel c) { }
     virtual void sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
         const uint8_t* b, uint16_t len) { }
-
-    virtual void startDNSLookup(HostName hostName) { }
 };
 
 }

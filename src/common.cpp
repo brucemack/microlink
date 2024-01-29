@@ -35,6 +35,15 @@ namespace kc1fsz {
 // Per Jonathan K1RFD: Make sure this starts with a number and ends with Z.
 const char* VERSION_ID = "0.02MLZ";
 
+bool isNullTerminated(const uint8_t* source, uint32_t sourceLen) {
+    for (uint32_t i = 0; i < sourceLen; i++) {
+        if (source[i] == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 uint32_t parseIP4Address(const char* dottedAddr) {
     uint32_t result = 0;
     char acc[8];
@@ -151,11 +160,11 @@ bool isRTCPPacket(const uint8_t* d, uint32_t len) {
 /**
  * The EL RTP implementation uses 144-byte packets.
  */
-bool isRTPPacket(const uint8_t* d, uint32_t len) {
+bool isRTPAudioPacket(const uint8_t* d, uint32_t len) {
     return len == 144 && d[0] == 0xc0 && d[1] == 0x03;
 }
 
-void parseRTPPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
+void parseRTPAudioPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
     uint8_t gsmFrames[4][33]) {    
     *seq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
     *ssrc = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | ((uint16_t)d[10] << 8) |
@@ -166,7 +175,7 @@ void parseRTPPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
 }
 
 bool isOnDataPacket(const uint8_t* d, uint32_t len) {
-    return (len > 6 && memcmp(d, "oNDATA", 6) == 0);
+    return (len >= 7 && memcmp(d, "oNDATA\r", 7) == 0);
 }
 
 uint32_t addRTCPPad(uint32_t unpaddedLength,

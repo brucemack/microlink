@@ -54,6 +54,8 @@ void strcatLimited(char* target, const char* source, uint32_t targetLimit);
 void memcpyLimited(uint8_t* target, const uint8_t* source, 
     uint32_t sourceLen, uint32_t targetLimit);
 
+bool isNullTerminated(const uint8_t* source, uint32_t sourceLen);
+
 // trim from start (in place)
 void ltrim(std::string &s);
 
@@ -64,9 +66,9 @@ bool isOnDataPacket(const uint8_t* d, uint32_t len);
 
 bool isRTCPPacket(const uint8_t* d, uint32_t len);
 
-bool isRTPPacket(const uint8_t* d, uint32_t len);
+bool isRTPAudioPacket(const uint8_t* d, uint32_t len);
 
-void parseRTPPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
+void parseRTPAudioPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
     uint8_t gsmFrames[4][33]);
 
 void writeInt32(uint8_t* buf, uint32_t d);

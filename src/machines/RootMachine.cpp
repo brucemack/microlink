@@ -24,8 +24,10 @@ using namespace std;
 
 namespace kc1fsz {
 
-RootMachine::RootMachine() 
-:   _state(IDLE) {
+RootMachine::RootMachine(UserInfo* userInfo) 
+:   _state(IDLE),
+    _userInfo(userInfo),
+    _qsoMachine(userInfo) {
 }
 
 void RootMachine::start(Context* ctx) {

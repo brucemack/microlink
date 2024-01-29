@@ -28,11 +28,14 @@
 #include "../CallSign.h"
 #include "../FixedString.h"
 #include "../Channel.h"
+#include "../UserInfo.h"
 
 namespace kc1fsz {
 
 class QSOFlowMachine : public StateMachine<Context> {
 public:
+
+    QSOFlowMachine(UserInfo* userInfo);
 
     virtual void processEvent(const Event* ev, Context* context);
     virtual void start(Context* ctx);
@@ -49,8 +52,11 @@ public:
 
 private:
 
-    enum State { IDLE, OPEN } _state;
+    void _audioTick();
 
+    enum State { IDLE, OPEN, SUCCEEDED } _state;
+
+    UserInfo* _userInfo;
     CallSign _callSign;
     FixedString _fullName;
     FixedString _location;
@@ -58,7 +64,15 @@ private:
     Channel _rtpChannel;
     Channel _rtcpChannel;
     uint32_t _ssrc;
-    uint32_t _lastKeepAliveMs;
+    uint32_t _lastKeepAliveSentMs;
+    uint32_t _lastKeepAliveRecvMs;
+
+    // This is a circular buffer used to keep track
+    // of audio frames waiting for the next audio pulse
+    static const uint32_t _frameQueueDepth = 8;
+    uint8_t _frameQueue[frameQueueDepth][33];
+    uint32_t _frameQueueWritePtr = 0;
+    uint32_t _frameQueueReadPtr = 0;
 };
 
 }
