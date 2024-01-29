@@ -21,13 +21,18 @@
 #ifndef _SocketContext_h
 #define _SocketContext_h
 
-#include "../Context.h"
+#include <vector>
+#include "../CommContext.h"
 
 namespace kc1fsz {
 
 class EventProcessor;
 
-class SocketContext : public Context {
+/**
+ * IMPORTANT: We are assuming that this runs in a full environment so 
+ * we are using a wider range of C++ std libraries.
+ */
+class SocketContext : public CommContext {
 public:
 
     SocketContext();
@@ -40,13 +45,11 @@ public:
 
     // ------ Request Methods -------------------------------------------------
 
-    virtual uint32_t getTimeMs();
-
     virtual void startDNSLookup(HostName hostName);
 
     virtual Channel createTCPChannel();
     virtual void closeTCPChannel(Channel c);
-    virtual void connectTCPChannel(Channel c, IPAddress ipAddr);
+    virtual void connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port);
     virtual void sendTCPChannel(Channel c, const uint8_t* b, uint16_t len);
 
     virtual Channel createUDPChannel(uint32_t localPort);
@@ -56,8 +59,19 @@ public:
 
 private:
 
+    void _closeChannel(Channel c);
+
     bool _dnsResultPending;
     IPAddress _dnsResult;
+
+    // This data structure is used to keep track of active sockets
+    struct SocketTracker {
+        bool connectPending = false;
+        int fd = 0;
+        bool pendingDelete = false;
+    };
+
+    std::vector<SocketTracker> _tracker;
 };
 
 }

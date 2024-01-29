@@ -22,31 +22,41 @@
 #define _StateMachine_h
 
 #include <cstdint>
+
+#include "common.h"
 #include "Event.h"
+#include "EventProcessor.h"
 
 namespace kc1fsz {
 
-template<typename C> class StateMachine {
+class StateMachine : public EventProcessor {
 public:
 
-    virtual void processEvent(const Event* event, C* context) = 0;
-    virtual void start(C* context) = 0;
+    virtual ~StateMachine() { }
+
+    virtual void processEvent(const Event* event) = 0;
+    virtual void start() = 0;
+    virtual void cleanup() { };
     virtual bool isDone() const = 0;
     virtual bool isGood() const = 0;
 
 protected:
 
-    bool isDoneAfterEvent(StateMachine& mach, const Event* ev, C* ctx) {
-        mach.processEvent(ev, ctx);
-        return mach.isDone();
+    bool isDoneAfterEvent(StateMachine& mach, const Event* ev) {
+        mach.processEvent(ev);
+        bool done = mach.isDone();
+        if (done) {
+            mach.cleanup();
+        }
+        return done;
     }
 
     void _setTimeoutMs(uint32_t t) {
         _timeoutTargetMs = t;
     }
 
-    bool _isTimedOut(C* ctx) const {
-        return (ctx->getTimeMs() > _timeoutTargetMs);
+    bool _isTimedOut() const {
+        return (time_ms() > _timeoutTargetMs);
     }
 
 private:

@@ -24,30 +24,34 @@ using namespace std;
 
 namespace kc1fsz {
 
-RootMachine::RootMachine(UserInfo* userInfo) 
+RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo) 
 :   _state(IDLE),
+    _ctx(ctx),
     _userInfo(userInfo),
-    _qsoMachine(userInfo) {
+    _logonMachine(ctx, userInfo),
+    _lookupMachine(ctx, userInfo),
+    _connectMachine(ctx, userInfo),
+    _qsoMachine(ctx, userInfo) {
 }
 
-void RootMachine::start(Context* ctx) {
+void RootMachine::start() {
     // Start the login process
-    _logonMachine.start(ctx);
+    _logonMachine.start();
     _state = LOGON;
 }
 
-void RootMachine::processEvent(const Event* ev, Context* ctx) {
+void RootMachine::processEvent(const Event* ev) {
     // In this state we are doing nothing waiting to be started
     if (_state == IDLE) {
     }
     // In this state we are waiting for the EL Server to process our 
     // logon request.
     else if (_state == LOGON) {
-        if (isDoneAfterEvent(_logonMachine, ev, ctx)) {
+        if (isDoneAfterEvent(_logonMachine, ev)) {
             if (_logonMachine.isGood()) {
                 // No data transfer is needed.  If we succeeded in the 
                 // login then keep going.
-                _lookupMachine.start(ctx);
+                _lookupMachine.start();
                 _state = LOOKUP;
             } else {
                 _state = FAILED;
@@ -57,13 +61,13 @@ void RootMachine::processEvent(const Event* ev, Context* ctx) {
     // In this state we are waiting for the EL Server to lookup the 
     // target callsign.
     else if (_state == LOOKUP) {
-        if (isDoneAfterEvent(_lookupMachine, ev, ctx)) {
+        if (isDoneAfterEvent(_lookupMachine, ev)) {
             if (_lookupMachine.isGood()) {
                 // Transfer the target address that we got from the EL Server
                 // into the connect machine and the QSO machine.
                 _connectMachine.setTargetAddress(_lookupMachine.getTargetAddress());
                 _qsoMachine.setTargetAddress(_lookupMachine.getTargetAddress());
-                _connectMachine.start(ctx);
+                _connectMachine.start();
                 _state = CONNECT; 
                 // Number of connect tries
                 _stateCount = 5;
@@ -75,21 +79,21 @@ void RootMachine::processEvent(const Event* ev, Context* ctx) {
     // In this state we are waiting for our QSO connection to be 
     // acknowledged by the 
     else if (_state == CONNECT) {
-        if (isDoneAfterEvent(_connectMachine, ev, ctx)) {
+        if (isDoneAfterEvent(_connectMachine, ev)) {
             if (_connectMachine.isGood()) {
                 // The connect process establishes UDP communication paths, 
                 // so transfer them over to the QSO machine.
                 _qsoMachine.setRTCPChannel(_connectMachine.getRTCPChannel());
                 _qsoMachine.setRTPChannel(_connectMachine.getRTPChannel());
                 _qsoMachine.setSSRC(_connectMachine.getSSRC());
-                _qsoMachine.start(ctx);
+                _qsoMachine.start();
                 _state = QSO;
             } 
             // If the connection fails then retry it a few times
             else {
                 if (_stateCount-- > 0) {
-                    _connectRetryWaitMachine.setTargetTimeMs(ctx->getTimeMs() + 500);
-                    _connectRetryWaitMachine.start(ctx);
+                    _connectRetryWaitMachine.setTargetTimeMs(time_ms() + 500);
+                    _connectRetryWaitMachine.start();
                     _state = CONNECT_RETRY_WAIT;
                 } else {
                     _state = FAILED;
@@ -100,14 +104,14 @@ void RootMachine::processEvent(const Event* ev, Context* ctx) {
     // In this state we are waiting for a brief period before going back 
     // to retry the connection.
     else if (_state == CONNECT_RETRY_WAIT) {
-        if (isDoneAfterEvent(_connectRetryWaitMachine, ev, ctx)) {
-            _connectMachine.start(ctx);
+        if (isDoneAfterEvent(_connectRetryWaitMachine, ev)) {
+            _connectMachine.start();
             _state = CONNECT;
         }
     }
     // In this state a QSO is ongoing
     else if (_state == QSO) {
-        if (isDoneAfterEvent(_qsoMachine, ev, ctx)) {
+        if (isDoneAfterEvent(_qsoMachine, ev)) {
             _state = SUCCEEDED;
         }
     }

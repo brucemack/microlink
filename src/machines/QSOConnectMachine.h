@@ -22,7 +22,6 @@
 #define _QSOConnectMachine_h
 
 #include "../Event.h"
-#include "../Context.h"
 #include "../StateMachine.h"
 #include "../IPAddress.h"
 #include "../Channel.h"
@@ -31,7 +30,10 @@
 
 namespace kc1fsz {
 
-class QSOConnectMachine : public StateMachine<Context> {
+class CommContext;
+class UserInfo;
+
+class QSOConnectMachine : public StateMachine {
 public:
 
     static uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
@@ -43,9 +45,10 @@ public:
         uint32_t ssrc2,
         uint8_t* packet, uint32_t packetSize);      
 
+    QSOConnectMachine(CommContext* ctx, UserInfo* userInfo);
 
-    virtual void processEvent(const Event* ev, Context* context);
-    virtual void start(Context* ctx);
+    virtual void processEvent(const Event* ev);
+    virtual void start();
     virtual bool isDone() const;
     virtual bool isGood() const;
 
@@ -63,6 +66,9 @@ private:
     static uint32_t _ssrcCounter;
 
     enum State { IDLE, CONNECTING, SUCCEEDED, FAILED } _state;
+
+    CommContext* _ctx;
+    UserInfo* _userInfo;
 
     CallSign _callSign;
     FixedString _fullName;

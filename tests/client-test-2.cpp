@@ -31,6 +31,8 @@
 
 #include "contexts/SocketContext.h"
 #include "machines/RootMachine.h"
+#include "events/TickEvent.h"
+
 #include "TestUserInfo.h"
 
 using namespace std;
@@ -41,15 +43,30 @@ int main(int, const char**) {
     SocketContext context;
 
     TestUserInfo info;
-    RootMachine rm(&info);
-    rm.setServerName(HostName("naeast.echolink.org"));
+    RootMachine rm(&context, &info);
+    //rm.setServerName(HostName("naeast.echolink.org"));
+    rm.setServerName(HostName("www.google.com"));
     rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString("XYZ123"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
     rm.setTargetCallSign(CallSign("W1TKZ-L"));
 
+    rm.start();
+
+    TickEvent tickEv;
+    uint32_t lastAudioTickMs = 0;
+
     // Here is the main event loop
-    while (true) {
+    while (true) {        
+
         // Tell the context to move forward
+        context.poll(&rm);
+
+        // Generate the audio clock every 20ms (160 samples)
+        uint32_t now = time_ms();
+        if (now - lastAudioTickMs > 20) {
+            lastAudioTickMs = now;
+            rm.processEvent(&tickEv);
+        }
     }
 }

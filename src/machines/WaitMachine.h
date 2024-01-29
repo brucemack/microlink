@@ -2,16 +2,15 @@
 #define _WaitMachine_h
 
 #include "../Event.h"
-#include "../Context.h"
 #include "../StateMachine.h"
 
 namespace kc1fsz {
 
-class WaitMachine : public StateMachine<Context> {
+class WaitMachine : public StateMachine {
 public:
 
-    virtual void processEvent(const Event* ev, Context* ctx);
-    virtual void start(Context* ctx);
+    virtual void processEvent(const Event* ev);
+    virtual void start();
     virtual bool isDone() const;
     virtual bool isGood() const;
 

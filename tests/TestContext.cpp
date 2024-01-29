@@ -16,8 +16,8 @@ Channel TestContext::createTCPChannel() {
     return channel0;
 }
 
-void TestContext::connectTCPChannel(Channel c, IPAddress a) {
-    cout << "TestContext: Asked for TCP connection to " << a.getAddr() << endl;;
+void TestContext::connectTCPChannel(Channel c, IPAddress a, uint32_t port) {
+    cout << "TestContext: Asked for TCP connection to " << a.getAddr() << " " << port << endl;;
     channel0 = c;
     ipAddr = a;
 }

@@ -19,6 +19,8 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include "../common.h"
+#include "../CommContext.h"
+
 #include "../events/UDPReceiveEvent.h"
 #include "../events/TickEvent.h"
 
@@ -33,19 +35,20 @@ namespace kc1fsz {
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
 
-QSOFlowMachine::QSOFlowMachine(UserInfo* userInfo) 
-:   _userInfo(userInfo) {
+QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo) 
+:   _ctx(ctx),
+    _userInfo(userInfo) {
 }
 
-void QSOFlowMachine::start(Context* ctx) {
+void QSOFlowMachine::start() {
     _lastKeepAliveSentMs = 0;
-    _lastKeepAliveRecvMs = ctx->getTimeMs();
+    _lastKeepAliveRecvMs = time_ms();
     _state = OPEN;
     _frameQueueWritePtr = 0;
-}    _frameQueueReadPtr = 0;
+    _frameQueueReadPtr = 0;
+}
 
-
-void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
+void QSOFlowMachine::processEvent(const Event* ev) {
     // In this state we are waiting for the reciprocal RTCP message
     if (_state == OPEN) {
         if (ev->getType() == UDPReceiveEvent::TYPE) {
@@ -57,7 +60,7 @@ void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
                 cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
                 prettyHexDump(evt->getData(), evt->getDataLen(), cout);
                
-               _lastKeepAliveRecvMs = ctx->getTimeMs();
+               _lastKeepAliveRecvMs = time_ms();
 
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
                 }
@@ -67,7 +70,7 @@ void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
 
                 cout << "QSOConnectMachine: GOT RTP DATA" << endl;
                 prettyHexDump(evt->getData(), evt->getDataLen(), cout);
-               _lastKeepAliveRecvMs = ctx->getTimeMs();
+               _lastKeepAliveRecvMs = time_ms();
 
                 if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
 
@@ -101,15 +104,15 @@ void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
         }
 
         // Always check to make sure it's not time for keep-alive
-        if (ctx->getTimeMs() > _lastKeepAliveSentMs + 10000) {
+        if (time_ms() > _lastKeepAliveSentMs + 10000) {
 
-            _lastKeepAliveSentMs = ctx->getTimeMs();
+            _lastKeepAliveSentMs = time_ms();
 
             const uint16_t packetSize = 128;
             uint8_t packet[packetSize];
             // Make the SDES message and send
             uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
-            ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+            _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
 
             // Make the initial oNDATA message for the RTP port
             const uint16_t bufferSize = 64;
@@ -126,11 +129,11 @@ void QSOFlowMachine::processEvent(const Event* ev, Context* ctx) {
             strcatLimited(buffer, _location.c_str(), bufferSize);
             strcatLimited(buffer, "\r", bufferSize);
             packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-            ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
+            _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
         }
 
         // Always check to make sure the other side is still there
-        if (ctx->getTimeMs() > _lastKeepAliveRecvMs + 30000) {
+        if (time_ms() > _lastKeepAliveRecvMs + 30000) {
             // Wrap up
             // TODO: ADD CLEANUP STATE
             _state = SUCCEEDED;

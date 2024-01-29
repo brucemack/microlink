@@ -88,7 +88,6 @@ add_executable(machine-test-1
   tests/machine-test-1.cpp
   tests/TestContext.cpp
   src/common.cpp
-  src/Context.cpp
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/LookupMachine.cpp
@@ -116,6 +115,26 @@ target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/src)
 #target_include_directories(client-test-1 PRIVATE src)
 #target_include_directories(client-test-1 PRIVATE gsm-0610-codec/include)
 #target_include_directories(client-test-1 PRIVATE gsm-0610-codec/src)
+
+# ------ client-test-2 -------------------------------------------------------
+
+add_executable(client-test-2
+  tests/client-test-2.cpp
+  tests/TestContext.cpp
+  src/common.cpp
+  src/contexts/SocketContext.cpp
+  src/machines/RootMachine.cpp
+  src/machines/LogonMachine.cpp
+  src/machines/LookupMachine.cpp
+  src/machines/QSOConnectMachine.cpp
+  src/machines/QSOFlowMachine.cpp
+  src/machines/WaitMachine.cpp
+)
+
+target_include_directories(client-test-2 PRIVATE src)
+target_include_directories(client-test-2 PRIVATE gsm-0610-codec/include)
+target_include_directories(client-test-2 PRIVATE gsm-0610-codec/src)
+
 
 # ------ exception-test-1 ----------------------------------------------------
 

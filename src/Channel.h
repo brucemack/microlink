@@ -27,14 +27,16 @@ class Channel {
 public:
 
     Channel() : _id(0) { }
-    Channel(const Channel& that) : _id(that._id) { }
-    Channel(int id) : _id(id) { }
+    Channel(const Channel& that) : _id(that._id), _isGood(that._isGood) { }
+    Channel(int id, bool isGood = true) : _id(id), _isGood(isGood) { }
     int getId() const { return _id; }
-    bool operator== (const Channel& that) { return _id == that._id; }
+    bool isGood() const { return _isGood; }
+    bool operator== (const Channel& that) { return _id == that._id && _isGood == that._isGood; }
 
 private:
 
     int _id;
+    bool _isGood;
 };
 
 }

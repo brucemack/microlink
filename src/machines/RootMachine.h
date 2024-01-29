@@ -23,7 +23,7 @@
 
 #include "../StateMachine.h"
 #include "../Event.h"
-#include "../Context.h"
+#include "../CommContext.h"
 #include "../UserInfo.h"
 
 #include "LogonMachine.h"
@@ -34,13 +34,13 @@
 
 namespace kc1fsz {
 
-class RootMachine : public StateMachine<Context> {
+class RootMachine : public StateMachine {
 public:
 
-    RootMachine(UserInfo* userInfo);
+    RootMachine(CommContext* ctx, UserInfo* userInfo);
 
-    virtual void processEvent(const Event* event, Context* context);
-    virtual void start(Context* ctx);
+    virtual void processEvent(const Event* event);
+    virtual void start();
     virtual bool isDone() const;
     virtual bool isGood() const;
 
@@ -57,6 +57,7 @@ private:
         QSO, BYE, FAILED, SUCCEEDED } _state;
     uint16_t _stateCount;
 
+    CommContext* _ctx;
     UserInfo* _userInfo;
     LogonMachine _logonMachine;
     LookupMachine _lookupMachine;

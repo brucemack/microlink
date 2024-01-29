@@ -18,8 +18,8 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _Context_h
-#define _Context_h
+#ifndef _CommContext_h
+#define _CommContext_h
 
 #include <cstdint>
 
@@ -37,19 +37,10 @@ namespace kc1fsz {
  * This class defines the interface for communications with 
  * the outside world.
  */
-class Context {
+class CommContext {
 public:
 
-    virtual ~Context() { }
-
-    /**
-     * This should be called periodically to allow the Context
-     * to push events back into the state machine (i.e. as
-     * asynchronous events happen).
-    */
-    virtual void applyEvents(StateMachine<Context>* machine) { }
-
-    virtual uint32_t getTimeMs() { return 0; }
+    virtual ~CommContext() { }
 
     // ------ Request Methods -------------------------------------------------
 
@@ -57,7 +48,7 @@ public:
 
     virtual Channel createTCPChannel() { return Channel(); }
     virtual void closeTCPChannel(Channel c) { }
-    virtual void connectTCPChannel(Channel c, IPAddress ipAddr) { }
+    virtual void connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port) { }
     virtual void sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) { }
 
     virtual Channel createUDPChannel(uint32_t localPort) { return Channel(); }

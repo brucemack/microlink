@@ -19,6 +19,7 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include "../common.h"
+#include "../CommContext.h"
 #include "../events/UDPReceiveEvent.h"
 
 #include "QSOConnectMachine.h"
@@ -32,11 +33,16 @@ static const uint32_t RTCP_PORT = 5199;
 
 uint32_t QSOConnectMachine::_ssrcCounter = 0xf0000000;
 
-void QSOConnectMachine::start(Context* ctx) {  
+QSOConnectMachine::QSOConnectMachine(CommContext* ctx, UserInfo* userInfo)
+:   _ctx(ctx),
+    _userInfo(userInfo) {   
+}
+
+void QSOConnectMachine::start() {  
 
     // Get UDP connections created
-    _rtpChannel = ctx->createUDPChannel(RTP_PORT);
-    _rtcpChannel = ctx->createUDPChannel(RTCP_PORT);
+    _rtpChannel = _ctx->createUDPChannel(RTP_PORT);
+    _rtcpChannel = _ctx->createUDPChannel(RTCP_PORT);
 
     // Assign a unique SSRC
     _ssrc = _ssrcCounter++;
@@ -46,8 +52,8 @@ void QSOConnectMachine::start(Context* ctx) {
     // Make the SDES message and send
     uint32_t packetLen = formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
     // Send it on both connections
-    ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
-    ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+    _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+    _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
 
     // Make the oNDATA message for the RTP port
     const uint16_t bufferSize = 64;
@@ -64,15 +70,15 @@ void QSOConnectMachine::start(Context* ctx) {
     strcatLimited(buffer, _location.c_str(), bufferSize);
     strcatLimited(buffer, "\r", bufferSize);
     packetLen = formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-    ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
+    _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
 
     // We give this 5 seconds to receive a response
-    _setTimeoutMs(ctx->getTimeMs() + 5000);
+    _setTimeoutMs(time_ms() + 5000);
 
     _state = CONNECTING;  
 }
 
-void QSOConnectMachine::processEvent(const Event* ev, Context* ctx) {
+void QSOConnectMachine::processEvent(const Event* ev) {
     // In this state we are waiting for the reciprocal RTCP message
     if (_state == CONNECTING) {
         if (ev->getType() == UDPReceiveEvent::TYPE) {
@@ -87,7 +93,7 @@ void QSOConnectMachine::processEvent(const Event* ev, Context* ctx) {
                 } 
             }
         }
-        else if (_isTimedOut(ctx)) {
+        else if (_isTimedOut()) {
             _state = FAILED;
         }
     }

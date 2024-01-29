@@ -29,36 +29,47 @@
 #include "../events/TCPDisconnectEvent.h"
 #include "../events/TCPReceiveEvent.h"
 
+#include "CommContext.h"
 #include "LookupMachine.h"
 
 using namespace std;
 
 namespace kc1fsz {
 
-void LookupMachine::start(Context* ctx) {
+// TODO: CONSOLIDATE
+//static const uint32_t ELS_PORT = 5200;
+static const uint32_t ELS_PORT = 80;
+
+LookupMachine::LookupMachine(CommContext* ctx, UserInfo* userInfo)
+:   _state(IDLE),
+    _ctx(ctx),
+    _userInfo(userInfo) { 
+}
+
+void LookupMachine::start() {
     _foundTarget = false;
     _targetAddr = 0;
     // Launch the DNS resolution process
-    ctx->startDNSLookup(_serverHostName);
+    _ctx->startDNSLookup(_serverHostName);
     // We give the lookup 5 seconds to complete
-    _setTimeoutMs(ctx->getTimeMs() + 5000);
+    _setTimeoutMs(time_ms() + 5000);
     _state = DNS_WAIT;
 }
 
-void LookupMachine::processEvent(const Event* ev, Context* ctx) {
+void LookupMachine::processEvent(const Event* ev) {
     // In this state we are waiting for the DNS resolution to complete
     if (_state == DNS_WAIT) {
         // Look for good completion
         if (ev->getType() == DNSLookupEvent::TYPE) {
             const DNSLookupEvent* evt = (DNSLookupEvent*)ev;
             // Start the process of opening the TCP connection
-            _channel = ctx->createTCPChannel();
-            ctx->connectTCPChannel(_channel, evt->addr);
+            _channel = _ctx->createTCPChannel();
+            _ctx->connectTCPChannel(_channel, evt->addr, ELS_PORT);
             // We give the connect 1 second to complete
-            _setTimeoutMs(ctx->getTimeMs() + 1000);
+            _setTimeoutMs(time_ms() + 1000);
             _state = CONNECTING;
         }
-        else if (_isTimedOut(ctx)) {
+        else if (_isTimedOut()) {
             _state = FAILED;
         }
     }
@@ -71,14 +82,14 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
             // Send the directory request message
             uint8_t buf[1];
             buf[0] = 's';
-            ctx->sendTCPChannel(_channel, buf, 1);
+            _ctx->sendTCPChannel(_channel, buf, 1);
             // We give the directory 15 seconds to complete
-            _setTimeoutMs(ctx->getTimeMs() + 15000);
+            _setTimeoutMs(time_ms() + 15000);
             _saveAreaPtr = 0;
             _headerSeen = false;
             _state = WAITING_FOR_DISCONNECT;            
         } 
-        else if (_isTimedOut(ctx)) {
+        else if (_isTimedOut()) {
             _state = FAILED;
         }
     }
@@ -194,7 +205,7 @@ void LookupMachine::processEvent(const Event* ev, Context* ctx) {
                 _state = FAILED;
             }
         }
-        else if (_isTimedOut(ctx)) {
+        else if (_isTimedOut()) {
                 // TODO: Close channel
 
             // TODO: NEED MESSAGE

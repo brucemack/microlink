@@ -2,11 +2,11 @@
 
 namespace kc1fsz {
 
-void WaitMachine::processEvent(const Event* ev, Context* ctx) {
+void WaitMachine::processEvent(const Event* ev) {
 
 }
 
-void WaitMachine::start(Context* ctx) {
+void WaitMachine::start() {
 
 }
 

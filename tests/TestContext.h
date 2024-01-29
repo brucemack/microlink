@@ -1,22 +1,16 @@
 #ifndef _TestContext_h
 #define _TestContext_h
 
-#include "../src/Context.h"
+#include "../src/CommContext.h"
 
 namespace kc1fsz {
 
-class TestContext : public Context {
+class TestContext : public CommContext {
 public:
-
-    virtual uint32_t getTimeMs() { return _timeMs; }
-
-    void setTimeMs(uint32_t ms) { _timeMs = ms; }
-
-    void advanceTimeMs(uint32_t ms) { _timeMs += ms; }
 
     Channel createTCPChannel();
 
-    void connectTCPChannel(Channel c, IPAddress ipAddr);
+    void connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port);
 
     void sendTCPChannel(Channel c, const uint8_t* b, uint16_t len);
 
@@ -33,10 +27,6 @@ public:
     HostName hostName;
     uint8_t data[256];
     uint32_t dataLen;
-
-private:
-
-    uint32_t _timeMs;
 };
 
 }

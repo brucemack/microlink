@@ -23,6 +23,8 @@
 #include <cstring>
 
 #include "../FixedString.h"
+#include "../CommContext.h"
+#include "../UserInfo.h"
 
 #include "../events/DNSLookupEvent.h"
 #include "../events/TCPConnectEvent.h"
@@ -35,36 +37,52 @@ using namespace std;
 
 namespace kc1fsz {
 
-LogonMachine::LogonMachine() 
+//static const uint32_t ELS_PORT = 5200;
+static const uint32_t ELS_PORT = 80;
+
+LogonMachine::LogonMachine(CommContext* ctx, UserInfo* userInfo) 
 :   _state(IDLE),
+    _ctx(ctx),
+    _userInfo(userInfo),
     _logonRespPtr(0) {
 }
 
-void LogonMachine::start(Context* ctx) {
+void LogonMachine::start() {
+    _channel = Channel(0, false);
+    _logonRespPtr = 0;
     // Launch the DNS resolution process
-    ctx->startDNSLookup(_serverHostName);
+    _ctx->startDNSLookup(_serverHostName);
     // We give the lookup 5 seconds to complete
-    _setTimeoutMs(ctx->getTimeMs() + 5000);
+    _setTimeoutMs(time_ms() + 5000);
     _state = DNS_WAIT;
 }
 
-void LogonMachine::processEvent(const Event* ev, Context* ctx) {
-    // In this state we are doing nothing waiting to be started
-    if (_state == IDLE) {
-    }
+void LogonMachine::cleanup() {
+    _ctx->closeTCPChannel(_channel);
+}
+
+void LogonMachine::processEvent(const Event* ev) {
     // In this state we are waiting for the DNS resolution to complete
-    else if (_state == DNS_WAIT) {
+    if (_state == DNS_WAIT) {
         // Look for good completion
         if (ev->getType() == DNSLookupEvent::TYPE) {
             const DNSLookupEvent* evt = (DNSLookupEvent*)ev;
+
+            _userInfo->setStatus("Connecting ...");
+
             // Start the process of opening the TCP connection
-            _channel = ctx->createTCPChannel();
-            ctx->connectTCPChannel(_channel, evt->addr);
-            // We give the connect 1 second to complete
-            _setTimeoutMs(ctx->getTimeMs() + 1000);
-            _state = CONNECTING;
+            _channel = _ctx->createTCPChannel();
+            if (!_channel.isGood()) {
+                _state = FAILED;
+            } else {
+                _ctx->connectTCPChannel(_channel, evt->addr, ELS_PORT);
+                // We give the connect 1 second to complete
+                _setTimeoutMs(time_ms() + 1000);
+                _state = CONNECTING;
+            }
         }
-        else if (_isTimedOut(ctx)) {
+        else if (_isTimedOut()) {
+            // TODO: MESSAGE
             _state = FAILED;
         }
     }
@@ -76,13 +94,14 @@ void LogonMachine::processEvent(const Event* ev, Context* ctx) {
             // Build the logon message
             uint8_t buf[256];
             uint32_t bufLen = createOnlineMessage(buf, 256, _callSign, _password, _location);
-            ctx->sendTCPChannel(_channel, buf, bufLen);
+            _ctx->sendTCPChannel(_channel, buf, bufLen);
             // We give the logon 10 seconds to complete
-            _setTimeoutMs(ctx->getTimeMs() + 10000);
+            _setTimeoutMs(time_ms() + 10000);
             _logonRespPtr = 0;
             _state = WAITING_FOR_DISCONNECT;            
         } 
-        else if (_isTimedOut(ctx)) {
+        else if (_isTimedOut()) {
+            // TODO: MESSAGE
             _state = FAILED;
         }
     }
@@ -90,7 +109,8 @@ void LogonMachine::processEvent(const Event* ev, Context* ctx) {
         // If we get data then accept it
         if (ev->getType() == TCPReceiveEvent::TYPE) {
             const TCPReceiveEvent* evt = (TCPReceiveEvent*)ev;
-            //prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+            cout << "GOT THIS" << endl;
+            prettyHexDump(evt->getData(), evt->getDataLen(), cout);
             // Accumulate the data (or as much as possible)
             uint32_t spaceLeft = _logonRespSize - _logonRespPtr;
             uint32_t l = std::min(spaceLeft, evt->getDataLen());
@@ -103,9 +123,10 @@ void LogonMachine::processEvent(const Event* ev, Context* ctx) {
             if (evt->getChannel() == _channel) {
                 // Parse the response to make sure we got what we expected
                 if (_logonRespPtr >= 1 && _logonResp[0] == 'O' && _logonResp[1] == 'K') {
+                    _userInfo->setStatus("Logon succeeded");
                     _state = SUCCEEDED;
                 } else {
-                    // TODO: MESSAGE
+                    _userInfo->setStatus("Logon failed");
                     _state = FAILED;
                 }
             } else {
@@ -113,8 +134,8 @@ void LogonMachine::processEvent(const Event* ev, Context* ctx) {
                 _state = FAILED;
             }
         }
-        else if (_isTimedOut(ctx)) {
-            // TODO: NEED MESSAGE
+        else if (_isTimedOut()) {
+            _userInfo->setStatus("Connection failed");
             _state = FAILED;
         }
     }

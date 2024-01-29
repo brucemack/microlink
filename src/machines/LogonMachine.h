@@ -22,7 +22,6 @@
 #define _LogonMachine_h
 
 #include "../Event.h"
-#include "../Context.h"
 #include "../StateMachine.h"
 
 #include "../HostName.h"
@@ -32,17 +31,21 @@
 
 namespace kc1fsz {
 
+class CommContext;
+class UserInfo;
+
 /**
  * This state machine is used to manage the process of logging 
  * on to the EchoLink server.
  */
-class LogonMachine : public StateMachine<Context> {
+class LogonMachine : public StateMachine {
 public:
 
-    LogonMachine();
+    LogonMachine(CommContext* ctx, UserInfo* userInfo);
 
-    virtual void processEvent(const Event* ev, Context* context);
-    virtual void start(Context* ctx);
+    virtual void processEvent(const Event* ev);
+    virtual void start();
+    virtual void cleanup();
     virtual bool isDone() const;
     virtual bool isGood() const;
 
@@ -54,6 +57,9 @@ public:
 private:
 
     enum State { IDLE, DNS_WAIT, CONNECTING, WAITING_FOR_DISCONNECT, FAILED, SUCCEEDED } _state;
+
+    CommContext* _ctx;
+    UserInfo* _userInfo;
 
     HostName _serverHostName;
     CallSign _callSign;

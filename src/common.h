@@ -37,6 +37,16 @@ uint32_t parseIP4Address(const char* dottedAddr);
 uint32_t time_ms();
 
 /**
+ * Used for testing purposes - sets time artificially.
+ */
+void set_time_ms(uint32_t ms);
+
+/**
+ * Used for testing purposes - moves time forward artificially.
+ */
+void advance_time_ms(uint32_t ms);
+
+/**
  * @param targetLimit The actual size of the target buffer.  This 
  * function will automatically save a space for the null.
  */

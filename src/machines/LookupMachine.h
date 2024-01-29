@@ -2,7 +2,6 @@
 #define _LookupMachine_h
 
 #include "../Event.h"
-#include "../Context.h"
 #include "../StateMachine.h"
 #include "../IPAddress.h"
 #include "../HostName.h"
@@ -10,16 +9,19 @@
 
 namespace kc1fsz {
 
+class CommContext;
+class UserInfo;
+
 /**
  * A state machine used for managing the EL directory lookup.
 */
-class LookupMachine : public StateMachine<Context> {
+class LookupMachine : public StateMachine {
 public:
 
-    LookupMachine() : _state(IDLE) { }
+    LookupMachine(CommContext* ctx, UserInfo* userInfo);
 
-    virtual void processEvent(const Event* ev, Context* context);
-    virtual void start(Context* ctx);
+    virtual void processEvent(const Event* ev);
+    virtual void start();
     virtual bool isDone() const;
     virtual bool isGood() const;
 
@@ -31,6 +33,9 @@ private:
 
     enum State { IDLE, DNS_WAIT, CONNECTING, WAITING_FOR_DISCONNECT, 
         FAILED, SUCCEEDED } _state;
+
+    CommContext* _ctx;
+    UserInfo* _userInfo;
 
     HostName _serverHostName;
     CallSign _targetCallSign;

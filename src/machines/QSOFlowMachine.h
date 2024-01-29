@@ -22,7 +22,6 @@
 #define _QSOFlowMachine_h
 
 #include "../Event.h"
-#include "../Context.h"
 #include "../StateMachine.h"
 #include "../IPAddress.h"
 #include "../CallSign.h"
@@ -32,13 +31,16 @@
 
 namespace kc1fsz {
 
-class QSOFlowMachine : public StateMachine<Context> {
+class UserInfo;
+class CommContext;
+
+class QSOFlowMachine : public StateMachine {
 public:
 
-    QSOFlowMachine(UserInfo* userInfo);
+    QSOFlowMachine(CommContext* ctx, UserInfo* userInfo);
 
-    virtual void processEvent(const Event* ev, Context* context);
-    virtual void start(Context* ctx);
+    virtual void processEvent(const Event* ev);
+    virtual void start();
     virtual bool isDone() const;
     virtual bool isGood() const;
 
@@ -56,7 +58,9 @@ private:
 
     enum State { IDLE, OPEN, SUCCEEDED } _state;
 
+    CommContext* _ctx;
     UserInfo* _userInfo;
+
     CallSign _callSign;
     FixedString _fullName;
     FixedString _location;
@@ -70,7 +74,7 @@ private:
     // This is a circular buffer used to keep track
     // of audio frames waiting for the next audio pulse
     static const uint32_t _frameQueueDepth = 8;
-    uint8_t _frameQueue[frameQueueDepth][33];
+    uint8_t _frameQueue[_frameQueueDepth][33];
     uint32_t _frameQueueWritePtr = 0;
     uint32_t _frameQueueReadPtr = 0;
 };
