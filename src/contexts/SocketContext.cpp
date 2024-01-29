@@ -139,6 +139,8 @@ void SocketContext::poll(EventProcessor* ep) {
                     int rc = recv(t.fd, buffer, 256, 0);
                     // Got any bytes?
                     if (rc > 0) {
+                        //cout << "----- UDP Receive " << t.fd << endl;
+                        //prettyHexDump((const uint8_t*)buffer, rc, cout);
                         // Generate an event
                         UDPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
                         ep->processEvent(&ev);
@@ -203,6 +205,19 @@ void SocketContext::closeTCPChannel(Channel c) {
 
 void SocketContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port) {
 
+    if (!c.isGood()) {
+        return;
+    }
+    // Find the existing tracker for this channel
+    auto it = std::find_if(_tracker.begin(), _tracker.end(), 
+        [&c](const SocketTracker& arg) { return arg.fd == c.getId(); });
+    if (it == _tracker.end()) {
+        return;
+    } 
+    if (it->type != SocketTracker::Type::TCP) {
+        return;
+    }
+
     struct sockaddr_in remote_addr;
     memset(&remote_addr, 0, sizeof(sockaddr_in));
     remote_addr.sin_family = AF_INET;
@@ -217,11 +232,8 @@ void SocketContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port
         assert(false);
     }
     else if (rc == -1 && errno == EINPROGRESS) {
-        SocketTracker tr;
-        tr.fd = c.getId();
-        tr.connectRequested = true;
-        tr.connectWaiting = true;
-        _tracker.push_back(tr);
+        it->connectRequested = true;
+        it->connectWaiting = true;
     } else {
         cout << "Connect failed" << endl;
     }
@@ -287,7 +299,10 @@ void SocketContext::_closeChannel(Channel c) {
 void SocketContext::sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
     const uint8_t* b, uint16_t len) {
 
-    cout << "UDP Send" << endl;
+    char buf[64];
+    formatIP4Address(targetAddr.getAddr(), buf, 64);
+
+    cout << "UDP Send to " << buf << ":" << targetPort << endl;
     prettyHexDump(b, len, cout);
 
     struct sockaddr_in remote_addr;
@@ -296,7 +311,10 @@ void SocketContext::sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t tar
     remote_addr.sin_addr.s_addr = targetAddr.getAddr();
     remote_addr.sin_port = htons(targetPort);
 
-    sendto(c.getId(), b, len, 0, (const struct sockaddr*)&remote_addr, sizeof(sockaddr_in));
+    int rc = sendto(c.getId(), b, len, 0, (const struct sockaddr*)&remote_addr, sizeof(sockaddr_in));
+    if (rc <= 0) {
+        cout << "SEND FAILED" << endl;
+    }
 }
 
 int SocketContext::getLiveChannelCount() const {

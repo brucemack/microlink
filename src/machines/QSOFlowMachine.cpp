@@ -68,12 +68,11 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             }
             else if (evt->getChannel() == _rtpChannel) {
 
-                cout << "QSOConnectMachine: GOT RTP DATA" << endl;
-                prettyHexDump(evt->getData(), evt->getDataLen(), cout);
-               _lastKeepAliveRecvMs = time_ms();
+                cout << "QSOFlowMachine: GOT RTP DATA" << endl;
+                //prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+                _lastKeepAliveRecvMs = time_ms();
 
                 if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
-
                     // TODO: MAKE THIS MORE EFFICIENT
                     // Unload the GSM frames from the RTP packet
                     uint8_t gsmFrames[4][33];
@@ -94,8 +93,8 @@ void QSOFlowMachine::processEvent(const Event* ev) {
                     char temp[64];
                     memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
                     temp[std::min((uint32_t)63, evt->getDataLen())] = 0;
-                    // Here we skip past the oNDATA\r part when we report the message
-                    _userInfo->setOnData(temp + 7);
+                    // Here we skip past the oNDATA part when we report the message
+                    _userInfo->setOnData(temp + 6);
                 }
             }
         }

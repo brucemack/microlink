@@ -32,7 +32,7 @@ namespace kc1fsz {
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
 
-uint32_t QSOConnectMachine::_ssrcCounter = 0xf0000000;
+uint32_t QSOConnectMachine::_ssrcCounter = 0xd0000010;
 
 QSOConnectMachine::QSOConnectMachine(CommContext* ctx, UserInfo* userInfo)
 :   _ctx(ctx),
@@ -45,11 +45,7 @@ void QSOConnectMachine::start() {
     formatIP4Address(_targetAddr.getAddr(), addr, 32);
     char message[64];
     sprintf(message, "Connecting to %s", addr);
-
     _userInfo->setStatus(message);
-
-    cout << "HALT" << endl;
-    exit(0);
 
     // Get UDP connections created
     _rtpChannel = _ctx->createUDPChannel(RTP_PORT);
@@ -57,55 +53,97 @@ void QSOConnectMachine::start() {
 
     // Assign a unique SSRC
     _ssrc = _ssrcCounter++;
-    const uint16_t packetSize = 128;
-    uint8_t packet[packetSize];
 
-    // Make the SDES message and send
-    uint32_t packetLen = formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
-    // Send it on both connections
-    _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
-    _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
-
-    // Make the oNDATA message for the RTP port
-    const uint16_t bufferSize = 64;
-    char buffer[bufferSize];
-    buffer[0] = 0;
-    strcatLimited(buffer, "oNDATA\r", bufferSize);
-    strcatLimited(buffer, _callSign.c_str(), bufferSize);
-    strcatLimited(buffer, "\r", bufferSize);
-    strcatLimited(buffer, "MicroLink V ", bufferSize);
-    strcatLimited(buffer, VERSION_ID, bufferSize);
-    strcatLimited(buffer, "\r", bufferSize);
-    strcatLimited(buffer, _fullName.c_str(), bufferSize);
-    strcatLimited(buffer, "\r", bufferSize);
-    strcatLimited(buffer, _location.c_str(), bufferSize);
-    strcatLimited(buffer, "\r", bufferSize);
-    packetLen = formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-    _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
-
-    // We give this 5 seconds to receive a response
-    _setTimeoutMs(time_ms() + 5000);
+    // On the first try the timeout zero to force the first
+    // connect attempt
+    _setTimeoutMs(time_ms());
 
     _state = CONNECTING;  
+    _retryCount = 0;
 }
 
 void QSOConnectMachine::processEvent(const Event* ev) {
+
     // In this state we are waiting for the reciprocal RTCP message
     if (_state == CONNECTING) {
         if (ev->getType() == UDPReceiveEvent::TYPE) {
-            const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
-            if (evt->getChannel() == _rtcpChannel) {
 
+            const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
+
+            if (evt->getChannel() == _rtcpChannel) {
+                
                 cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
                 prettyHexDump(evt->getData(), evt->getDataLen(), cout);
 
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
                     _state = SUCCEEDED;
                 } 
+            } else if (evt->getChannel() == _rtpChannel) {
+                if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
+                    // Make sure the message is null-terminated one way or the other
+                    char temp[64];
+                    memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
+                    temp[std::min((uint32_t)63, evt->getDataLen())] = 0;
+                    // Here we skip past the oNDATA part when we report the message
+                    _userInfo->setOnData(temp +67);
+                }
             }
+
         }
         else if (_isTimedOut()) {
-            _state = FAILED;
+
+            // Check to see if it's time to give up connecting
+            if (_retryCount++ > 5) {
+                _userInfo->setStatus("No response from station");
+                _state = FAILED;
+            }
+            else {
+                const uint16_t packetSize = 128;
+                uint8_t packet[packetSize];
+
+                // Make the SDES message and send
+                uint32_t packetLen = formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
+                // Send it on both connections
+                _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+                _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+
+                // Make the oNDATA message for the RTP port
+                const uint16_t bufferSize = 64;
+                char buffer[bufferSize];
+                buffer[0] = 0;
+                strcatLimited(buffer, "oNDATA\r", bufferSize);
+                strcatLimited(buffer, _callSign.c_str(), bufferSize);
+                strcatLimited(buffer, "\r", bufferSize);
+                strcatLimited(buffer, "MicroLink V ", bufferSize);
+                strcatLimited(buffer, VERSION_ID, bufferSize);
+                strcatLimited(buffer, "\r", bufferSize);
+                strcatLimited(buffer, _fullName.c_str(), bufferSize);
+                strcatLimited(buffer, "\r", bufferSize);
+                strcatLimited(buffer, _location.c_str(), bufferSize);
+                strcatLimited(buffer, "\r", bufferSize);
+                packetLen = formatOnDataPacket(buffer, _ssrc, packet, packetSize);
+                _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
+
+                // We give this 5 seconds to receive a response on subsequent attempts
+                _setTimeoutMs(time_ms() + 5000);
+            }
+        }
+    }
+    // It's possible to receive an oNDATA packet even after we have 
+    // detected success. Pull it in an process it normally.
+    else if (_state == SUCCEEDED) {
+        if (ev->getType() == UDPReceiveEvent::TYPE) {
+            const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
+            if (evt->getChannel() == _rtpChannel) {
+                if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
+                    // Make sure the message is null-terminated one way or the other
+                    char temp[64];
+                    memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
+                    temp[std::min((uint32_t)63, evt->getDataLen())] = 0;
+                    // Here we skip past the oNDATA\r part when we report the message
+                    _userInfo->setOnData(temp + 7);
+                }
+            }
         }
     }
 }

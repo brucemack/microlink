@@ -77,6 +77,7 @@ private:
     Channel _rtpChannel;
     Channel _rtcpChannel;
     uint32_t _ssrc;
+    uint32_t _retryCount;
 };
 
 }

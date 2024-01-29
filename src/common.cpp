@@ -198,7 +198,7 @@ void parseRTPAudioPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
 }
 
 bool isOnDataPacket(const uint8_t* d, uint32_t len) {
-    return (len >= 7 && memcmp(d, "oNDATA\r", 7) == 0);
+    return (len >= 6 && memcmp(d, "oNDATA", 6) == 0);
 }
 
 uint32_t addRTCPPad(uint32_t unpaddedLength,
