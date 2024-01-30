@@ -25,7 +25,7 @@
 
 #include "common.h"
 #include "kc1fsz-tools/Event.h"
-#include "EventProcessor.h"
+#include "kc1fsz-tools/EventProcessor.h"
 
 namespace kc1fsz {
 

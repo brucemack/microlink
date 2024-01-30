@@ -21,7 +21,7 @@
 #ifndef _TestAudioOutputContext_h
 #define _TestAudioOutputContext_h
 
-#include "../src/AudioOutputContext.h"
+#include "kc1fsz-tools/AudioOutputContext.h"
 
 namespace kc1fsz {
 

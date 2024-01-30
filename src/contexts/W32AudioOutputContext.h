@@ -23,7 +23,8 @@
 
 #include <cstdint>
 #include <Windows.h>
-#include "../AudioOutputContext.h"
+
+#include "kc1fsz-tools/AudioOutputContext.h"
 
 namespace kc1fsz {
 

@@ -26,11 +26,11 @@
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/Channel.h"
+#include "kc1fsz-tools//AudioOutputContext.h"
 #include "gsm-0610-codec/Decoder.h"
 
 #include "../StateMachine.h"
 #include "../UserInfo.h"
-#include "../AudioOutputContext.h"
 
 namespace kc1fsz {
 

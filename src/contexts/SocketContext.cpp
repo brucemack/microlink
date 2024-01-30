@@ -37,9 +37,9 @@
 #include "kc1fsz-tools/events/TCPReceiveEvent.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
 #include "kc1fsz-tools/Common.h"
+#include "kc1fsz-tools/EventProcessor.h"
 
 #include "../common.h"
-#include "../EventProcessor.h"
 
 #include "SocketContext.h"
 
