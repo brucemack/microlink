@@ -28,6 +28,8 @@
 #include "../FixedString.h"
 #include "../Channel.h"
 #include "../UserInfo.h"
+#include "../AudioOutputContext.h"
+#include "gsm-0610-codec/Decoder.h"
 
 namespace kc1fsz {
 
@@ -37,7 +39,8 @@ class CommContext;
 class QSOFlowMachine : public StateMachine {
 public:
 
-    QSOFlowMachine(CommContext* ctx, UserInfo* userInfo);
+    QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
+        AudioOutputContext* audioOutput);
 
     virtual void processEvent(const Event* ev);
     virtual void start();
@@ -54,13 +57,11 @@ public:
 
 private:
 
-    void _audioTick();
-    void _decodeGSMFrame(uint8_t* frame);
-
     enum State { IDLE, OPEN, SUCCEEDED } _state;
 
     CommContext* _ctx;
     UserInfo* _userInfo;
+    AudioOutputContext* _audioOutput;
 
     CallSign _callSign;
     FixedString _fullName;
@@ -72,13 +73,7 @@ private:
     uint32_t _lastKeepAliveSentMs;
     uint32_t _lastKeepAliveRecvMs;
 
-    // This is a circular buffer used to keep track
-    // of audio frames waiting for the next audio pulse
-    static const uint32_t _frameQueueDepth = 16;
-    uint8_t _frameQueue[_frameQueueDepth][33];
-    uint32_t _frameQueueSize = 0;
-    uint32_t _frameQueueWritePtr = 0;
-    uint32_t _frameQueueReadPtr = 0;
+    Decoder _gsmDecoder;
 };
 
 }

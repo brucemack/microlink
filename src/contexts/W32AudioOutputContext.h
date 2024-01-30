@@ -37,7 +37,7 @@ public:
         int16_t* bufferArea);
     virtual ~W32AudioOutputContext();
 
-    virtual void poll();
+    virtual bool poll();
 
     virtual void play(int16_t* frame);
 
@@ -48,6 +48,7 @@ private:
     HWAVEOUT _waveOut;
     WAVEHDR _waveHdr[2];
     uint32_t _frameCount;
+    uint32_t _frameCountOnLastWrite;
 };
 
 }

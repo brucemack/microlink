@@ -23,8 +23,6 @@
 
 #include "../StateMachine.h"
 #include "../Event.h"
-#include "../CommContext.h"
-#include "../UserInfo.h"
 
 #include "LogonMachine.h"
 #include "LookupMachine.h"
@@ -34,10 +32,14 @@
 
 namespace kc1fsz {
 
+class CommContext;
+class UserInfo;
+class AudioOutputContext;
+
 class RootMachine : public StateMachine {
 public:
 
-    RootMachine(CommContext* ctx, UserInfo* userInfo);
+    RootMachine(CommContext* ctx, UserInfo* userInfo, AudioOutputContext* audioOutput);
 
     virtual void processEvent(const Event* event);
     virtual void start();

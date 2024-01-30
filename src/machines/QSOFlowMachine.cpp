@@ -35,18 +35,17 @@ namespace kc1fsz {
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
 
-QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo) 
+QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
+    AudioOutputContext* audioOutput) 
 :   _ctx(ctx),
-    _userInfo(userInfo) {
+    _userInfo(userInfo),
+    _audioOutput(audioOutput) {
 }
 
 void QSOFlowMachine::start() {
     _lastKeepAliveSentMs = 0;
     _lastKeepAliveRecvMs = time_ms();
     _state = OPEN;
-    _frameQueueWritePtr = 0;
-    _frameQueueReadPtr = 0;
-    _frameQueueSize = 0;
 }
 
 void QSOFlowMachine::processEvent(const Event* ev) {
@@ -73,30 +72,31 @@ void QSOFlowMachine::processEvent(const Event* ev) {
 
                 if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
 
-                    //cout << "Got Audio " << _frameQueueSize << endl;
+                    cout << "Got Audio " << endl;
 
-                    // TODO: MAKE THIS MORE EFFICIENT
+                    // TODO: MAKE THIS MORE EFFICIENT - WE DON'T NEED TWO DATA MOVES
                     // Unload the GSM frames from the RTP packet
                     uint8_t gsmFrames[4][33];
                     uint16_t remoteSeq = 0;
                     uint32_t remoteSSRC = 0;
                     parseRTPAudioPacket(evt->getData(), &remoteSeq, &remoteSSRC, gsmFrames);
 
-                    // Load frames into the queue for future decode on the audio clock
-                    for (int i = 0; i < 4; i++) {
-                        // Check to see if we have room on the audio queue 
-                        if (_frameQueueSize < _frameQueueDepth) {
-                            memcpy(_frameQueue[_frameQueueWritePtr], gsmFrames[i], 33);
-                            if (++_frameQueueWritePtr == _frameQueueDepth) {
-                                _frameQueueWritePtr = 0;
-                            }
-                            _frameQueueSize++;
-                        } 
-                        // This shouldn't happen unless there is a rush of audio packets
-                        else {
-                            cout << "FRAME OVERFLOW" << endl;
-                        }
+                    // TODO: LOOK AT SSRC and ignore echos
+
+                    // Decode the GSM data
+                    Parameters params;
+                    int16_t pcmData[4 * 160];
+                    uint32_t pcmPtr = 0;
+                    for (uint32_t f = 0; f < 4; f++) {
+                        // TODO: PROVIDE AN UNPACK THAT CONTAINS STATE
+                        kc1fsz::PackingState state;
+                        params.unpack(gsmFrames[f], &state);
+                        _gsmDecoder.decode(&params, pcmData + pcmPtr);
+                        pcmPtr += 160;
                     }
+
+                    // Hand off to the audio context to play the sound
+                    _audioOutput->play(pcmData);
                 } 
                 else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
                     // Make sure the message is null-terminated one way or the other
@@ -107,9 +107,6 @@ void QSOFlowMachine::processEvent(const Event* ev) {
                     _userInfo->setOnData(temp + 6);
                 }
             }
-        }
-        else if (ev->getType() == TickEvent::TYPE) {
-            _audioTick();
         }
 
         // Always check to make sure it's not time for keep-alive
@@ -156,20 +153,6 @@ bool QSOFlowMachine::isDone() const {
 
 bool QSOFlowMachine::isGood() const {
     return (_state == SUCCEEDED);
-}
-
-void QSOFlowMachine::_audioTick() {
-    if (_frameQueueSize > 0) {
-        cout << "Audio Tick " << _frameQueueSize << endl;
-        _decodeGSMFrame(_frameQueue[_frameQueueReadPtr]);
-        if (++_frameQueueReadPtr == _frameQueueDepth) {
-            _frameQueueReadPtr = 0;
-        }
-        _frameQueueSize--;
-    }
-}
-
-void QSOFlowMachine::_decodeGSMFrame(uint8_t* frame) {
 }
 
 }

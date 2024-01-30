@@ -19,7 +19,11 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include <stdexcept>
+#include <iostream>
+
 #include "W32AudioOutputContext.h"
+
+using namespace std;
 
 namespace kc1fsz {
 
@@ -60,10 +64,15 @@ W32AudioOutputContext::W32AudioOutputContext(uint32_t frameSize,
         throw std::runtime_error("Unable to open audio output");
     }
 
-    // Set up and prepare buffers/headers for output.  We use to buffers
+    // Set up and prepare buffers/headers for output.  We use the buffers
     // in alternating sequence. 
     for (int b = 0; b < 2; b++) {
+        // Calculate the start of the frame
         int16_t* buf = _waveData + (b * _frameSize);
+        // Clear
+        for (uint32_t i = 0; i < _frameSize; i++) {
+            buf[i] = 0;
+        }
         _waveHdr[b].lpData = (LPSTR)(buf);
         _waveHdr[b].dwBufferLength = _frameSize * 2;
         _waveHdr[b].dwBytesRecorded = 0;
@@ -78,6 +87,7 @@ W32AudioOutputContext::W32AudioOutputContext(uint32_t frameSize,
 
     _frameCount  = 0;
     int nextBuffer = _frameCount % 2;
+    _frameCountOnLastWrite = 0;
     
     // Get things going by launching the first buffer
     result = waveOutWrite(_waveOut, &(_waveHdr[nextBuffer]), sizeof(WAVEHDR));
@@ -91,18 +101,23 @@ W32AudioOutputContext::~W32AudioOutputContext() {
     CloseHandle(_event);
 }
 
-void W32AudioOutputContext::poll() {
+bool W32AudioOutputContext::poll() {
+
+    bool anythingHappened = false;
 
     // Check the status of the event (and un-signal it atomically if it is set)
     // Timeout is zero
     DWORD r = ::WaitForSingleObject(_event, 0);
     if (r == 0) {
 
+        anythingHappened = true;
+
         int currentBuffer = _frameCount % 2;
         int nextBuffer = (_frameCount + 1) % 2;
         _frameCount++;
 
         // Clear the current buffer so that we get silence by default
+        // (in the underflow situation)
         int16_t* b = _waveData + (currentBuffer * _frameSize);
         for (uint32_t i = 0; i < _frameSize; i++) {
             *b = 0;
@@ -111,14 +126,21 @@ void W32AudioOutputContext::poll() {
         // Serve up the "other" buffer in alternating sequence
         waveOutWrite(_waveOut, &(_waveHdr[nextBuffer]), sizeof(WAVEHDR));
     }
+
+    return anythingHappened;
 }
 
 void W32AudioOutputContext::play(int16_t* frame) {
+
+    int delta = (int)_frameCount - (int)_frameCountOnLastWrite;
+    cout << "Play delta " << delta << endl;    
+
     int nextBuffer = (_frameCount + 1) % 2;
     int16_t* b = _waveData + (nextBuffer * _frameSize);
     for (uint32_t i = 0; i < _frameSize; i++) {
         b[i] = frame[i];
     }
+    _frameCountOnLastWrite = _frameCount;
 }
 
 }

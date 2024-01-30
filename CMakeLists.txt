@@ -121,22 +121,6 @@ target_include_directories(machine-test-1 PRIVATE src)
 target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/include)
 target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/src)
 
-# ------ client-test-1 -------------------------------------------------------
-
-#add_executable(client-test-1
-#  tests/client-test-1.cpp
-#  src/common.cpp
-#  gsm-0610-codec/src/fixed_math.cpp
-#  gsm-0610-codec/src/wav_util.cpp
-#  gsm-0610-codec/src/Parameters.cpp
-#  gsm-0610-codec/src/Encoder.cpp
-#  gsm-0610-codec/src/Decoder.cpp
-#)
-
-#target_include_directories(client-test-1 PRIVATE src)
-#target_include_directories(client-test-1 PRIVATE gsm-0610-codec/include)
-#target_include_directories(client-test-1 PRIVATE gsm-0610-codec/src)
-
 # ------ client-test-2 -------------------------------------------------------
 
 add_executable(client-test-2
@@ -144,18 +128,24 @@ add_executable(client-test-2
   tests/TestContext.cpp
   src/common.cpp
   src/contexts/SocketContext.cpp
+  src/contexts/W32AudioOutputContext.cpp
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/LookupMachine.cpp
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
 )
 
 target_include_directories(client-test-2 PRIVATE src)
 target_include_directories(client-test-2 PRIVATE gsm-0610-codec/include)
 target_include_directories(client-test-2 PRIVATE gsm-0610-codec/src)
-
+target_link_libraries(client-test-2 winmm)
 
 # ------ exception-test-1 ----------------------------------------------------
 

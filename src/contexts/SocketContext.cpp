@@ -49,15 +49,17 @@ SocketContext::SocketContext()
 :   _dnsResultPending(false) {
 }
 
-void SocketContext::poll(EventProcessor* ep) {
+bool SocketContext::poll(EventProcessor* ep) {
+
+    bool anythingHappened = false;
 
     // TODO: NICE QUEUE NEEDED HERE
     // Check for any pending DNS results (making a synchronous event look
     // asynchronous).
     if (_dnsResultPending) {
         _dnsResultPending = false;
-        DNSLookupEvent ev(_dnsResult);
-        ep->processEvent(&ev);
+        ep->processEvent(&_dnsResult);
+        anythingHappened = true;
     }
 
     if (!_tracker.empty()) {
@@ -90,7 +92,7 @@ void SocketContext::poll(EventProcessor* ep) {
         }; 
 
         // A lambda that is used to process the results of the call to select()
-        auto processSelect = [&readfds, &writefds, &ep](SocketTracker& t) { 
+        auto processSelect = [&readfds, &writefds, &ep, &anythingHappened](SocketTracker& t) { 
             if (t.deletePending) {
                 return;
             }
@@ -107,6 +109,7 @@ void SocketContext::poll(EventProcessor* ep) {
                         // Generate an event
                         TCPConnectEvent ev(Channel(t.fd));
                         ep->processEvent(&ev);
+                        anythingHappened = true;
                     } 
                 }
                 // If the channel is connected and we see that read ready then 
@@ -120,6 +123,7 @@ void SocketContext::poll(EventProcessor* ep) {
                             // Generate an event
                             TCPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
                             ep->processEvent(&ev);
+                            anythingHappened = true;
                         } 
                         // Check if the other side has dropped?
                         else if (rc == 0) {
@@ -128,6 +132,7 @@ void SocketContext::poll(EventProcessor* ep) {
                             // Generate an event
                             TCPDisconnectEvent ev(Channel(t.fd));
                             ep->processEvent(&ev);
+                            anythingHappened = true;
                         }
                     }
                 }
@@ -145,6 +150,7 @@ void SocketContext::poll(EventProcessor* ep) {
                         // Generate an event
                         UDPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
                         ep->processEvent(&ev);
+                        anythingHappened = true;
                     } 
                 }
             }
@@ -162,6 +168,8 @@ void SocketContext::poll(EventProcessor* ep) {
             std::for_each(_tracker.begin(), _tracker.end(), processSelect);
         }
     }
+
+    return anythingHappened;
 }
 
 void SocketContext::_cleanupTracker() {
@@ -174,13 +182,19 @@ void SocketContext::_cleanupTracker() {
     std::remove_if(_tracker.begin(), _tracker.end(), cleanup);
 }
 
+int SocketContext::getLiveChannelCount() const {
+    // Effectively const
+    ((SocketContext*)this)->_cleanupTracker();
+    return _tracker.size();
+}
+
 void SocketContext::startDNSLookup(HostName hostName) {
     // TODO: UPGRADE FOR IP6
     const struct hostent* remoteHost = gethostbyname(hostName.c_str());
     if (remoteHost->h_addrtype == AF_INET && remoteHost->h_length == 4) {
         uint32_t addr_nl = *(uint32_t*)remoteHost->h_addr_list[0];
         _dnsResultPending = true;
-        _dnsResult = IPAddress(addr_nl);
+        _dnsResult = DNSLookupEvent(hostName, addr_nl);
     }
 }
 
@@ -316,12 +330,6 @@ void SocketContext::sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t tar
     if (rc <= 0) {
         cout << "SEND FAILED" << endl;
     }
-}
-
-int SocketContext::getLiveChannelCount() const {
-    // Effectively const
-    ((SocketContext*)this)->_cleanupTracker();
-    return _tracker.size();
 }
 
 }

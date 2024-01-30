@@ -31,11 +31,9 @@
 namespace kc1fsz {
 
 /**
- * An attempt to completely abstract the management of an EchoLink 
- * session from the hardware environment it runs in.
- * 
- * This class defines the interface for communications with 
- * the outside world.
+ * An attempt to completely abstract socket communications.  This
+ * is needed because some platforms (embedded) may not use 
+ * a standard socket API.
  */
 class CommContext {
 public:
@@ -44,6 +42,10 @@ public:
 
     // ------ Request Methods -------------------------------------------------
 
+    /**
+     * Starts a DNS lookup.  The result will be delivered via a 
+     * DNSLookupEvent.
+     */
     virtual void startDNSLookup(HostName hostName) { }
 
     virtual Channel createTCPChannel() { return Channel(); }

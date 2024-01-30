@@ -24,14 +24,15 @@ using namespace std;
 
 namespace kc1fsz {
 
-RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo) 
+RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo, 
+    AudioOutputContext* audioOutput) 
 :   _state(IDLE),
     _ctx(ctx),
     _userInfo(userInfo),
     _logonMachine(ctx, userInfo),
     _lookupMachine(ctx, userInfo),
     _connectMachine(ctx, userInfo),
-    _qsoMachine(ctx, userInfo) {
+    _qsoMachine(ctx, userInfo, audioOutput) {
 }
 
 void RootMachine::start() {

@@ -27,8 +27,9 @@ namespace kc1fsz {
 
 /**
  * An abstract interface for the ability to play a continuous stream of 
- * PCM audio.
-*/
+ * PCM audio.  We do this because there are completely different ways
+ * of generating audio output on different platforms.
+ */
 class AudioOutputContext {
 public:
 
@@ -39,10 +40,18 @@ public:
 
     /**
      * This should be called continuously from the event loop, or at
-     * least fast enough to keep up with the audio rate.
+     * least fast enough to keep up with the frame rate.
+     * 
+     * @returns true if anything happened while polling
      */
-    virtual void poll() = 0;
-    
+    virtual bool poll() = 0;
+
+    /**
+     * Loads the "next" frame of PMC audio to be played.  Be careful
+     * to keep this running at the frame rate since the internal 
+     * implementation may not necessarily have the ability to buffer
+     * extra frames.
+     */   
     virtual void play(int16_t* frame) = 0;
 
 protected:

@@ -22,7 +22,9 @@
 #define _SocketContext_h
 
 #include <vector>
+
 #include "../CommContext.h"
+#include "../events/DNSLookupEvent.h"
 
 namespace kc1fsz {
 
@@ -40,8 +42,10 @@ public:
     /**
      * This should be called from the event loop.  It attempts to make forward
      * progress and passes all events to the event processor.
+     * 
+     * @returns true if any events were dispatched.
     */
-    void poll(EventProcessor* ep);
+    bool poll(EventProcessor* ep);
 
     // ------ Request Methods -------------------------------------------------
 
@@ -64,8 +68,10 @@ private:
     void _closeChannel(Channel c);
     void _cleanupTracker();
 
+    // A one-deep queue of DNS results
+    // TODO: MAKE THIS A REAL QUEUE
     bool _dnsResultPending;
-    IPAddress _dnsResult;
+    DNSLookupEvent _dnsResult;
 
     // This data structure is used to keep track of active sockets
     struct SocketTracker {

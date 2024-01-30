@@ -74,7 +74,7 @@ void LogonMachine::processEvent(const Event* ev) {
             if (!_channel.isGood()) {
                 _state = FAILED;
             } else {
-                _ctx->connectTCPChannel(_channel, evt->addr, ELS_PORT);
+                _ctx->connectTCPChannel(_channel, evt->getAddr(), ELS_PORT);
                 // We give the connect 1 second to complete
                 _setTimeoutMs(time_ms() + 1000);
                 _state = CONNECTING;

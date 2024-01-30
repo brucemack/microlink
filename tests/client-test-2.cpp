@@ -31,21 +31,28 @@
 #include <thread>
 #include <chrono>
 
-#include "contexts/SocketContext.h"
 #include "machines/RootMachine.h"
 #include "events/TickEvent.h"
 
+#include "contexts/SocketContext.h"
+#include "contexts/W32AudioOutputContext.h"
 #include "TestUserInfo.h"
 
 using namespace std;
 using namespace kc1fsz;
 
+// The size of one EchoLink RTP packet (after decoding)
+static const int audioFrameSize = 160 * 4;
+// Double-buffer
+static int16_t audioFrameOut[2 * audioFrameSize];
+
 int main(int, const char**) {
 
     SocketContext context;
-
     TestUserInfo info;
-    RootMachine rm(&context, &info);
+    W32AudioOutputContext audioOutContext(audioFrameSize, 8000, audioFrameOut);
+
+    RootMachine rm(&context, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
     //rm.setServerName(HostName("www.google.com"));
     rm.setCallSign(CallSign("KC1FSZ"));
@@ -61,13 +68,11 @@ int main(int, const char**) {
     uint32_t lastAudioTickMs = 0;
 
     // Here is the main event loop
-    while (true) {        
+    uint32_t start = time_ms();
+    while ((time_ms() - start) < 30000) {
 
-        // Tell the context to move forward
-        //uint32_t t0 = time_ms();
-        //std::this_thread::sleep_for(std::chrono::microseconds(500));
-        std::this_thread::yield();
-        context.poll(&rm);
+        bool activity = audioOutContext.poll();
+        activity = activity || context.poll(&rm);
         //uint32_t t1 = time_ms();
         //if (t1 - t0 > 5) {
         //    cout << "  Took " << (t1 - t0) << endl;
@@ -79,5 +84,14 @@ int main(int, const char**) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
+
+        // This is here only to avoid high-CPU loops
+        // Tell the context to move forward
+        //uint32_t t0 = time_ms();
+        //std::this_thread::sleep_for(std::chrono::microseconds(500));
+        //std::this_thread::yield();
+
+        if (!activity)
+            Sleep(5);
     }
 }
