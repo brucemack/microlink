@@ -22,14 +22,14 @@
 #include <cstring>
 #include <algorithm>
 
-#include "../FixedString.h"
+#include "kc1fsz-tools/CommContext.h"
 
-#include "../events/DNSLookupEvent.h"
-#include "../events/TCPConnectEvent.h"
-#include "../events/TCPDisconnectEvent.h"
-#include "../events/TCPReceiveEvent.h"
+#include "kc1fsz-tools/FixedString.h"
+#include "kc1fsz-tools/events/DNSLookupEvent.h"
+#include "kc1fsz-tools/events/TCPConnectEvent.h"
+#include "kc1fsz-tools/events/TCPDisconnectEvent.h"
+#include "kc1fsz-tools/events/TCPReceiveEvent.h"
 
-#include "CommContext.h"
 #include "LookupMachine.h"
 #include "UserInfo.h"
 

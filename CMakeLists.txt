@@ -53,9 +53,11 @@ add_executable(socket-test-1
   tests/TestContext.cpp
   src/contexts/SocketContext.cpp
   src/common.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
 )
 
 target_include_directories(socket-test-1 PRIVATE src)
+target_include_directories(socket-test-1 PRIVATE kc1fsz-tools-cpp/include)
 
 # ------ packet-test-1 -------------------------------------------------------
 
@@ -70,8 +72,8 @@ add_executable(packet-test-1
 )
 
 target_include_directories(packet-test-1 PRIVATE src)
-target_include_directories(packet-test-1 PRIVATE ../gsm-0610-codec/include)
-#target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
+target_include_directories(packet-test-1 PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
 
 # ------ common-test-1 -------------------------------------------------------
 
@@ -115,18 +117,17 @@ add_executable(machine-test-1
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
-  ../gsm-0610-codec/src/fixed_math.cpp
-  ../gsm-0610-codec/src/wav_util.cpp
-  ../gsm-0610-codec/src/Parameters.cpp
-  ../gsm-0610-codec/src/Encoder.cpp
-  ../gsm-0610-codec/src/Decoder.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
 )
 
 target_include_directories(machine-test-1 PRIVATE src)
-# Includes outside of the repo
-target_include_directories(machine-test-1 PRIVATE ../kc1fsz-tools-cpp/include)
-target_include_directories(machine-test-1 PRIVATE ../gsm-0610-codec/include)
-#target_include_directories(machine-test-1 PRIVATE ../gsm-0610-codec/src)
+target_include_directories(machine-test-1 PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/include)
 
 # ------ client-test-2 -------------------------------------------------------
 
@@ -142,6 +143,7 @@ add_executable(client-test-2
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
   gsm-0610-codec/src/fixed_math.cpp
   gsm-0610-codec/src/wav_util.cpp
   gsm-0610-codec/src/Parameters.cpp
@@ -150,8 +152,8 @@ add_executable(client-test-2
 )
 
 target_include_directories(client-test-2 PRIVATE src)
+target_include_directories(client-test-2 PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(client-test-2 PRIVATE gsm-0610-codec/include)
-target_include_directories(client-test-2 PRIVATE gsm-0610-codec/src)
 target_link_libraries(client-test-2 winmm)
 
 # ------ exception-test-1 ----------------------------------------------------
@@ -166,5 +168,3 @@ pico_enable_stdio_uart(exception-test-1 1)
 target_compile_definitions(exception-test-1 PUBLIC PICO_BUILD=1)
 target_link_libraries(exception-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
 endif()
-
-

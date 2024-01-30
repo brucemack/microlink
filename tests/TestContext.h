@@ -1,7 +1,7 @@
 #ifndef _TestContext_h
 #define _TestContext_h
 
-#include "../src/CommContext.h"
+#include "kc1fsz-tools/CommContext.h"
 
 namespace kc1fsz {
 

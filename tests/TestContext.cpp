@@ -1,11 +1,12 @@
 #include <iostream>
-#include "TestContext.h"
 
-#include "../src/events/DNSLookupEvent.h"
-#include "../src/events/TCPConnectEvent.h"
-#include "../src/events/TCPDisconnectEvent.h"
-#include "../src/events/TCPReceiveEvent.h"
-#include "../src/Channel.h"
+#include "kc1fsz-tools/Channel.h"
+#include "kc1fsz-tools/events/DNSLookupEvent.h"
+#include "kc1fsz-tools/events/TCPConnectEvent.h"
+#include "kc1fsz-tools/events/TCPDisconnectEvent.h"
+#include "kc1fsz-tools/events/TCPReceiveEvent.h"
+
+#include "TestContext.h"
 
 using namespace std;
 

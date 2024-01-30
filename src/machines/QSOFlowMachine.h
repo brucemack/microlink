@@ -21,15 +21,16 @@
 #ifndef _QSOFlowMachine_h
 #define _QSOFlowMachine_h
 
-#include "../Event.h"
+#include "kc1fsz-tools/Event.h"
+#include "kc1fsz-tools/IPAddress.h"
+#include "kc1fsz-tools/CallSign.h"
+#include "kc1fsz-tools/FixedString.h"
+#include "kc1fsz-tools/Channel.h"
+#include "gsm-0610-codec/Decoder.h"
+
 #include "../StateMachine.h"
-#include "../IPAddress.h"
-#include "../CallSign.h"
-#include "../FixedString.h"
-#include "../Channel.h"
 #include "../UserInfo.h"
 #include "../AudioOutputContext.h"
-#include "gsm-0610-codec/Decoder.h"
 
 namespace kc1fsz {
 

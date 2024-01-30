@@ -2,13 +2,14 @@
 #include <cstring>
 #include <iostream>
 
-#include "../src/events/TickEvent.h"
+#include "kc1fsz-tools/events/TickEvent.h"
+#include "kc1fsz-tools/events/DNSLookupEvent.h"
+#include "kc1fsz-tools/events/TCPConnectEvent.h"
+#include "kc1fsz-tools/events/TCPDisconnectEvent.h"
+#include "kc1fsz-tools/events/TCPReceiveEvent.h"
+#include "kc1fsz-tools/events/UDPReceiveEvent.h"
+
 #include "../src/machines/RootMachine.h"
-#include "../src/events/DNSLookupEvent.h"
-#include "../src/events/TCPConnectEvent.h"
-#include "../src/events/TCPDisconnectEvent.h"
-#include "../src/events/TCPReceiveEvent.h"
-#include "../src/events/UDPReceiveEvent.h"
 
 #include "TestContext.h"
 #include "TestUserInfo.h"

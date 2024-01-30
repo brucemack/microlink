@@ -54,26 +54,6 @@ void set_time_ms(uint32_t ms);
  */
 void advance_time_ms(uint32_t ms);
 
-/**
- * @param targetLimit The actual size of the target buffer.  This 
- * function will automatically save a space for the null.
- */
-void strcpyLimited(char* target, const char* source, uint32_t targetLimit);
-
-/**
- * Appends the characters in the source string to the target string, being
- * careful not to overrun.
- * 
- * @param targetLimit The actual size of the target buffer.  This 
- * function will automatically save a space for the null.
- */
-void strcatLimited(char* target, const char* source, uint32_t targetLimit);
-
-void memcpyLimited(uint8_t* target, const uint8_t* source, 
-    uint32_t sourceLen, uint32_t targetLimit);
-
-bool isNullTerminated(const uint8_t* source, uint32_t sourceLen);
-
 // trim from start (in place)
 void ltrim(std::string &s);
 
@@ -99,12 +79,6 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
 
 uint32_t addRTCPPad(uint32_t unpaddedLength, uint8_t* p, uint32_t packetSize);
-
-/**
- * Produces a pretty hex-dump to aid in debugging.
- */
-void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out,
-    bool useColor = true);
 
 }
 

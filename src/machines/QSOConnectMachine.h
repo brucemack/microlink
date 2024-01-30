@@ -21,12 +21,13 @@
 #ifndef _QSOConnectMachine_h
 #define _QSOConnectMachine_h
 
-#include "../Event.h"
+#include "kc1fsz-tools/Event.h"
+#include "kc1fsz-tools/IPAddress.h"
+#include "kc1fsz-tools/Channel.h"
+#include "kc1fsz-tools/FixedString.h"
+#include "kc1fsz-tools/CallSign.h"
+
 #include "../StateMachine.h"
-#include "../IPAddress.h"
-#include "../Channel.h"
-#include "../FixedString.h"
-#include "../CallSign.h"
 
 namespace kc1fsz {
 

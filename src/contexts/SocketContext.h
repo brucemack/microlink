@@ -23,8 +23,8 @@
 
 #include <vector>
 
-#include "../CommContext.h"
-#include "../events/DNSLookupEvent.h"
+#include "kc1fsz-tools/CommContext.h"
+#include "kc1fsz-tools/events/DNSLookupEvent.h"
 
 namespace kc1fsz {
 

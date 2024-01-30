@@ -21,8 +21,9 @@
 #ifndef _RootMachine_h
 #define _RootMachine_h
 
+#include "kc1fsz-tools/Event.h"
+
 #include "../StateMachine.h"
-#include "../Event.h"
 
 #include "LogonMachine.h"
 #include "LookupMachine.h"

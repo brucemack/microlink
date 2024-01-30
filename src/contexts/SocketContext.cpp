@@ -31,13 +31,15 @@
 #include <iostream>
 #include <algorithm>
 
+#include "kc1fsz-tools/events/DNSLookupEvent.h"
+#include "kc1fsz-tools/events/TCPConnectEvent.h"
+#include "kc1fsz-tools/events/TCPDisconnectEvent.h"
+#include "kc1fsz-tools/events/TCPReceiveEvent.h"
+#include "kc1fsz-tools/events/UDPReceiveEvent.h"
+#include "kc1fsz-tools/Common.h"
+
 #include "../common.h"
 #include "../EventProcessor.h"
-#include "../events/DNSLookupEvent.h"
-#include "../events/TCPConnectEvent.h"
-#include "../events/TCPDisconnectEvent.h"
-#include "../events/TCPReceiveEvent.h"
-#include "../events/UDPReceiveEvent.h"
 
 #include "SocketContext.h"
 

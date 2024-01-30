@@ -37,15 +37,6 @@ namespace kc1fsz {
 // Per Jonathan K1RFD: Make sure this starts with a number and ends with Z.
 const char* VERSION_ID = "0.02MLZ";
 
-bool isNullTerminated(const uint8_t* source, uint32_t sourceLen) {
-    for (uint32_t i = 0; i < sourceLen; i++) {
-        if (source[i] == 0) {
-            return true;
-        }
-    }
-    return false;
-}
-
 uint32_t parseIP4Address(const char* dottedAddr) {
     uint32_t result = 0;
     char acc[8];
@@ -76,27 +67,6 @@ uint32_t parseIP4Address(const char* dottedAddr) {
 
 void formatIP4Address(uint32_t addr_nl, char* dottedAddr, uint32_t dottedAddrSize) {
     inet_ntop(AF_INET, &addr_nl, dottedAddr, dottedAddrSize);
-}
-
-void strcpyLimited(char* target, const char* source, uint32_t limit) {
-    if (limit > 1) {
-        uint32_t len = std::min(limit - 1, (uint32_t)std::strlen(source));
-        memcpy(target, source, len);
-        target[len] = 0;
-    }
-}
-
-void strcatLimited(char* target, const char* source, uint32_t targetLimit) {
-    uint32_t existingLen = std::min((uint32_t)std::strlen(target), targetLimit);
-    if (existingLen < targetLimit) {
-        strcpyLimited(target + existingLen, source, targetLimit - existingLen);
-    }
-}
-
-void memcpyLimited(uint8_t* target, const uint8_t* source, 
-    uint32_t sourceLen, uint32_t targetLimit) {
-    uint32_t len = std::min(targetLimit, sourceLen);
-    memcpy(target, source, len);
 }
 
 // trim from start (in place)
@@ -268,67 +238,6 @@ uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     p += 7;
 
     return unpaddedLength + padSize;
-}
-
-void prettyHexDump(const uint8_t* data, uint32_t len, std::ostream& out,
-    bool color) {
-    
-    uint32_t lines = len / 16;
-    if (len % 16 != 0) {
-        lines++;
-    }
-
-    char buf[16];
-
-    for (uint32_t line = 0; line < lines; line++) {
-
-        // Position counter
-        sprintf(buf, "%04X | ", line * 16);
-        out << buf;
-
-        // Hex section
-        for (uint16_t i = 0; i < 16; i++) {
-            uint32_t k = line * 16 + i;
-            if (k < len) {
-                sprintf(buf, "%02x", (unsigned int)data[k]);
-                out << buf << " ";
-            } else {
-                out << "   ";
-            }
-            if (i == 7) {
-                out << " ";
-            }
-        }
-        // Space between hex and ASCII section
-        out << " ";
-
-        if (color) {   
-            out << "\u001b[36m";
-        }
-
-        // ASCII section
-        for (uint16_t i = 0; i < 16; i++) {
-            uint32_t k = line * 16 + i;
-            if (k < len) {
-                if (isprint((char)data[k]) && data[k] != 32) {
-                    out << (char)data[k];
-                } else {
-                    //out << ".";
-                    out << "\u00b7";
-                }
-            } else {
-                out << " ";
-            }
-            if (i == 7) {
-                out << " ";
-            }
-        }
-
-        if (color) {   
-            out << "\u001b[0m";
-        }
-        out << std::endl;
-    }
 }
 
 }

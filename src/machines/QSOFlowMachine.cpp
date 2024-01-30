@@ -18,11 +18,11 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#include "../common.h"
-#include "../CommContext.h"
+#include "kc1fsz-tools/CommContext.h"
+#include "kc1fsz-tools/events/UDPReceiveEvent.h"
+#include "kc1fsz-tools/events/TickEvent.h"
 
-#include "../events/UDPReceiveEvent.h"
-#include "../events/TickEvent.h"
+#include "../common.h"
 
 #include "QSOConnectMachine.h"
 #include "QSOFlowMachine.h"

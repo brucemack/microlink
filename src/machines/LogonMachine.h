@@ -21,13 +21,13 @@
 #ifndef _LogonMachine_h
 #define _LogonMachine_h
 
-#include "../Event.h"
-#include "../StateMachine.h"
+#include "kc1fsz-tools/Event.h"
+#include "kc1fsz-tools/HostName.h"
+#include "kc1fsz-tools/Channel.h"
+#include "kc1fsz-tools/CallSign.h"
+#include "kc1fsz-tools/FixedString.h"
 
-#include "../HostName.h"
-#include "../Channel.h"
-#include "../CallSign.h"
-#include "../FixedString.h"
+#include "../StateMachine.h"
 
 namespace kc1fsz {
 

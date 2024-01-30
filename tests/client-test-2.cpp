@@ -31,9 +31,9 @@
 #include <thread>
 #include <chrono>
 
-#include "machines/RootMachine.h"
-#include "events/TickEvent.h"
+#include "kc1fsz-tools/events/TickEvent.h"
 
+#include "machines/RootMachine.h"
 #include "contexts/SocketContext.h"
 #include "contexts/W32AudioOutputContext.h"
 #include "TestUserInfo.h"
