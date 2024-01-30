@@ -62,16 +62,16 @@ target_include_directories(socket-test-1 PRIVATE src)
 add_executable(packet-test-1
   tests/packet-test-1.cpp
   src/common.cpp
-  gsm-0610-codec/src/fixed_math.cpp
-  gsm-0610-codec/src/wav_util.cpp
-  gsm-0610-codec/src/Parameters.cpp
-  gsm-0610-codec/src/Encoder.cpp
-  gsm-0610-codec/src/Decoder.cpp
+  ../gsm-0610-codec/src/fixed_math.cpp
+  ../gsm-0610-codec/src/wav_util.cpp
+  ../gsm-0610-codec/src/Parameters.cpp
+  ../gsm-0610-codec/src/Encoder.cpp
+  ../gsm-0610-codec/src/Decoder.cpp
 )
 
 target_include_directories(packet-test-1 PRIVATE src)
-target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
-target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
+target_include_directories(packet-test-1 PRIVATE ../gsm-0610-codec/include)
+#target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/src)
 
 # ------ common-test-1 -------------------------------------------------------
 
@@ -115,16 +115,18 @@ add_executable(machine-test-1
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
-  gsm-0610-codec/src/fixed_math.cpp
-  gsm-0610-codec/src/wav_util.cpp
-  gsm-0610-codec/src/Parameters.cpp
-  gsm-0610-codec/src/Encoder.cpp
-  gsm-0610-codec/src/Decoder.cpp
+  ../gsm-0610-codec/src/fixed_math.cpp
+  ../gsm-0610-codec/src/wav_util.cpp
+  ../gsm-0610-codec/src/Parameters.cpp
+  ../gsm-0610-codec/src/Encoder.cpp
+  ../gsm-0610-codec/src/Decoder.cpp
 )
 
 target_include_directories(machine-test-1 PRIVATE src)
-target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/include)
-target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/src)
+# Includes outside of the repo
+target_include_directories(machine-test-1 PRIVATE ../kc1fsz-tools-cpp/include)
+target_include_directories(machine-test-1 PRIVATE ../gsm-0610-codec/include)
+#target_include_directories(machine-test-1 PRIVATE ../gsm-0610-codec/src)
 
 # ------ client-test-2 -------------------------------------------------------
 
