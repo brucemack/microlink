@@ -18,27 +18,25 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _CallSign_h
-#define _CallSign_h
+#ifndef _TestAudioOutputContext_h
+#define _TestAudioOutputContext_h
 
-#include <cstring>
-#include "common.h"
+#include "../src/AudioOutputContext.h"
 
 namespace kc1fsz {
 
-class CallSign {
+/**
+ * A dummy implementation that does nothing.
+ */
+class TestAudioOutputContext : public AudioOutputContext {
 public:
 
-    CallSign() { _callSign[0] = 0; }
-    CallSign(const CallSign& that) { strcpyLimited(_callSign, that._callSign, 32); }
-    CallSign(const char* cs) { strcpyLimited(_callSign, cs, 32); }
-    const char* c_str() { return _callSign; }
-    uint32_t len() const { return std::strlen(_callSign); }
-    bool operator== (const char* other) const { return strcmp(_callSign, other) == 0; }
+    TestAudioOutputContext(uint32_t frameSize, uint32_t samplesPerSecond)
+    : AudioOutputContext(frameSize, samplesPerSecond) { }
 
-private:
+    bool poll() { return false; }
 
-    char _callSign[32];
+    void play(int16_t* frame) { }
 };
 
 }

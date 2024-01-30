@@ -115,6 +115,11 @@ add_executable(machine-test-1
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
 )
 
 target_include_directories(machine-test-1 PRIVATE src)

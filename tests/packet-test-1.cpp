@@ -29,7 +29,7 @@
 #include <cstring>
 #include <string>
 
-#include "common.h"
+#include "../src/common.h"
 #include "gsm-0610-codec/Decoder.h"
 #include "gsm-0610-codec/wav_util.h"
 
@@ -89,13 +89,13 @@ static void test_1() {
         if (isOnDataPacket(packet, packetLen)) {
             cout << "oNDATA" << endl;
         } 
-        else if (isRTPPacket(packet, packetLen)) {
+        else if (isRTPAudioPacket(packet, packetLen)) {
 
             // Unpack the RTP packet
             uint16_t seq;
             uint32_t ssrc;
             uint8_t gsmFrames[4][33];
-            parseRTPPacket(packet, &seq, &ssrc, gsmFrames);
+            parseRTPAudioPacket(packet, &seq, &ssrc, gsmFrames);
 
             // Only listening to one side
             if (ssrc != 0) {

@@ -21,9 +21,8 @@ public:
 
         if (ev->getType() == DNSLookupEvent::TYPE) {
             const DNSLookupEvent* evt = (const DNSLookupEvent*)ev;
-            cout << "ADDR: " << std::hex << evt->addr.getAddr() << endl;
             char buf[64];
-            formatIP4Address(evt->addr.getAddr(), buf, 64);
+            formatIP4Address(evt->getAddr().getAddr(), buf, 64);
             cout << "ADDR: " << buf << endl;
             dnsCount++;
         }
@@ -47,7 +46,7 @@ int main(int,const char**) {
     ctx.poll(&evp);
     assert(evp.dnsCount == 1);
 
-    // Setup a UDP socket
+    // Setup a UDP socket that talks to ourselves
     IPAddress a = parseIP4Address("127.0.0.1");
     Channel u = ctx.createUDPChannel(9999);
     assert(ctx.getLiveChannelCount() == 1);

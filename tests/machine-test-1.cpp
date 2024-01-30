@@ -12,6 +12,7 @@
 
 #include "TestContext.h"
 #include "TestUserInfo.h"
+#include "TestAudioOutputContext.h"
 
 using namespace std;
 using namespace kc1fsz;
@@ -26,11 +27,13 @@ static void misc_test_1() {
 
 static void machine_test_1() {
 
-    TestContext context;
     set_time_ms(1000);
 
+    TestContext context;    
     TestUserInfo info;
-    RootMachine rm(&context, &info);
+    TestAudioOutputContext audioOutput(0, 8000);
+
+    RootMachine rm(&context, &info, &audioOutput);
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString("XYZ123"));
@@ -50,7 +53,7 @@ static void machine_test_1() {
         // 2. See the TCP open
         // 3. See the TCP connect
         context.channel0 = Channel(2);
-        DNSLookupEvent ev(IPAddress(8));
+        DNSLookupEvent ev(HostName("a.com"), IPAddress(8));
         rm.processEvent(&ev);
         assert(context.channel0.getId() == 2);
         assert(context.ipAddr.getAddr() == 8);
@@ -84,7 +87,7 @@ static void machine_test_1() {
         cout << "--- Cycle 4" << endl;
         // 1. Generate DNS response
         context.channel0 = Channel(3);
-        DNSLookupEvent ev(IPAddress(8));
+        DNSLookupEvent ev(HostName("a.com"), IPAddress(8));
         rm.processEvent(&ev);
         assert(context.channel0.getId() == 3);
         assert(context.ipAddr.getAddr() == 8);
@@ -169,11 +172,13 @@ static void machine_test_1() {
 //
 static void machine_test_2() {
 
-    TestContext context;
     set_time_ms(1000);
 
+    TestContext context;
     TestUserInfo info;
-    RootMachine rm(&context, &info);
+    TestAudioOutputContext audioOutput(0, 8000);
+
+    RootMachine rm(&context, &info, &audioOutput);
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString("XYZ123"));
@@ -192,7 +197,7 @@ static void machine_test_2() {
         // 2. See the TCP open
         // 3. See the TCP connect
         context.channel0 = Channel(2);
-        DNSLookupEvent ev(IPAddress(8));
+        DNSLookupEvent ev(HostName("a.com"), IPAddress(8));
         rm.processEvent(&ev);
         assert(context.channel0.getId() == 2);
         assert(context.ipAddr.getAddr() == 8);
