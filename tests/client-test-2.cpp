@@ -28,6 +28,8 @@
 #include <cassert>
 #include <cstring>
 #include <string>
+#include <thread>
+#include <chrono>
 
 #include "contexts/SocketContext.h"
 #include "machines/RootMachine.h"
@@ -62,11 +64,18 @@ int main(int, const char**) {
     while (true) {        
 
         // Tell the context to move forward
+        //uint32_t t0 = time_ms();
+        //std::this_thread::sleep_for(std::chrono::microseconds(500));
+        std::this_thread::yield();
         context.poll(&rm);
+        //uint32_t t1 = time_ms();
+        //if (t1 - t0 > 5) {
+        //    cout << "  Took " << (t1 - t0) << endl;
+        //}
 
         // Generate the audio clock every 20ms (160 samples)
         uint32_t now = time_ms();
-        if (now - lastAudioTickMs > 20) {
+        if (now - lastAudioTickMs >= 20) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }

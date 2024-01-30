@@ -93,9 +93,9 @@ static void test_ip_addr() {
 
 int main(int, const char**) {
 
-    //uint8_t test[20] = { 0, 1, 2, 3, 4, 65, 6, 7, 8, 9, 10, 11, 12, 13, 
-    //    48, 15, 16, 17, 18, 19 };
-    //prettyHexDump(test, 20, cout);
+    uint8_t test[20] = { 0, 1, 2, 3, 4, 65, 6, 7, 8, 9, 10, 11, 12, 13, 
+        48, 15, 16, 17, 18, 19 };
+    prettyHexDump(test, 20, cout);
 
     //test_packets();
     test_ip_addr();

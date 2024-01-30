@@ -66,9 +66,10 @@ void SocketContext::poll(EventProcessor* ep) {
         FD_ZERO(&readfds);
         FD_ZERO(&writefds);
         int highestFd = 0;
+
         struct timeval tv;
         tv.tv_sec = 0;
-        tv.tv_usec = 1000;
+        tv.tv_usec = 0;
 
         auto setupSelect = [&readfds, &writefds, &highestFd](const SocketTracker& t) { 
             if (t.deletePending) {

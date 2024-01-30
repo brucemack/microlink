@@ -82,6 +82,16 @@ add_executable(common-test-1
 
 target_include_directories(common-test-1 PRIVATE src)
 
+# ------ audio-test-1 --------------------------------------------------------
+
+add_executable(audio-test-1
+  tests/audio-test-1.cpp
+  src/common.cpp
+)
+
+target_include_directories(audio-test-1 PRIVATE src)
+target_link_libraries(audio-test-1 winmm)
+
 # ------ machine-test-1 -------------------------------------------------------
 
 add_executable(machine-test-1

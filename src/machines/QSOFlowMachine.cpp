@@ -46,6 +46,7 @@ void QSOFlowMachine::start() {
     _state = OPEN;
     _frameQueueWritePtr = 0;
     _frameQueueReadPtr = 0;
+    _frameQueueSize = 0;
 }
 
 void QSOFlowMachine::processEvent(const Event* ev) {
@@ -68,11 +69,12 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             }
             else if (evt->getChannel() == _rtpChannel) {
 
-                cout << "QSOFlowMachine: GOT RTP DATA" << endl;
-                //prettyHexDump(evt->getData(), evt->getDataLen(), cout);
                 _lastKeepAliveRecvMs = time_ms();
 
                 if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
+
+                    //cout << "Got Audio " << _frameQueueSize << endl;
+
                     // TODO: MAKE THIS MORE EFFICIENT
                     // Unload the GSM frames from the RTP packet
                     uint8_t gsmFrames[4][33];
@@ -82,9 +84,17 @@ void QSOFlowMachine::processEvent(const Event* ev) {
 
                     // Load frames into the queue for future decode on the audio clock
                     for (int i = 0; i < 4; i++) {
-                        memcpy(_frameQueue[_frameQueueWritePtr], gsmFrames[i], 33);
-                        if (++_frameQueueWritePtr == _frameQueueDepth) {
-                            _frameQueueWritePtr = 0;
+                        // Check to see if we have room on the audio queue 
+                        if (_frameQueueSize < _frameQueueDepth) {
+                            memcpy(_frameQueue[_frameQueueWritePtr], gsmFrames[i], 33);
+                            if (++_frameQueueWritePtr == _frameQueueDepth) {
+                                _frameQueueWritePtr = 0;
+                            }
+                            _frameQueueSize++;
+                        } 
+                        // This shouldn't happen unless there is a rush of audio packets
+                        else {
+                            cout << "FRAME OVERFLOW" << endl;
                         }
                     }
                 } 
@@ -149,6 +159,17 @@ bool QSOFlowMachine::isGood() const {
 }
 
 void QSOFlowMachine::_audioTick() {
+    if (_frameQueueSize > 0) {
+        cout << "Audio Tick " << _frameQueueSize << endl;
+        _decodeGSMFrame(_frameQueue[_frameQueueReadPtr]);
+        if (++_frameQueueReadPtr == _frameQueueDepth) {
+            _frameQueueReadPtr = 0;
+        }
+        _frameQueueSize--;
+    }
+}
+
+void QSOFlowMachine::_decodeGSMFrame(uint8_t* frame) {
 }
 
 }

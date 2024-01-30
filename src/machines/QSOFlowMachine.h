@@ -55,6 +55,7 @@ public:
 private:
 
     void _audioTick();
+    void _decodeGSMFrame(uint8_t* frame);
 
     enum State { IDLE, OPEN, SUCCEEDED } _state;
 
@@ -73,8 +74,9 @@ private:
 
     // This is a circular buffer used to keep track
     // of audio frames waiting for the next audio pulse
-    static const uint32_t _frameQueueDepth = 8;
+    static const uint32_t _frameQueueDepth = 16;
     uint8_t _frameQueue[_frameQueueDepth][33];
+    uint32_t _frameQueueSize = 0;
     uint32_t _frameQueueWritePtr = 0;
     uint32_t _frameQueueReadPtr = 0;
 };
