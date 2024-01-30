@@ -133,7 +133,7 @@ int main(int, const char**) {
 
     int bufferCount = 0;
     int nextBuffer = bufferCount % 2;
-
+    
     // Get things going by launching the first buffer
     result = waveOutWrite(waveOut, &(waveHdr[nextBuffer]), sizeof(WAVEHDR));
     if (result) {
@@ -160,14 +160,15 @@ int main(int, const char**) {
                 return -1;
             }
         }
-
-        cout << "Tick " << i << endl;
-        // Theoretically the buffer size (160 * 4) is the same as 20ms of audio 
-        // at 8,000.  So setting the sleep at 19 should be good enough to keep
-        // the tone continuous.
-        //
-        // Try changing it to 50ms to see what I mean.
-        Sleep(20);
+        else {
+            cout << "Tick " << i << endl;
+            // Theoretically the buffer size (160 * 4) is the same as 20ms of audio 
+            // at 8,000.  So setting the sleep at 19 should be good enough to keep
+            // the tone continuous.
+            //
+            // Try changing it to 50ms to see what I mean.
+            Sleep(20);
+        }
     }
 
     waveOutClose(waveOut);

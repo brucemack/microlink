@@ -92,6 +92,17 @@ add_executable(audio-test-1
 target_include_directories(audio-test-1 PRIVATE src)
 target_link_libraries(audio-test-1 winmm)
 
+# ------ audio-test-2 --------------------------------------------------------
+
+add_executable(audio-test-2
+  tests/audio-test-2.cpp
+  src/common.cpp
+  src/contexts/W32AudioOutputContext.cpp
+)
+
+target_include_directories(audio-test-2 PRIVATE src)
+target_link_libraries(audio-test-2 winmm)
+
 # ------ machine-test-1 -------------------------------------------------------
 
 add_executable(machine-test-1
