@@ -31,12 +31,10 @@
 #include <cstring>
 #include <cmath>
 
-//#include "common.h"
-
 using namespace std;
-//using namespace kc1fsz;
 
-const int NUMPTS = 8000 * 2;
+// The size of one EchoLink RTP packet (after decoding)
+const int NUMPTS = 160 * 4;
 // Double-buffer
 int16_t waveData[2][NUMPTS];
 
@@ -59,7 +57,7 @@ int main(int, const char**) {
 
     MMRESULT result;
 
-    // Specify recording parameters
+    // Specify audio parameters
     int sampleRate = 8000;
     WAVEFORMATEX pFormat;
     pFormat.wFormatTag = WAVE_FORMAT_PCM;
@@ -70,13 +68,14 @@ int main(int, const char**) {
     pFormat.wBitsPerSample = 16;
     pFormat.cbSize = 0;
 
-    // Create an event that will be fired
+    // Create an event that will be fired by the Wave system when it is 
+    // ready to receive some more data.
     HANDLE event = CreateEvent( 
         NULL,               // default security attributes
-        FALSE,               // TRUE=manual-reset event, FALSE=auto-reset
-        FALSE,              // initial state is nonsignaled
+        FALSE,              // TRUE=manual-reset event, FALSE=auto-reset
+        FALSE,              // initial state is non-signaled
         TEXT("Done")        // object name
-        ); 
+    ); 
     if (event == 0) {
         cout << "Event failed" << endl;
         return -1;
@@ -91,7 +90,8 @@ int main(int, const char**) {
         return -1;
     }
 
-    // Set up and prepare buffers/headers for output
+    // Set up and prepare buffers/headers for output.  We use to buffers
+    // in alternating sequence. 
     WAVEHDR waveHdr[2];
 
     waveHdr[0].lpData = (LPSTR)waveData[0];
@@ -118,8 +118,10 @@ int main(int, const char**) {
         return -1;
     }
 
-    // Fill buffers with a consistent tone
-    float freqRad = 667.0 * 2.0 * 3.1415926;
+    // Fill buffers with a consistent tone.  Normally this would be done
+    // on-the-fly as audio arrives.  But we are pre-loading two buffers 
+    // in a phase-continuous way to listen carefully for glitches.
+    float freqRad = 1000.0 * 2.0 * 3.1415926;
     float omega = freqRad / (float)sampleRate;
     float phi = 0;
     for (int b = 0; b < 2; b++) {
@@ -139,9 +141,12 @@ int main(int, const char**) {
         return -1;
     }
 
-    for (int i = 0; i < 40; i++) {
+    // The test runs for some fixed period.  This is basically the main
+    // event loop of the program.
+    for (int i = 0; i < 200; i++) {
 
         // Check the status of the event (and un-signal it atomically if it is set)
+        // Timeout is zero
         DWORD r = ::WaitForSingleObject(event, 0);
         if (r == 0) {
 
@@ -149,7 +154,6 @@ int main(int, const char**) {
             nextBuffer = bufferCount % 2;
 
             // Serve up the "other" buffer in alternating sequence
-            cout << "Delivering buffer " << nextBuffer << endl;
             result = waveOutWrite(waveOut, &(waveHdr[nextBuffer]), sizeof(WAVEHDR));
             if (result) {
                 cout << "Write failed" << endl;
@@ -158,6 +162,14 @@ int main(int, const char**) {
         }
 
         cout << "Tick " << i << endl;
-        Sleep(250);
+        // Theoretically the buffer size (160 * 4) is the same as 20ms of audio 
+        // at 8,000.  So setting the sleep at 19 should be good enough to keep
+        // the tone continuous.
+        //
+        // Try changing it to 50ms to see what I mean.
+        Sleep(20);
     }
+
+    waveOutClose(waveOut);
+    CloseHandle(event);
 }
