@@ -15,9 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
-
+#
 cmake_minimum_required(VERSION 3.13)
-if (TARGET_GROUP STREQUAL pico)
+if(DEFINED ENV{PICO_BUILD})
 include(pico_sdk_import.cmake)
 endif()
 project(microlink C CXX ASM)
@@ -25,13 +25,13 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 file(MAKE_DIRECTORY tmp)
 
-if (TARGET_GROUP STREQUAL pico)
+if(DEFINED ENV{PICO_BUILD})
 pico_sdk_init()
 endif()
 
-if (TARGET_GROUP STREQUAL pico)
+if(DEFINED ENV{PICO_BUILD})
 message("----- PICO build ---------------------------------------------------------------")
-add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
+add_compile_options(-Wall -g)
 else()
 message("Desktop build!")
 add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
@@ -168,9 +168,24 @@ add_executable(exception-test-1
   tests/exception-test-1.cpp
 )
 
-if (TARGET_GROUP STREQUAL pico)
+if(DEFINED ENV{PICO_BUILD})
 pico_enable_stdio_usb(exception-test-1 1)
-pico_enable_stdio_uart(exception-test-1 1)
+pico_enable_stdio_uart(exception-test-1 0)
 target_compile_definitions(exception-test-1 PUBLIC PICO_BUILD=1)
 target_link_libraries(exception-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
 endif()
+
+# ------ esp32at-test-1 ------------------------------------------------------
+
+add_executable(esp32at-test-1
+  tests/esp32at-test-1.cpp
+)
+
+if(DEFINED ENV{PICO_BUILD})
+pico_enable_stdio_usb(esp32at-test-1 1)
+# Watch out!  Don't let the STDIO get sent to the UART
+pico_enable_stdio_uart(esp32at-test-1 0)
+target_compile_definitions(esp32at-test-1 PUBLIC PICO_BUILD=1)
+target_link_libraries(esp32at-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
+endif()
+
