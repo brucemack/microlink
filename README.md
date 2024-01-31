@@ -20,6 +20,12 @@ cd build
 cmake -DTARGET_GROUP=pico ..
 make <target>
 
+# Test Notes
+
+## client-test-2
+
+* Set environment variable EL_PASSWORD with password.
+
 References
 ==========
 

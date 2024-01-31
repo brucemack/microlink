@@ -45,7 +45,7 @@ using namespace kc1fsz;
 
 // The size of one EchoLink RTP packet (after decoding)
 static const int audioFrameSize = 160 * 4;
-static const int audioFrameCount = 8;
+static const int audioFrameCount = 16;
 // Double-buffer
 static int16_t audioFrameOut[audioFrameCount * audioFrameSize];
 // Double-buffer
@@ -75,33 +75,40 @@ int main(int, const char**) {
     TickEvent tickEv;
     uint32_t lastAudioTickMs = 0;
 
-    PerfTimer timer;
-    uint32_t longestUs = 0;
+    PerfTimer socketTimer;
+    PerfTimer audioTimer;
+    uint32_t longestSocketUs = 0;
+    uint32_t longestAudioUs = 0;
 
     // Here is the main event loop
     uint32_t start = time_ms();
     uint32_t cycle = 0;
+
     while ((time_ms() - start) < 30000) {
 
+        // Poll the audio system 
+        audioTimer.reset();
         bool audioActivity = audioOutContext.poll();
-        timer.reset();
-
+        uint32_t ela = audioTimer.elapsedUs();
+        if (ela > longestAudioUs) {
+            longestAudioUs = ela;
+            cout << "Longest Audio " << longestAudioUs << endl;
+        }
+        
+        // Poll the communications system
+        socketTimer.reset();
         bool commActivity = context.poll(&rm);
-        uint32_t ela = timer.elapsedUs();
-        if (ela > longestUs) {
-            longestUs = ela;
-            cout << "Longest " << longestUs << endl;
+        ela = socketTimer.elapsedUs();
+        if (ela > longestSocketUs) {
+            longestSocketUs = ela;
+            cout << "Longest Socket " << longestSocketUs << endl;
         }
 
         bool activity = audioActivity || commActivity;
-        //uint32_t t1 = time_ms();
-        //if (t1 - t0 > 5) {
-        //    cout << "  Took " << (t1 - t0) << endl;
-        //}
 
-        // Generate the audio clock every 20ms (160 samples)
+        // Generate the audio clock every 20ms (160*4 samples)
         uint32_t now = time_ms();
-        if (now - lastAudioTickMs >= 20) {
+        if (now - lastAudioTickMs >= 80) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
@@ -110,12 +117,11 @@ int main(int, const char**) {
         // Tell the context to move forward
         //uint32_t t0 = time_ms();
         //std::this_thread::sleep_for(std::chrono::microseconds(500));
-        //std::this_thread::yield();
+        std::this_thread::yield();
 
         if (!activity)
             Sleep(5);
 
         cycle++;
     }
-    cout << "Longest " << longestUs << endl;
 }

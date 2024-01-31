@@ -136,12 +136,12 @@ bool W32AudioOutputContext::poll() {
         // Figure out whether it's time to switch between silence and audio
         if (_inSilence) {
             if (_audioQueueUsed > (_audioQueueSize / 2)) {
-                cout << "Switching out of silence" << endl;
+                //cout << "Switching out of silence" << endl;
                 _inSilence = false;
             }
         } else {
             if (_audioQueueUsed == 0) {
-                cout << "Switching into silence" << endl;
+                //cout << "Switching into silence" << endl;
                 _inSilence = true;
             }
         }
@@ -152,6 +152,12 @@ bool W32AudioOutputContext::poll() {
             _silenceQueuePtr = (_silenceQueuePtr + 1) % 2;
             waveOutWrite(_waveOut, &(_silenceHdr[_silenceQueuePtr]), sizeof(WAVEHDR));
         } else {
+            // Clear out what we just finished with
+            int16_t* buf = _audioData + (_audioQueuePtr * _frameSize);
+            for (uint32_t i = 0; i < _frameSize; i++) {
+                *buf = 0;
+            }
+            // Feed the next frame
             _audioQueuePtr = (_audioQueuePtr + 1) % _audioQueueSize;
             _audioQueueUsed--;
             waveOutWrite(_waveOut, &(_audioHdr[_audioQueuePtr]), sizeof(WAVEHDR));
@@ -174,8 +180,8 @@ void W32AudioOutputContext::play(int16_t* frame) {
         }
         _audioQueueUsed++;
         //cout << "Wrote to " << nextBuffer << " (used=" << _audioQueueUsed << ")" << endl;
-    } else {
-        cout << "Overflow" << endl;
+    //} else {
+    //    cout << "Overflow" << endl;
     }
 }
 

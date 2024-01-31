@@ -33,7 +33,7 @@ class W32AudioOutputContext : public AudioOutputContext {
 public:
 
     /**
-     * @param bufferArea Must be 8 x frameSize in length.
+     * @param bufferArea Must be 16 x frameSize in length.
      * @param silenceArea Must be 2 x frameSize in length.  
     */
     W32AudioOutputContext(uint32_t frameSize, uint32_t samplesPerSecond, 
@@ -55,7 +55,9 @@ private:
     bool _inSilence;
 
     int16_t* _audioData;
-    static const uint32_t _audioQueueSize = 8;
+    // This controls how much audio backlog we can retain before
+    // overflowing.
+    static const uint32_t _audioQueueSize = 16;
     WAVEHDR _audioHdr[_audioQueueSize];
     uint32_t _audioQueuePtr;
     uint32_t _audioQueueUsed;
