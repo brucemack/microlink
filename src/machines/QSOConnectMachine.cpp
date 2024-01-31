@@ -88,7 +88,7 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                     memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
                     temp[std::min((uint32_t)63, evt->getDataLen())] = 0;
                     // Here we skip past the oNDATA part when we report the message
-                    _userInfo->setOnData(temp +67);
+                    _userInfo->setOnData(temp + 6);
                 }
             }
 
@@ -107,7 +107,8 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 // Make the SDES message and send
                 uint32_t packetLen = formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
                 // Send it on both connections
-                _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+                // The EchoLink client sends this, but things seem to work without it?
+                //_ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
                 _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
 
                 // Make the oNDATA message for the RTP port

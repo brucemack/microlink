@@ -35,6 +35,15 @@ namespace kc1fsz {
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
 
+// Significance?
+// d8 20 a2 e1 5a 50 00 49 24 92 49 24 50 00 49 24 92 49 24 50 00 49 24 92 49 24 50 00 49 24 92 49 24
+static const uint8_t SPEC_FRAME[33] = {
+ 0xd8, 0x20, 0xa2, 0xe1, 0x5a, 0x50, 0x00, 0x49, 
+ 0x24, 0x92, 0x49, 0x24, 0x50, 0x00, 0x49, 0x24, 
+ 0x92, 0x49, 0x24, 0x50, 0x00, 0x49, 0x24, 0x92, 
+ 0x49, 0x24, 0x50, 0x00, 0x49, 0x24, 0x92, 0x49, 
+ 0x24 };
+
 QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
 :   _ctx(ctx),
@@ -90,10 +99,19 @@ void QSOFlowMachine::processEvent(const Event* ev) {
                     // Process each of the GSM frame independently/sequentially
                     const uint8_t* frame = (d + 12);
                     for (uint16_t f = 0; f < framesPerPacket; f++) {
-                        // TODO: PROVIDE AN UNPACK THAT CONTAINS STATE
-                        kc1fsz::PackingState state;
-                        params.unpack(frame, &state);
-                        _gsmDecoder.decode(&params, pcmData + pcmPtr);
+                        // TODO: EXPLAIN?
+                        if (memcmp(SPEC_FRAME, frame, 33) == 0) {
+                            cout << "HIT" << endl;
+                            for (uint32_t i = 0; i < 160; i++) {
+                                pcmData[pcmPtr + i] = 0;
+                            }
+                        } 
+                        else {
+                            // TODO: PROVIDE AN UNPACK THAT CONTAINS STATE
+                            kc1fsz::PackingState state;
+                            params.unpack(frame, &state);
+                            _gsmDecoder.decode(&params, pcmData + pcmPtr);
+                        }
                         pcmPtr += samplesPerFrame;
                         frame += 33;
                     }
@@ -102,6 +120,8 @@ void QSOFlowMachine::processEvent(const Event* ev) {
                     _audioOutput->play(pcmData);
                 } 
                 else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
+                    cout << "ONDATA?" << endl;
+                    prettyHexDump(evt->getData(), evt->getDataLen(), cout);
                     // Make sure the message is null-terminated one way or the other
                     char temp[64];
                     memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
