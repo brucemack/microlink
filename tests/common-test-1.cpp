@@ -29,6 +29,7 @@
 #include <cstring>
 #include <string>
 
+//#include <conio.h>
 #include "Windows.h"
 
 #include "kc1fsz-tools/Common.h"
