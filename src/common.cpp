@@ -157,16 +157,6 @@ bool isRTPAudioPacket(const uint8_t* d, uint32_t len) {
     return len == 144 && d[0] == 0xc0 && d[1] == 0x03;
 }
 
-void parseRTPAudioPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
-    uint8_t gsmFrames[4][33]) {    
-    *seq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
-    *ssrc = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | ((uint16_t)d[10] << 8) |
-        ((uint16_t)d[11]);
-    for (uint16_t i = 0; i < 4; i++) {
-        memcpy(gsmFrames[i], (const void*)(d + 12 + (i * 33)), 33);
-    }
-}
-
 bool isOnDataPacket(const uint8_t* d, uint32_t len) {
     return (len >= 6 && memcmp(d, "oNDATA", 6) == 0);
 }

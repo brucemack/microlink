@@ -25,6 +25,7 @@
 #include <Windows.h>
 
 #include "kc1fsz-tools/AudioOutputContext.h"
+#include "../PerfTimer.h"
 
 namespace kc1fsz {
 
@@ -32,24 +33,38 @@ class W32AudioOutputContext : public AudioOutputContext {
 public:
 
     /**
-     * @param bufferArea Must be 2xframeSize in length.
+     * @param bufferArea Must be 8 x frameSize in length.
+     * @param silenceArea Must be 2 x frameSize in length.  
     */
     W32AudioOutputContext(uint32_t frameSize, uint32_t samplesPerSecond, 
-        int16_t* bufferArea);
+        int16_t* audioArea, int16_t* silenceArea);
     virtual ~W32AudioOutputContext();
 
     virtual bool poll();
-
     virtual void play(int16_t* frame);
+
+    virtual uint32_t getAudioQueueUsed() const {
+        return _audioQueueUsed;
+    }
 
 private:
 
-    int16_t* _waveData;
     HANDLE _event;
     HWAVEOUT _waveOut;
-    WAVEHDR _waveHdr[2];
-    uint32_t _frameCount;
-    uint32_t _frameCountOnLastWrite;
+
+    bool _inSilence;
+
+    int16_t* _audioData;
+    static const uint32_t _audioQueueSize = 8;
+    WAVEHDR _audioHdr[_audioQueueSize];
+    uint32_t _audioQueuePtr;
+    uint32_t _audioQueueUsed;
+
+    int16_t* _silenceData;
+    WAVEHDR _silenceHdr[2];
+    uint32_t _silenceQueuePtr;
+
+    PerfTimer _timer;
 };
 
 }

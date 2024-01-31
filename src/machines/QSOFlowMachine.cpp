@@ -72,30 +72,33 @@ void QSOFlowMachine::processEvent(const Event* ev) {
 
                 if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
 
-                    cout << "Got Audio " << endl;
-
-                    // TODO: MAKE THIS MORE EFFICIENT - WE DON'T NEED TWO DATA MOVES
                     // Unload the GSM frames from the RTP packet
-                    uint8_t gsmFrames[4][33];
-                    uint16_t remoteSeq = 0;
-                    uint32_t remoteSSRC = 0;
-                    parseRTPAudioPacket(evt->getData(), &remoteSeq, &remoteSSRC, gsmFrames);
+                    //uint16_t remoteSeq = 0;
+                    //uint32_t remoteSSRC = 0;
+                    const uint8_t* d = evt->getData();
 
-                    // TODO: LOOK AT SSRC and ignore echos
+                    //remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
+                    //remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
+                    //    ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
 
-                    // Decode the GSM data
-                    Parameters params;
-                    int16_t pcmData[4 * 160];
+                    const uint32_t framesPerPacket = 4;
+                    const uint32_t samplesPerFrame = 160;
+                    int16_t pcmData[framesPerPacket * samplesPerFrame];
                     uint32_t pcmPtr = 0;
-                    for (uint32_t f = 0; f < 4; f++) {
+                    Parameters params;
+
+                    // Process each of the GSM frame independently/sequentially
+                    const uint8_t* frame = (d + 12);
+                    for (uint16_t f = 0; f < framesPerPacket; f++) {
                         // TODO: PROVIDE AN UNPACK THAT CONTAINS STATE
                         kc1fsz::PackingState state;
-                        params.unpack(gsmFrames[f], &state);
+                        params.unpack(frame, &state);
                         _gsmDecoder.decode(&params, pcmData + pcmPtr);
-                        pcmPtr += 160;
+                        pcmPtr += samplesPerFrame;
+                        frame += 33;
                     }
 
-                    // Hand off to the audio context to play the sound
+                    // Hand off to the audio context to play the audio
                     _audioOutput->play(pcmData);
                 } 
                 else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {

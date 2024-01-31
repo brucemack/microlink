@@ -80,9 +80,12 @@ target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
 add_executable(common-test-1
   tests/common-test-1.cpp
   src/common.cpp
-)
+  src/PerfTimer.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+) 
 
 target_include_directories(common-test-1 PRIVATE src)
+target_include_directories(common-test-1 PRIVATE kc1fsz-tools-cpp/include)
 
 # ------ audio-test-1 --------------------------------------------------------
 
@@ -99,10 +102,12 @@ target_link_libraries(audio-test-1 winmm)
 add_executable(audio-test-2
   tests/audio-test-2.cpp
   src/common.cpp
+  src/PerfTimer.cpp
   src/contexts/W32AudioOutputContext.cpp
 )
 
 target_include_directories(audio-test-2 PRIVATE src)
+target_include_directories(audio-test-2 PRIVATE kc1fsz-tools-cpp/include)
 target_link_libraries(audio-test-2 winmm)
 
 # ------ machine-test-1 -------------------------------------------------------
@@ -135,6 +140,7 @@ add_executable(client-test-2
   tests/client-test-2.cpp
   tests/TestContext.cpp
   src/common.cpp
+  src/PerfTimer.cpp
   src/contexts/SocketContext.cpp
   src/contexts/W32AudioOutputContext.cpp
   src/machines/RootMachine.cpp

@@ -28,10 +28,10 @@ using namespace std;
 namespace kc1fsz {
 
 W32AudioOutputContext::W32AudioOutputContext(uint32_t frameSize, 
-    uint32_t sampleRate, int16_t* bufferArea)
+    uint32_t sampleRate, int16_t* audioArea, int16_t* silenceArea)
 :   AudioOutputContext(frameSize, sampleRate),
-    _waveData(bufferArea),
-    _frameCount(0) {
+    _audioData(audioArea),
+    _silenceData(silenceArea) {
 
     MMRESULT result;
 
@@ -64,36 +64,57 @@ W32AudioOutputContext::W32AudioOutputContext(uint32_t frameSize,
         throw std::runtime_error("Unable to open audio output");
     }
 
-    // Set up and prepare buffers/headers for output.  We use the buffers
+    // Set up and prepare buffers/headers for audio output.  We use the buffers
     // in alternating sequence. 
-    for (int b = 0; b < 2; b++) {
+    for (uint32_t b = 0; b < _audioQueueSize; b++) {
         // Calculate the start of the frame
-        int16_t* buf = _waveData + (b * _frameSize);
+        int16_t* buf = _audioData + (b * _frameSize);
         // Clear
         for (uint32_t i = 0; i < _frameSize; i++) {
             buf[i] = 0;
         }
-        _waveHdr[b].lpData = (LPSTR)(buf);
-        _waveHdr[b].dwBufferLength = _frameSize * 2;
-        _waveHdr[b].dwBytesRecorded = 0;
-        _waveHdr[b].dwUser = 0L;
-        _waveHdr[b].dwFlags = 0L;
-        _waveHdr[b].dwLoops = 0L;
-        result = waveOutPrepareHeader(_waveOut, &(_waveHdr[b]), sizeof(WAVEHDR));    
+        _audioHdr[b].lpData = (LPSTR)(buf);
+        _audioHdr[b].dwBufferLength = _frameSize * 2;
+        _audioHdr[b].dwBytesRecorded = 0;
+        _audioHdr[b].dwUser = 0L;
+        _audioHdr[b].dwFlags = 0L;
+        _audioHdr[b].dwLoops = 0L;
+        result = waveOutPrepareHeader(_waveOut, &(_audioHdr[b]), sizeof(WAVEHDR));    
         if (result) {
             throw std::runtime_error("Unable to prepare audio buffer");
         }
     }
 
-    _frameCount  = 0;
-    int nextBuffer = _frameCount % 2;
-    _frameCountOnLastWrite = 0;
-    
-    // Get things going by launching the first buffer
-    result = waveOutWrite(_waveOut, &(_waveHdr[nextBuffer]), sizeof(WAVEHDR));
-    if (result) {
-        throw std::runtime_error("Unable to write audio");
+    _audioQueuePtr = 0;
+    _audioQueueUsed = 0;
+
+    // Set up and prepare buffers/headers for silence output.  We use the buffers
+    // in alternating sequence. 
+    for (uint32_t b = 0; b < 2; b++) {
+        // Calculate the start of the frame
+        int16_t* buf = _silenceData + (b * _frameSize);
+        // Clear the buffer
+        // TODO: GENERATE COMFORT NOISE
+        for (uint32_t i = 0; i < _frameSize; i++) {
+            buf[i] = 0;
+        }
+        _silenceHdr[b].lpData = (LPSTR)(buf);
+        _silenceHdr[b].dwBufferLength = _frameSize * 2;
+        _silenceHdr[b].dwBytesRecorded = 0;
+        _silenceHdr[b].dwUser = 0L;
+        _silenceHdr[b].dwFlags = 0L;
+        _silenceHdr[b].dwLoops = 0L;
+        result = waveOutPrepareHeader(_waveOut, &(_silenceHdr[b]), sizeof(WAVEHDR));    
+        if (result) {
+            throw std::runtime_error("Unable to prepare audio buffer");
+        }
     }
+
+    _silenceQueuePtr = 0;
+    _inSilence = true;
+
+    // Start sending silence
+    waveOutWrite(_waveOut, &(_silenceHdr[_silenceQueuePtr]), sizeof(WAVEHDR));
 }
 
 W32AudioOutputContext::~W32AudioOutputContext() {
@@ -112,19 +133,29 @@ bool W32AudioOutputContext::poll() {
 
         anythingHappened = true;
 
-        int currentBuffer = _frameCount % 2;
-        int nextBuffer = (_frameCount + 1) % 2;
-        _frameCount++;
-
-        // Clear the current buffer so that we get silence by default
-        // (in the underflow situation)
-        int16_t* b = _waveData + (currentBuffer * _frameSize);
-        for (uint32_t i = 0; i < _frameSize; i++) {
-            *b = 0;
+        // Figure out whether it's time to switch between silence and audio
+        if (_inSilence) {
+            if (_audioQueueUsed > (_audioQueueSize / 2)) {
+                cout << "Switching out of silence" << endl;
+                _inSilence = false;
+            }
+        } else {
+            if (_audioQueueUsed == 0) {
+                cout << "Switching into silence" << endl;
+                _inSilence = true;
+            }
         }
-
-        // Serve up the "other" buffer in alternating sequence
-        waveOutWrite(_waveOut, &(_waveHdr[nextBuffer]), sizeof(WAVEHDR));
+        
+        // Send a frame to the audio player, depending on whether we are in 
+        // silence or not.
+        if (_inSilence) {
+            _silenceQueuePtr = (_silenceQueuePtr + 1) % 2;
+            waveOutWrite(_waveOut, &(_silenceHdr[_silenceQueuePtr]), sizeof(WAVEHDR));
+        } else {
+            _audioQueuePtr = (_audioQueuePtr + 1) % _audioQueueSize;
+            _audioQueueUsed--;
+            waveOutWrite(_waveOut, &(_audioHdr[_audioQueuePtr]), sizeof(WAVEHDR));
+        }
     }
 
     return anythingHappened;
@@ -132,15 +163,20 @@ bool W32AudioOutputContext::poll() {
 
 void W32AudioOutputContext::play(int16_t* frame) {
 
-    int delta = (int)_frameCount - (int)_frameCountOnLastWrite;
-    cout << "Play delta " << delta << endl;    
-
-    int nextBuffer = (_frameCount + 1) % 2;
-    int16_t* b = _waveData + (nextBuffer * _frameSize);
-    for (uint32_t i = 0; i < _frameSize; i++) {
-        b[i] = frame[i];
+    // Only allow a write if there are open frames in the queue
+    if (_audioQueueUsed < _audioQueueSize) {
+        // Calculate where to write the next frame based on the write 
+        // pointer and the size of the queue
+        int nextBuffer = (_audioQueuePtr + _audioQueueUsed) % _audioQueueSize;
+        int16_t* b = _audioData + (nextBuffer * _frameSize);
+        for (uint32_t i = 0; i < _frameSize; i++) {
+            b[i] = frame[i];
+        }
+        _audioQueueUsed++;
+        //cout << "Wrote to " << nextBuffer << " (used=" << _audioQueueUsed << ")" << endl;
+    } else {
+        cout << "Overflow" << endl;
     }
-    _frameCountOnLastWrite = _frameCount;
 }
 
 }

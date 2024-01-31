@@ -66,9 +66,6 @@ bool isRTCPPacket(const uint8_t* d, uint32_t len);
 
 bool isRTPAudioPacket(const uint8_t* d, uint32_t len);
 
-void parseRTPAudioPacket(const uint8_t* d, uint16_t* seq, uint32_t* ssrc,
-    uint8_t gsmFrames[4][33]);
-
 void writeInt32(uint8_t* buf, uint32_t d);
 
 uint32_t formatRTCPPacket_BYE(uint32_t ssrc,

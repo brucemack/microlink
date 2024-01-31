@@ -36,6 +36,8 @@
 #include "machines/RootMachine.h"
 #include "contexts/SocketContext.h"
 #include "contexts/W32AudioOutputContext.h"
+
+#include "PerfTimer.h"
 #include "TestUserInfo.h"
 
 using namespace std;
@@ -43,20 +45,27 @@ using namespace kc1fsz;
 
 // The size of one EchoLink RTP packet (after decoding)
 static const int audioFrameSize = 160 * 4;
+static const int audioFrameCount = 8;
 // Double-buffer
-static int16_t audioFrameOut[2 * audioFrameSize];
+static int16_t audioFrameOut[audioFrameCount * audioFrameSize];
+// Double-buffer
+static int16_t silenceFrameOut[2 * audioFrameSize];
 
 int main(int, const char**) {
 
+    if (getenv("EL_PASSWORD") == 0) {
+        cout << "EL_PASSWORD must be set." << endl;
+        return -1;
+    }
+
     SocketContext context;
     TestUserInfo info;
-    W32AudioOutputContext audioOutContext(audioFrameSize, 8000, audioFrameOut);
+    W32AudioOutputContext audioOutContext(audioFrameSize, 8000, audioFrameOut, silenceFrameOut);
 
     RootMachine rm(&context, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
-    //rm.setServerName(HostName("www.google.com"));
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString("XYZ123"));
+    rm.setPassword(FixedString(getenv("EL_PASSWORD")));
     rm.setLocation(FixedString("Wellesley, MA USA"));
     //rm.setTargetCallSign(CallSign("W1TKZ-L"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
@@ -66,12 +75,25 @@ int main(int, const char**) {
     TickEvent tickEv;
     uint32_t lastAudioTickMs = 0;
 
+    PerfTimer timer;
+    uint32_t longestUs = 0;
+
     // Here is the main event loop
     uint32_t start = time_ms();
+    uint32_t cycle = 0;
     while ((time_ms() - start) < 30000) {
 
-        bool activity = audioOutContext.poll();
-        activity = activity || context.poll(&rm);
+        bool audioActivity = audioOutContext.poll();
+        timer.reset();
+
+        bool commActivity = context.poll(&rm);
+        uint32_t ela = timer.elapsedUs();
+        if (ela > longestUs) {
+            longestUs = ela;
+            cout << "Longest " << longestUs << endl;
+        }
+
+        bool activity = audioActivity || commActivity;
         //uint32_t t1 = time_ms();
         //if (t1 - t0 > 5) {
         //    cout << "  Took " << (t1 - t0) << endl;
@@ -92,5 +114,8 @@ int main(int, const char**) {
 
         if (!activity)
             Sleep(5);
+
+        cycle++;
     }
+    cout << "Longest " << longestUs << endl;
 }

@@ -38,18 +38,20 @@ using namespace std;
 using namespace kc1fsz;
 
 // The size of one EchoLink RTP packet (after decoding)
-const int NUMPTS = 160 * 4;
+const int frameSize = 160 * 4;
+const int frameCount = 8;
 // Double-buffer
-int16_t waveData[2 * NUMPTS];
+int16_t audioData[frameCount * frameSize];
+// Double-buffer
+int16_t silenceData[2 * frameSize];
 
 // A simple example of playing an audio tone using alternating buffers.
 //
 int main(int, const char**) {
 
     const int sampleRate = 8000;
-    const int frameSize = 160 * 4;
 
-    W32AudioOutputContext context(frameSize, sampleRate, waveData);
+    W32AudioOutputContext context(frameSize, sampleRate, audioData, silenceData);
 
     uint32_t lastFrameMs = 0;
 
@@ -60,9 +62,17 @@ int main(int, const char**) {
         // Let the context do any background work it needs to
         context.poll();
 
+        unsigned int gapMs = 80;
+
+        // Simulate a slowdown
+        //if (i > 300 && i < 350) {
+        //    cout << "Slow down" << endl;
+        //    gapMs = 100;
+        //}
+
         // Simulate the generation of a new audio frame every 20ms
         uint32_t now = time_ms();
-        if (now - lastFrameMs >= 20) {
+        if (now - lastFrameMs >= gapMs) {
 
             lastFrameMs = now;
 
