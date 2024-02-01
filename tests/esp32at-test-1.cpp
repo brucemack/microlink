@@ -35,6 +35,10 @@
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
 
+#include "kc1fsz-tools/Common.h"
+#include "kc1fsz-tools/rp2040/PicoUartChannel.h"
+#include "kc1fsz-tools/rp2040/PicoPollTimer.h"
+
 const uint LED_PIN = 25;
 
 #define UART_ID uart0
@@ -46,6 +50,7 @@ const uint LED_PIN = 25;
 #define U_PARITY UART_PARITY_NONE
 
 using namespace std;
+using namespace kc1fsz;
 
 static const uint32_t accSize = 256;
 uint8_t acc[accSize];
@@ -112,15 +117,24 @@ bool findToken(const uint8_t* acc, uint32_t accLen, const char* token,
 /**
  * @returns true on success, false on ERROR
  */
-bool waitOn(uart_inst_t* u, const char* token, uint32_t timeOut,
+bool waitOn(PicoUartChannel& channel, const char* token, uint32_t timeOut,
     uint8_t* preText, uint32_t preTextSize, uint32_t* preTextLen) {
 
     while (true) {
-        if (uart_is_readable(UART_ID)) {
-            char c = uart_getc(UART_ID);
-            if (accLen < accSize) {
-                acc[accLen++] = c;
-            }
+
+        // Since we're in a blocking loop here, prompt the channel to 
+        // make sure we're making forward progress in all the right ways.        
+        channel.poll();
+
+        if (channel.isReadable()) {
+            
+            // Read directly into the accumulator
+            uint32_t accFree = accSize - accLen;
+            accLen += channel.read(acc + accLen, accFree);
+
+            //cout << "ACC: " << accLen << endl;
+            //prettyHexDump(acc, accLen, cout);
+
             // Check for termination
             uint32_t tokenLoc = 0;
             uint32_t tokenLen = 0;
@@ -145,10 +159,15 @@ bool waitOn(uart_inst_t* u, const char* token, uint32_t timeOut,
     return false;
 }
 
-bool runCmd(uart_inst_t* u, const char* cmd, const char* respToken, 
+bool runCmd(PicoUartChannel& channel, 
+    const char* cmd, const char* respToken, 
     uint32_t to, uint8_t* preText, uint32_t preTextSize, uint32_t* preTextLen) {
-    uart_write_blocking(u, (const uint8_t*)cmd, strlen(cmd));
-    bool b = waitOn(UART_ID, respToken, to, preText, preTextSize, preTextLen);
+    // Send the command
+    if (channel.write((const uint8_t*)cmd, strlen(cmd)) != (int32_t)strlen(cmd)) {
+        return false;
+    }
+    // Wait for result
+    bool b = waitOn(channel, respToken, to, preText, preTextSize, preTextLen);
     return b;
 }
 
@@ -180,56 +199,77 @@ int main() {
     gpio_put(LED_PIN, 0);
     sleep_ms(1000);
 
-    cout << "Hello ESP32-AT" << endl;
+    cout << "Hello ESP32-AT 3" << endl;
     cout << endl;
+
+    // Sertup UART and timer
+    const uint32_t readBufferSize = 256;
+    uint8_t readBuffer[readBufferSize];
+    const uint32_t writeBufferSize = 256;
+    uint8_t writeBuffer[writeBufferSize];
+
+    PicoUartChannel channel(UART_ID, 
+        readBuffer, readBufferSize, writeBuffer, writeBufferSize);
+
+    PicoPollTimer timer;
+    timer.setIntervalUs(1000 * 5000);
 
     uint8_t preText[256];
     const uint32_t preTextSize = 256;
     uint32_t preTextLen = 0;
     uint32_t to = 0;
+
     // RESET
     //uart_puts(UART_ID, "AT+RST\r\n");
     //waitResponse(UART_ID, "\r\nready", 0);
+
     // Stop echo
-    runCmd(UART_ID, "ATE0\r\n",
+    runCmd(channel, "ATE0\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
     // Display state
-    runCmd(UART_ID, "AT+CIPSTATE?\r\n",
+    cout << "Second command" << endl;
+    runCmd(channel, "AT+CIPSTATE?\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
     // Setup station mode
-    runCmd(UART_ID, "AT+CWMODE=1\r\n",
+    runCmd(channel, "AT+CWMODE=1\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
     // Setup mux
-    runCmd(UART_ID, "AT+CIPMUX=1\r\n",
+    runCmd(channel, "AT+CIPMUX=1\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);        
     // Close all connections
-    runCmd(UART_ID, "AT+CIPCLOSE=5\r\n",
+    runCmd(channel, "AT+CIPCLOSE=5\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
     preText[preTextLen] = 0;
     cout << "PRE [" << preText << "] len " << preTextLen << endl;
     // Setup UDP receive
-    runCmd(UART_ID, "AT+CIPSTART=0,\"UDP\",\"192.168.8.102\",5198,5198,0\r\n",
+    cout << "Receive 1" << endl;
+    runCmd(channel, "AT+CIPSTART=0,\"UDP\",\"192.168.8.102\",5198,5198,0\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
     absolute_time_t start = get_absolute_time();
-    for (int j = 0; j < 20; j++) {
+
+    for (int j = 0; j < 10; j++) {
+
+        cout << j << endl;
+
         uint8_t frame[144];
         for (int i = 0; i < 144; i++) {
             frame[i] = 'a' + j;
         }
         absolute_time_t start2 = get_absolute_time();
         // Do a send of 144
-        runCmd(UART_ID, "AT+CIPSEND=0,144,\"192.168.8.102\",5198\r\n",
+        runCmd(channel, "AT+CIPSEND=0,144,\"192.168.8.102\",5198\r\n",
             "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
         absolute_time_t end2 = get_absolute_time();
         cout << "  Big Cmd " << absolute_time_diff_us(start2, end2) << endl;
 
         absolute_time_t start3 = get_absolute_time();
-        uart_write_blocking(UART_ID, frame, 144);
+        channel.blockAndFlush(0);
+        channel.write(frame, 144);
         absolute_time_t end3 = get_absolute_time();
         cout << "  Big Write " << absolute_time_diff_us(start3, end3) << endl;
 
         absolute_time_t start4 = get_absolute_time();
-        waitOn(UART_ID, "\r\nSEND OK\r\n", to, preText, preTextSize, &preTextLen);
+        waitOn(channel, "\r\nSEND OK\r\n", to, preText, preTextSize, &preTextLen);
         absolute_time_t end4 = get_absolute_time();
         cout << "  Big Wait " << absolute_time_diff_us(start4, end4) << endl;
     }
@@ -239,23 +279,17 @@ int main() {
     // We always have one garbage charcter (10?) on the UART at
     // startup.
 
-    while (1) {
-        if (uart_is_readable(UART_ID)) {
-            char c = uart_getc(UART_ID);
-            if (isprint(c) || c == 13 || c == 10) {
-                cout << c;
-                if (c == 13) {
-                    cout << endl << "<CR>";
-                }
-                if (c == 10) {
-                    cout << "<LF>";
-                }
-            } 
-            else {    
-                cout << "[" << (int)c << "] ";
-            }
-            //cout << "[" << (int)c << "] " << c;
-            //cout << c;
+    while (true) {
+
+        // Display whatever comes in
+        channel.poll();
+
+        // Check for result
+        if (channel.isReadable()) {
+            uint8_t buf[256];
+            int len = channel.read(buf, 256);
+            cout.write((const char*)buf, len);
+            cout.flush();
         }
     }
 }

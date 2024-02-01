@@ -179,6 +179,10 @@ endif()
 
 add_executable(esp32at-test-1
   tests/esp32at-test-1.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+
 )
 
 if(DEFINED ENV{PICO_BUILD})
@@ -189,3 +193,4 @@ target_compile_definitions(esp32at-test-1 PUBLIC PICO_BUILD=1)
 target_link_libraries(esp32at-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
 endif()
 
+target_include_directories(esp32at-test-1 PRIVATE kc1fsz-tools-cpp/include)
