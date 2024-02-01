@@ -29,6 +29,7 @@
 #include <cstring>
 #include <string>
 
+#include "kc1fsz-tools/AsyncChannel.h"
 #include "ATProcessor.h"
 
 namespace kc1fsz {
@@ -88,6 +89,60 @@ bool findCompletionToken(const uint8_t* acc, uint32_t accLen, const char* token,
         }
     }
 
+    return false;
+}
+
+static const uint32_t accSize = 256;
+static uint8_t acc[accSize];
+static uint32_t accLen = 0;
+
+/**
+ * A utilty function that is helpful when dealing with AT-style 
+ * protcols.  Reads continuously from the channel looking for 
+ * the completion token.  But can also preserve/return any 
+ * "other" traffic that comes on the line (i.e. notifications).
+ *
+ * @param preText A pointer to a buffer that will be filled 
+ *  with any "pre text" (i.e. unrelated things that show up before
+ *  the completion token.
+ * @returns true on success, false on ERROR
+ */
+bool waitOnCompletion(AsyncChannel& channel, const char* token, uint32_t timeOut,
+    uint8_t* preText, uint32_t preTextSize, uint32_t* preTextLen) {
+
+    while (true) {
+
+        // Since we're in a blocking loop here, prompt the channel to 
+        // make sure we're making forward progress in all the right ways.        
+        channel.poll();
+
+        if (channel.isReadable()) {
+            
+            // Read directly into the end of the accumulator
+            uint32_t accFree = accSize - accLen;
+            accLen += channel.read(acc + accLen, accFree);
+
+            // Check for termination
+            uint32_t tokenLoc = 0;
+            uint32_t tokenLen = 0;
+            bool b = findCompletionToken(acc, accLen, token, &tokenLoc, &tokenLen);
+            if (b) {
+                // Copy the pre-text (if any)
+                if (tokenLoc > 0) {
+                    for (unsigned int i = 0; 
+                        i < preTextSize && i < tokenLoc; i++) {
+                            preText[i] = acc[i];
+                    }
+                    *preTextLen = tokenLoc;
+                }
+                // Failure is when the ERROR token is found
+                bool ret = acc[tokenLoc + 2] != 'E';
+                // Flush the accumulator
+                accLen = 0;
+                return ret;
+            }
+        }
+    }
     return false;
 }
 

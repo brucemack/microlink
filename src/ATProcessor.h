@@ -49,6 +49,20 @@ namespace kc1fsz {
 bool findCompletionToken(const uint8_t* acc, uint32_t accLen, 
     const char* token, uint32_t* loc, uint32_t* len);
 
+/**
+ * A utilty function that is helpful when dealing with AT-style 
+ * protcols.  Reads continuously from the channel looking for 
+ * the completion token.  But can also preserve/return any 
+ * "other" traffic that comes on the line (i.e. notifications).
+ *
+ * @param preText A pointer to a buffer that will be filled 
+ *  with any "pre text" (i.e. unrelated things that show up before
+ *  the completion token.
+ * @returns true on success, false on ERROR
+ */
+bool waitOnCompletion(AsyncChannel& channel, const char* token, uint32_t timeOut,
+    uint8_t* preText, uint32_t preTextSize, uint32_t* preTextLen);
+
 }
 
 #endif
