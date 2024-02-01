@@ -27,8 +27,10 @@
 #include <iostream>
 #include <cctype>
 #include <cstring>
+#include <string>
 
 #include "pico/stdlib.h"
+#include "pico/time.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
@@ -49,7 +51,8 @@ static const uint32_t accSize = 256;
 uint8_t acc[accSize];
 uint32_t accLen = 0;
 
-static const char* ERROR_TOKEN = "\r\nERROR\r\n";
+static constexpr const char* ERROR_TOKEN = "\r\nERROR\r\n";
+static constexpr int ERROR_TOKEN_LEN = std::char_traits<char>::length(ERROR_TOKEN);
 
 /**
  * A function that is helpful when dealing with AT+ command protocols.
@@ -68,7 +71,6 @@ bool findToken(const uint8_t* acc, uint32_t accLen, const char* token,
 
     // Check for the target token
     const int tokenLen = strlen(token);
-    const int errorLen = strlen(ERROR_TOKEN);
 
     for (int i = 0; i < accLen; i++) {
 
@@ -89,7 +91,7 @@ bool findToken(const uint8_t* acc, uint32_t accLen, const char* token,
         }
 
         matchLen = 0;
-        for (int k = 0; k < errorLen && i + k < accLen; k++) {
+        for (int k = 0; k < ERROR_TOKEN_LEN && i + k < accLen; k++) {
             if (acc[i + k] == ERROR_TOKEN[k]) {
                 matchLen++;
             } else {
@@ -97,9 +99,9 @@ bool findToken(const uint8_t* acc, uint32_t accLen, const char* token,
             }
         }
         // Did we match an entire term?
-        if (matchLen == errorLen) {
+        if (matchLen == ERROR_TOKEN_LEN) {
             *loc = i;
-            *len = errorLen;
+            *len = ERROR_TOKEN_LEN;
             return true;
         }
     }
@@ -116,11 +118,6 @@ bool waitOn(uart_inst_t* u, const char* token, uint32_t timeOut,
     while (true) {
         if (uart_is_readable(UART_ID)) {
             char c = uart_getc(UART_ID);
-            /*
-            if (isprint(c) || c == 13 || c == 10) {
-                cout << c;
-            }
-            */
             if (accLen < accSize) {
                 acc[accLen++] = c;
             }
@@ -150,14 +147,8 @@ bool waitOn(uart_inst_t* u, const char* token, uint32_t timeOut,
 
 bool runCmd(uart_inst_t* u, const char* cmd, const char* respToken, 
     uint32_t to, uint8_t* preText, uint32_t preTextSize, uint32_t* preTextLen) {
-    cout << cmd;
-    uart_puts(u, cmd);
+    uart_write_blocking(u, (const uint8_t*)cmd, strlen(cmd));
     bool b = waitOn(UART_ID, respToken, to, preText, preTextSize, preTextLen);
-    if (b) {
-        cout << "GOOD" << endl;
-    } else {
-        cout << "BAD" << endl;
-    }
     return b;
 }
 
@@ -219,11 +210,31 @@ int main() {
     // Setup UDP receive
     runCmd(UART_ID, "AT+CIPSTART=0,\"UDP\",\"192.168.8.102\",5198,5198,0\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
-    // Do a send
-    runCmd(UART_ID, "AT+CIPSEND=0,4,\"192.168.8.102\",5198\r\n",
-        "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
-    uart_puts(UART_ID, "izzy");
-    waitOn(UART_ID, "\r\nSEND OK\r\n", to, preText, preTextSize, &preTextLen);
+    absolute_time_t start = get_absolute_time();
+    for (int j = 0; j < 20; j++) {
+        uint8_t frame[144];
+        for (int i = 0; i < 144; i++) {
+            frame[i] = 'a' + j;
+        }
+        absolute_time_t start2 = get_absolute_time();
+        // Do a send of 144
+        runCmd(UART_ID, "AT+CIPSEND=0,144,\"192.168.8.102\",5198\r\n",
+            "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
+        absolute_time_t end2 = get_absolute_time();
+        cout << "  Big Cmd " << absolute_time_diff_us(start2, end2) << endl;
+
+        absolute_time_t start3 = get_absolute_time();
+        uart_write_blocking(UART_ID, frame, 144);
+        absolute_time_t end3 = get_absolute_time();
+        cout << "  Big Write " << absolute_time_diff_us(start3, end3) << endl;
+
+        absolute_time_t start4 = get_absolute_time();
+        waitOn(UART_ID, "\r\nSEND OK\r\n", to, preText, preTextSize, &preTextLen);
+        absolute_time_t end4 = get_absolute_time();
+        cout << "  Big Wait " << absolute_time_diff_us(start4, end4) << endl;
+    }
+    absolute_time_t end = get_absolute_time();
+    cout << "Elapsed " << absolute_time_diff_us(start, end) << endl;
 
     // We always have one garbage charcter (10?) on the UART at
     // startup.
