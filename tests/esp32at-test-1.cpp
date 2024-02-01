@@ -38,6 +38,9 @@
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
+#include "kc1fsz-tools/rp2040/PicoPerfTimer.h"
+
+#include "ATProcessor.h"
 
 const uint LED_PIN = 25;
 
@@ -56,65 +59,15 @@ static const uint32_t accSize = 256;
 uint8_t acc[accSize];
 uint32_t accLen = 0;
 
-static constexpr const char* ERROR_TOKEN = "\r\nERROR\r\n";
-static constexpr int ERROR_TOKEN_LEN = std::char_traits<char>::length(ERROR_TOKEN);
-
 /**
- * A function that is helpful when dealing with AT+ command protocols.
- * Locates either the token specified or \r\nERROR\r\n and returns its 
- * starting position in the accumulator provided.
+ * A utilty function that is helpful when dealing with AT-style 
+ * protcols.  Reads continuously from the channel looking for 
+ * the completion token.  But can also preserve/return any 
+ * "other" traffic that comes on the line (i.e. notifications).
  *
- * @param acc
- * @param accLen
- * @param loc This is where the location of the start of the 
- *   token is located.
- * @returns true if something was found, or false if nothing was found.
- *  
- */
-bool findToken(const uint8_t* acc, uint32_t accLen, const char* token, 
-    uint32_t* loc, uint32_t* len) {
-
-    // Check for the target token
-    const int tokenLen = strlen(token);
-
-    for (int i = 0; i < accLen; i++) {
-
-        int matchLen = 0;
-
-        for (int k = 0; k < tokenLen && i + k < accLen; k++) {
-            if (acc[i + k] == token[k]) {
-                matchLen++;
-            } else {
-                break;
-            }
-        }
-        // Did we match an entire term?
-        if (matchLen == tokenLen) {
-            *loc = i;
-            *len = tokenLen;
-            return true;
-        }
-
-        matchLen = 0;
-        for (int k = 0; k < ERROR_TOKEN_LEN && i + k < accLen; k++) {
-            if (acc[i + k] == ERROR_TOKEN[k]) {
-                matchLen++;
-            } else {
-                break;
-            }
-        }
-        // Did we match an entire term?
-        if (matchLen == ERROR_TOKEN_LEN) {
-            *loc = i;
-            *len = ERROR_TOKEN_LEN;
-            return true;
-        }
-    }
-
-    return false;
-}
-
-/**
+ * @param preText A pointer to a buffer that will be filled 
+ *  with any "pre text" (i.e. unrelated things that show up before
+ *  the completion token.
  * @returns true on success, false on ERROR
  */
 bool waitOn(PicoUartChannel& channel, const char* token, uint32_t timeOut,
@@ -128,17 +81,14 @@ bool waitOn(PicoUartChannel& channel, const char* token, uint32_t timeOut,
 
         if (channel.isReadable()) {
             
-            // Read directly into the accumulator
+            // Read directly into the end of the accumulator
             uint32_t accFree = accSize - accLen;
             accLen += channel.read(acc + accLen, accFree);
-
-            //cout << "ACC: " << accLen << endl;
-            //prettyHexDump(acc, accLen, cout);
 
             // Check for termination
             uint32_t tokenLoc = 0;
             uint32_t tokenLen = 0;
-            bool b = findToken(acc, accLen, token, &tokenLoc, &tokenLen);
+            bool b = findCompletionToken(acc, accLen, token, &tokenLoc, &tokenLen);
             if (b) {
                 // Copy the pre-text (if any)
                 if (tokenLoc > 0) {
@@ -199,7 +149,7 @@ int main() {
     gpio_put(LED_PIN, 0);
     sleep_ms(1000);
 
-    cout << "Hello ESP32-AT 3" << endl;
+    cout << "Hello ESP32-AT 1" << endl;
     cout << endl;
 
     // Sertup UART and timer
@@ -245,7 +195,8 @@ int main() {
     cout << "Receive 1" << endl;
     runCmd(channel, "AT+CIPSTART=0,\"UDP\",\"192.168.8.102\",5198,5198,0\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
-    absolute_time_t start = get_absolute_time();
+
+    PicoPerfTimer timer0;
 
     for (int j = 0; j < 10; j++) {
 
@@ -262,19 +213,15 @@ int main() {
         absolute_time_t end2 = get_absolute_time();
         cout << "  Big Cmd " << absolute_time_diff_us(start2, end2) << endl;
 
-        absolute_time_t start3 = get_absolute_time();
-        channel.blockAndFlush(0);
         channel.write(frame, 144);
-        absolute_time_t end3 = get_absolute_time();
-        cout << "  Big Write " << absolute_time_diff_us(start3, end3) << endl;
 
         absolute_time_t start4 = get_absolute_time();
         waitOn(channel, "\r\nSEND OK\r\n", to, preText, preTextSize, &preTextLen);
         absolute_time_t end4 = get_absolute_time();
         cout << "  Big Wait " << absolute_time_diff_us(start4, end4) << endl;
     }
-    absolute_time_t end = get_absolute_time();
-    cout << "Elapsed " << absolute_time_diff_us(start, end) << endl;
+    
+    cout << "Elapsed " << timer0.elapsedUs() << endl;
 
     // We always have one garbage charcter (10?) on the UART at
     // startup.
@@ -290,7 +237,7 @@ int main() {
             int len = channel.read(buf, 256);
             cout.write((const char*)buf, len);
             cout.flush();
-        }
+        }  
     }
 }
 

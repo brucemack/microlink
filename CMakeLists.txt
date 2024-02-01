@@ -80,7 +80,7 @@ target_include_directories(packet-test-1 PRIVATE gsm-0610-codec/include)
 add_executable(common-test-1
   tests/common-test-1.cpp
   src/common.cpp
-  src/PerfTimer.cpp
+  kc1fsz-tools-cpp/src/win32/Win32PerfTimer.cpp
   kc1fsz-tools-cpp/src/Common.cpp
 ) 
 
@@ -102,7 +102,7 @@ target_link_libraries(audio-test-1 winmm)
 add_executable(audio-test-2
   tests/audio-test-2.cpp
   src/common.cpp
-  src/PerfTimer.cpp
+  kc1fsz-tools-cpp/src/win32/Win32PerfTimer.cpp
   src/contexts/W32AudioOutputContext.cpp
 )
 
@@ -140,7 +140,6 @@ add_executable(client-test-2
   tests/client-test-2.cpp
   tests/TestContext.cpp
   src/common.cpp
-  src/PerfTimer.cpp
   src/contexts/SocketContext.cpp
   src/contexts/W32AudioOutputContext.cpp
   src/machines/RootMachine.cpp
@@ -150,6 +149,7 @@ add_executable(client-test-2
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
   kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/win32/Win32PerfTimer.cpp
   gsm-0610-codec/src/fixed_math.cpp
   gsm-0610-codec/src/wav_util.cpp
   gsm-0610-codec/src/Parameters.cpp
@@ -178,11 +178,12 @@ endif()
 # ------ esp32at-test-1 ------------------------------------------------------
 
 add_executable(esp32at-test-1
+  src/ATProcessor.cpp
   tests/esp32at-test-1.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
-
 )
 
 if(DEFINED ENV{PICO_BUILD})
@@ -193,4 +194,5 @@ target_compile_definitions(esp32at-test-1 PUBLIC PICO_BUILD=1)
 target_link_libraries(esp32at-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
 endif()
 
+target_include_directories(esp32at-test-1 PRIVATE src)
 target_include_directories(esp32at-test-1 PRIVATE kc1fsz-tools-cpp/include)
