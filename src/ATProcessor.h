@@ -63,6 +63,100 @@ bool findCompletionToken(const uint8_t* acc, uint32_t accLen,
 bool waitOnCompletion(AsyncChannel& channel, const char* token, uint32_t timeOut,
     uint8_t* preText, uint32_t preTextSize, uint32_t* preTextLen);
 
+class ATProcessor {
+public:
+
+    /**
+     * This interface is how the proessor reports its results to the 
+     * outside world.
+     */
+    class EventSink {
+    public:
+        virtual void ok() = 0;
+        virtual void sendOk() = 0;
+        virtual void error() = 0;
+        virtual void sendPrompt() = 0;
+        virtual void sendSize() = 0;
+        virtual void ipd(uint32_t channel, 
+            const uint8_t* data, uint32_t len) = 0;
+        virtual void closed(uint32_t channel) = 0;
+        virtual void notification(const uint8_t* data, uint32_t len) = 0;
+        virtual void confused() = 0;
+    };
+
+    ATProcessor(EventSink*sink);
+
+    void process(const uint8_t* data, uint32_t dataLen);
+
+private:
+
+    // This is the function that does the heavy lifting
+    void _processByte(uint8_t b);
+    // Called to get back into the initial state
+    void _reset();
+
+    enum State {
+        // Trying to match on something
+        MATCHING,
+        // Got the "Recv ", discarding the rest
+        IN_RECV,
+        // Got the "+IPD," processing the channel #
+        IN_IPD_0,
+        // Got the channel number and second comma, processing the length
+        IN_IPD_1,
+        // Got length and colon, processing the content
+        IN_IPD_2,
+        // This state is used when the parse stream breaks and we
+        // need to preserve state for debug
+        HALTED
+    };
+
+    enum MatchType {
+        OK,
+        ERROR,
+        SEND_OK,
+        SEND_PROMPT,
+        RECV_SIZE,
+        IPD,
+        CLOSED,
+        NOTIFICATION
+    };
+
+    struct Matcher {
+        MatchType type;
+        bool alive;
+        const char* target;
+        uint32_t param;
+    };
+
+    EventSink* _sink;
+    State _state;
+    uint32_t _ipdChannel;
+    // A genral-purpose value that is used in a few places
+    // where we need to remember numbers during the parse.
+    uint32_t _ipdTotal;
+    uint32_t _ipdRecd;
+
+    const int _matchersSize = 8;
+    Matcher _matchers[8] = { 
+        { MatchType::OK, false, "\r\nOK\r\n" }, 
+        { MatchType::SEND_OK, false, "\r\nSEND OK\r\n" } ,
+        { MatchType::ERROR, false, "\r\nERROR\r\n" } ,
+        { MatchType::SEND_PROMPT, false, "\r\n>" } ,
+        { MatchType::RECV_SIZE, false, "\r\nRecv " } ,
+        { MatchType::IPD, false, "\r\n+IPD," } ,
+        { MatchType::CLOSED, false, "\r\n#,CLOSED\r\n" } ,
+        { MatchType::NOTIFICATION, false, 0 } 
+    };
+
+    // Here is where we accumulate data looking for a match.
+    static const int _accSize = 64;
+    uint8_t _acc[_accSize];
+    uint32_t _accUsed;
+    uint8_t _lastByte;
+    uint32_t _matchPtr;
+};
+
 }
 
 #endif
