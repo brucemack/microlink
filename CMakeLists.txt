@@ -246,3 +246,42 @@ endif()
 
 target_include_directories(socket-test-2 PRIVATE src)
 target_include_directories(socket-test-2 PRIVATE kc1fsz-tools-cpp/include)
+
+# ------ client-test-2p ------------------------------------------------------
+#
+# Runs on the RP2040
+
+add_executable(client-test-2p
+  tests/client-test-2p.cpp
+  src/ATResponseProcessor.cpp
+  src/common.cpp
+  src/contexts/ESP32CommContext.cpp
+  src/machines/RootMachine.cpp
+  src/machines/LogonMachine.cpp
+  src/machines/LookupMachine.cpp
+  src/machines/QSOConnectMachine.cpp
+  src/machines/QSOFlowMachine.cpp
+  src/machines/WaitMachine.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
+)
+
+if(DEFINED ENV{PICO_BUILD})
+pico_enable_stdio_usb(client-test-2p 1)
+# Watch out!  Don't let the STDIO get sent to the UART
+pico_enable_stdio_uart(client-test-2p 0)
+target_compile_definitions(client-test-2p PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
+target_compile_definitions(client-test-2p PRIVATE PICO_BUILD=1)
+target_link_libraries(client-test-2p pico_stdlib hardware_i2c hardware_adc pico_multicore)
+endif()
+
+target_include_directories(client-test-2p PRIVATE src)
+target_include_directories(client-test-2p PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(client-test-2p PRIVATE gsm-0610-codec/include)

@@ -188,7 +188,6 @@ bool isOnDataPacket(const uint8_t* d, uint32_t len) {
     return (len >= 6 && memcmp(d, "oNDATA", 6) == 0);
 }
 
-#ifndef PICO_BUILD
 uint32_t addRTCPPad(uint32_t unpaddedLength,
     uint8_t* p, uint32_t packetSize) {
 
@@ -198,7 +197,7 @@ uint32_t addRTCPPad(uint32_t unpaddedLength,
     uint32_t padSize = 4 - (unpaddedLength % 4);
 
     if (packetSize < unpaddedLength + padSize)
-        throw std::invalid_argument("Insufficient space");
+        panic("Insufficient space");
 
     // Move to where the pad needs to be added
     p += unpaddedLength;
@@ -214,6 +213,7 @@ uint32_t addRTCPPad(uint32_t unpaddedLength,
     return padSize;
 }
 
+#ifndef PICO_BUILD
 uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint8_t* p, uint32_t packetSize) {
 
