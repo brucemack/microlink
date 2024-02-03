@@ -31,6 +31,7 @@
 #include <cctype>
 #include <cstring>
 #include <string>
+#include <functional>
 
 namespace kc1fsz {
 
@@ -123,10 +124,20 @@ private:
     };
 
     struct Matcher {
+
         MatchType type;
         bool alive;
         const char* target;
+        std::function<void(ATProcessor&,const ATProcessor::Matcher&)> onSuccess;
+        uint32_t matchPtr;
         uint32_t param;
+
+        /**
+         * @return true if a successful match has been found.
+         */
+        bool process(uint8_t lastByte, uint8_t b);
+
+        void reset();
     };
 
     EventSink* _sink;
@@ -137,24 +148,14 @@ private:
     uint32_t _ipdTotal;
     uint32_t _ipdRecd;
 
-    const int _matchersSize = 8;
-    Matcher _matchers[8] = { 
-        { MatchType::OK, false, "\r\nOK\r\n" }, 
-        { MatchType::SEND_OK, false, "\r\nSEND OK\r\n" } ,
-        { MatchType::ERROR, false, "\r\nERROR\r\n" } ,
-        { MatchType::SEND_PROMPT, false, "\r\n>" } ,
-        { MatchType::RECV_SIZE, false, "\r\nRecv " } ,
-        { MatchType::IPD, false, "\r\n+IPD," } ,
-        { MatchType::CLOSED, false, "\r\n#,CLOSED\r\n" } ,
-        { MatchType::NOTIFICATION, false, 0 } 
-    };
-
     // Here is where we accumulate data looking for a match.
     static const int _accSize = 64;
     uint8_t _acc[_accSize];
     uint32_t _accUsed;
     uint8_t _lastByte;
-    uint32_t _matchPtr;
+    //uint32_t _matchPtr;
+
+    static Matcher _matchers[]; 
 };
 
 }

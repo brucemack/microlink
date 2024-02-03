@@ -152,6 +152,118 @@ bool waitOnCompletion(AsyncChannel& channel, const char* token, uint32_t timeOut
     return false;
 }
 
+// Here we define the set of matchers that are used.  The lambda
+// expression defines the "next move," assuming a match is
+// match successfully.
+ATProcessor::Matcher ATProcessor::_matchers[] = { 
+    { MatchType::OK, false, "\r\nOK\r\n",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._sink->ok();
+            p._reset();
+        }
+    }, 
+    { MatchType::SEND_OK, false, "\r\nSEND OK\r\n",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._sink->sendOk();
+            p._reset();
+        }
+    } ,
+    { MatchType::ERROR, false, "\r\nERROR\r\n",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._sink->error();
+            p._reset();
+        }
+    } ,
+    { MatchType::SEND_PROMPT, false, "\r\n>",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._sink->sendPrompt();
+            p._reset();
+        }
+    } ,
+    { MatchType::RECV_SIZE, false, "\r\nRecv ",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._state = State::IN_RECV;
+        }
+    } ,
+    { MatchType::IPD, false, "\r\n+IPD,",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._state = State::IN_IPD_0;
+        }
+    } ,
+    { MatchType::CLOSED, false, "\r\n#,CLOSED\r\n",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._sink->closed(m.param);
+            p._reset();
+        }
+    } ,
+    { MatchType::NOTIFICATION, false, 0,
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._sink->notification(p._acc, p._accUsed - 2);
+            p._reset();
+        }
+    } 
+};
+
+void ATProcessor::Matcher::reset() {
+    alive = true;
+    matchPtr = 0;
+}
+
+bool ATProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
+    // The processing/matching process depends on the type being used
+    if (type == MatchType::OK ||
+        type == MatchType::SEND_OK ||
+        type == MatchType::ERROR ||
+        type == MatchType::SEND_PROMPT ||
+        type == MatchType::RECV_SIZE ||
+        type == MatchType::IPD) {
+        // Still going?
+        if ((char)(target[matchPtr]) == b) {
+            matchPtr++;
+            // Complete match?
+            if (target[matchPtr] == 0) {
+                return true;
+            }
+        } 
+        // If any of the individual matches fails then this is dead.
+        else {
+            alive = false;
+        }
+    }
+    else if (type == MatchType::CLOSED) {
+        // Still going?
+        if ((char)(target[matchPtr]) == b ||
+            ((char)(target[matchPtr]) == '#' && isdigit(b))) {
+            // Capture the number if necessary
+            if ((char)(target[matchPtr]) == '#') {
+                param = b - (uint8_t)0x30;
+            }
+            matchPtr++;
+            // Complete match?
+            if (target[matchPtr] == 0) {
+                return true;
+            }
+        }
+        // If any of the individual matches fails then this is dead.
+        else {
+            alive = false;
+        }
+    }
+    else if (type == MatchType::NOTIFICATION) {
+        // NOtifications need to start with a letter
+        if (matchPtr == 0 && !isalpha(b)) {
+            alive = false;
+        }
+        matchPtr++;
+        // Just looking for a block of text that ends with 0x0d x00a
+        if (lastByte == 0x0d && b == 0x0a) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 ATProcessor::ATProcessor(EventSink* sink)
 :   _sink(sink),
     _state(State::MATCHING) {
@@ -183,6 +295,7 @@ void ATProcessor::_processByte(uint8_t b) {
     // special cases when receive data asyncronously.
 
     if (_state == State::MATCHING) {    
+
         int liveMatchers = 0;
 
         // Go trough the remaining live matchers and try to get a hit 
@@ -191,79 +304,13 @@ void ATProcessor::_processByte(uint8_t b) {
             // Only work on the live matchers
             if (m.alive) {
                 liveMatchers++;
-                // What we do depends on the matcher type
-                if (m.type == MatchType::OK ||
-                    m.type == MatchType::SEND_OK ||
-                    m.type == MatchType::ERROR ||
-                    m.type == MatchType::SEND_PROMPT ||
-                    m.type == MatchType::RECV_SIZE ||
-                    m.type == MatchType::IPD) {
-                    // Still going?
-                    if ((char)(m.target[_matchPtr]) == b) {
-                        // Complete match?
-                        if (m.target[_matchPtr + 1] == 0) {
-                            if (m.type == MatchType::OK) {
-                                _sink->ok();
-                                _reset();
-                                return;
-                            } else if (m.type == MatchType::SEND_OK) {
-                                _sink->sendOk();
-                                _reset();
-                                return;
-                            } else if (m.type == MatchType::ERROR) {
-                                _sink->error();
-                                _reset();
-                                return;
-                            } else if (m.type == MatchType::SEND_PROMPT) {
-                                _sink->sendPrompt();
-                                _reset();
-                                return;
-                            } else if (m.type == MatchType::RECV_SIZE) {
-                                _state = State::IN_RECV;
-                            } else if (m.type == MatchType::IPD) {
-                                _state = State::IN_IPD_0;
-                            }
-                        }
-                    } 
-                    // If any of the individual matches fails then this is dead.
-                    else {
-                        m.alive = false;
-                    }
-                }
-                else if (m.type == MatchType::CLOSED) {
-                    // Still going?
-                    if ((char)(m.target[_matchPtr]) == b ||
-                        ((char)(m.target[_matchPtr]) == '#' && isdigit(b))) {
-                        // Capture the number if necessary
-                        if ((char)(m.target[_matchPtr]) == '#') {
-                            m.param = b - (uint8_t)0x30;
-                        }
-                        // Complete match?
-                        if (m.target[_matchPtr + 1] == 0) {
-                            _sink->closed(m.param);
-                            _reset();
-                            return;
-                        }
-                    }
-                    // If any of the individual matches fails then this is dead.
-                    else {
-                        m.alive = false;
-                    }
-                }
-                else if (m.type == MatchType::NOTIFICATION) {
-                    // NOtifications need to start with a letter
-                    if (_accUsed == 1 && !isalpha(b)) {
-                        m.alive = false;
-                    }
-                    // Just looking for a block of text that ends with 0x0d x00a
-                    else if (_lastByte == 0x0d && b == 0x0a) {
-                        _sink->notification(_acc, _accUsed - 2);
-                        _reset();
-                        return;
-                    }
+                if (m.process(_lastByte, b)) {
+                    m.onSuccess(*this, m);
+                    return;                        
                 }
             }
         }
+
         // This is an error state - no matchers have anything.
         if (liveMatchers == 0) {
             _sink->confused();
@@ -324,19 +371,19 @@ void ATProcessor::_processByte(uint8_t b) {
     }
 
     _lastByte = b;
-    _matchPtr++;
 }
 
 void ATProcessor::_reset() {
+
     _state = MATCHING;
     _ipdChannel = 0;
     _ipdTotal = 0;
     _ipdRecd = 0;
     _accUsed = 0;
     _lastByte = 0;
-    _matchPtr = 0;
-    for (int i = 0; i < _matchersSize; i++)
-        _matchers[i].alive = true;
+
+    for (Matcher& m : _matchers)
+        m.reset();
 }
 
 }

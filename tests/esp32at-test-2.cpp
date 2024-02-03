@@ -129,7 +129,7 @@ public:
 
 static void test_0() {
 
-    cout << "Unit tests 0 starting 2" << endl;
+    cout << "Unit tests 0 starting 3" << endl;
 
     TestSink sink;
     ATProcessor p(&sink);    
