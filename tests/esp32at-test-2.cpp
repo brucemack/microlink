@@ -255,7 +255,7 @@ static int test_1() {
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
 
     const char* frame = 
-        "lKC1FSZ\254\254echolink667\rONLINE0.02MLZ(20:31)\rWellesley, MA USA\r";
+        "lKC1FSZ\254\254xxxxxxxx\rONLINE0.02MLZ(20:31)\rWellesley, MA USA\r";
     uint32_t frameLen = strlen(frame);
 
     char cmdBuf[64];

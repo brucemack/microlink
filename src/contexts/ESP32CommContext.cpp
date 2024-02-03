@@ -40,7 +40,8 @@ using namespace std;
 namespace kc1fsz {
 
 ESP32CommContext::ESP32CommContext(AsyncChannel* esp32) 
-:   _esp32(esp32),
+:   _state(State::NONE),
+    _esp32(esp32),
     _respProc(this) {
 }
 
@@ -110,13 +111,20 @@ void ESP32CommContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t p
     char buf[64];
     sprintf(buf, "AT+CIPSTART=%d,\"TCP\",\"%s\",%lu\r\n",
         c.getId(), addr, port);
-    cout << "Connect: " << buf << endl;
     _esp32->write((uint8_t*)buf, strlen(buf));
 }
 
 void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {
-    if (c.isGood()) {
+    if (!c.isGood()) {
+        return;
     }
+    // Grab a copy of the the data
+
+    // Make the send request
+    char buf[64];
+    sprintf(buf, "AT+CIPSEND=1,%d\r\n", len);
+    _esp32->write((uint8_t*)buf, strlen(buf));
+    // Now we wait for the prompt
 }
 
 Channel ESP32CommContext::createUDPChannel(uint32_t localPort) {
@@ -145,13 +153,20 @@ void ESP32CommContext::ok() {
 }
 
 void ESP32CommContext::domain(const char* addr) {
-    cout << "DOMAIN: " << addr << endl;
     // Create an event and forward
     IPAddress a(parseIP4Address(addr));
     DNSLookupEvent ev(_lastHostNameRequest, a);
     _eventProc->processEvent(&ev);
 }
 
+void ESP32CommContext::connected(uint32_t channel) {
+    // Create an event and forward
+    TCPConnectEvent ev(channel);
+    _eventProc->processEvent(&ev);
+}
+
+void ESP32CommContext::closed(uint32_t channel) {
+}
 
 }
 

@@ -76,12 +76,17 @@ public:
 
     virtual void ok();
     virtual void domain(const char* addr);
+    virtual void connected(uint32_t channel);
+    virtual void closed(uint32_t channel);
 
 private:
 
     void _closeChannel(Channel c);
     void _cleanupTracker();
 
+    enum State { NONE, SEND_PROMPT_WAIT };
+
+    State _state;
     AsyncChannel* _esp32;
     ATResponseProcessor _respProc;
     EventProcessor* _eventProc;

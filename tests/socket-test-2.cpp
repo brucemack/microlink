@@ -47,6 +47,8 @@ minicom -b 115200 -o -D /dev/ttyACM0
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
+#include "kc1fsz-tools/events/TCPReceiveEvent.h"
+#include "kc1fsz-tools/events/TCPConnectEvent.h"
 #include "kc1fsz-tools/EventProcessor.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
@@ -82,15 +84,19 @@ public:
             const DNSLookupEvent* evt = (const DNSLookupEvent*)ev;
             char buf[64];
             formatIP4Address(evt->getAddr().getAddr(), buf, 64);
-            cout << "ADDR: " << buf << endl;
+            cout << "  Got address: " << buf << endl;
             dnsCount++;
         }
         else if (ev->getType() == UDPReceiveEvent::TYPE) {
             const UDPReceiveEvent* evt = (const UDPReceiveEvent*)ev;
-            cout << "Got UDP Data: [";
+            cout << "  Got UDP Data: [";
             cout.write((const char*)evt->getData(), evt->getDataLen());
             cout << "]" << endl;
             udpCount++;
+        }
+        else if (ev->getType() == TCPConnectEvent::TYPE) {
+            const TCPConnectEvent* evt = (const TCPConnectEvent*)ev;
+            cout << "  Got connect: " << evt->getChannel().getId() << endl;
         }
     }
 };
@@ -127,6 +133,8 @@ int main(int,const char**) {
 
     PicoUartChannel channel(UART_ID, 
         readBuffer, readBufferSize, writeBuffer, writeBufferSize);
+
+    cout << "A" << endl;
 
     PicoPollTimer timer;
     timer.setIntervalUs(1000 * 5000);
@@ -165,12 +173,15 @@ int main(int,const char**) {
     sleep_ms(10);
 
     // Try getting a DNS resolution        
-    ctx.startDNSLookup(HostName("www.google.com"));
+    //ctx.startDNSLookup(HostName("www.google.com"));
 
     // Try opening a TCP socket
     //Channel c = ctx.createTCPChannel();
     //IPAddress addr(parseIP4Address("142.251.40.164"));
     //ctx.connectTCPChannel(c, addr, 80);
+
+    // Send some data on the socket
+    //ctx.sendTCPChannel(c, (uint8_t*)"X\n", 2);
 
     while (true) {        
         ctx.poll();
