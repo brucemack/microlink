@@ -190,7 +190,7 @@ ATProcessor::Matcher ATProcessor::_matchers[] = {
             p._state = State::IN_IPD_0;
         }
     } ,
-    { MatchType::CLOSED, false, "\r\n#,CLOSED\r\n",
+    { MatchType::CLOSED, false, "#,CLOSED\r\n",
         [](ATProcessor& p, const ATProcessor::Matcher& m) { 
             p._sink->closed(m.param);
             p._reset();
@@ -264,6 +264,8 @@ bool ATProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
     return false;
 }
 
+static int trace2 = 0;
+
 ATProcessor::ATProcessor(EventSink* sink)
 :   _sink(sink),
     _state(State::MATCHING) {
@@ -276,6 +278,10 @@ void ATProcessor::process(const uint8_t* data, uint32_t dataLen) {
 }
 
 void ATProcessor::_processByte(uint8_t b) {
+
+    if (trace2 == 7) {
+        cout << (int)b << endl;
+    }
 
     if (_state == State::HALTED) {
         return;
@@ -313,6 +319,7 @@ void ATProcessor::_processByte(uint8_t b) {
 
         // This is an error state - no matchers have anything.
         if (liveMatchers == 0) {
+            cout << "NO LIVE MATCHERS" << endl;
             _sink->confused();
             _state = State::HALTED;
             return;
@@ -348,11 +355,12 @@ void ATProcessor::_processByte(uint8_t b) {
         // Keep track of how much data we have received
         _ipdRecd++;
         // Received everything we expected?  If so, report out the 
-        // final chunk and reset.
+        // final chunk and go into the state used to ignore the 
+        // trailing 0x0d 0x0a (which are not part of the length)
         if (_ipdRecd == _ipdTotal) {
             _sink->ipd(_ipdChannel, _acc, _accUsed);
-            _reset();
-            return;
+            _accUsed = 0;
+            _state = IN_IPD_3;
         }
         // Accumluator full?  If so, hand off the latest chunk and 
         // keep going in the same state
@@ -361,12 +369,18 @@ void ATProcessor::_processByte(uint8_t b) {
             _accUsed = 0;
         }
     }
+    // This state is used to wait for the final 0x0a after the end of 
+    // the content.
+    else if (_state == State::IN_IPD_3) {    
+        if (b == 0x0a) {
+            _reset();
+        }
+    }
     // Here we have "Recv " and are discarding the rest
     else if (_state == State::IN_RECV) {    
         if (b == 0x0a) {
             _sink->sendSize();
             _reset();
-            return;
         } 
     }
 

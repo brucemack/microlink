@@ -107,6 +107,8 @@ private:
         IN_IPD_1,
         // Got length and colon, processing the content
         IN_IPD_2,
+        // Got all content, waiting past the final \r\n
+        IN_IPD_3,
         // This state is used when the parse stream breaks and we
         // need to preserve state for debug
         HALTED
@@ -153,7 +155,6 @@ private:
     uint8_t _acc[_accSize];
     uint32_t _accUsed;
     uint8_t _lastByte;
-    //uint32_t _matchPtr;
 
     static Matcher _matchers[]; 
 };

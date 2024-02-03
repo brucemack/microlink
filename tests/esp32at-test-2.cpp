@@ -102,9 +102,10 @@ public:
     }
     virtual void ipd(uint32_t channel, 
         const uint8_t* data, uint32_t len)  {
-        cout << "IPD " << channel << "," << len << ":";
-        cout.write((const char*)data, len);
-        cout << endl;
+
+        cout << "IPD " << channel << "," << len << endl;
+        prettyHexDump(data, len, cout);
+
         result0 = 6;
         result1 = channel;
     }
@@ -129,7 +130,7 @@ public:
 
 static void test_0() {
 
-    cout << "Unit tests 0 starting 3" << endl;
+    cout << "Unit tests 0 starting" << endl;
 
     TestSink sink;
     ATProcessor p(&sink);    
@@ -150,12 +151,13 @@ static void test_0() {
     p.process((const uint8_t*)s, strlen(s));
     assert(sink.result0 == 4);
 
-    s = "\r\n+IPD,1,5:henry";
+    // NOTE: Content length doesn't include the trailing \r\n
+    s = "\r\n+IPD,1,5:henry\r\n";
     p.process((const uint8_t*)s, strlen(s));
     assert(sink.result0 == 6);
     assert(sink.result1 == 1);
 
-    s = "\r\n2,CLOSED\r\n";
+    s = "2,CLOSED\r\n";
     p.process((const uint8_t*)s, strlen(s));
     assert(sink.result0 == 7);
     assert(sink.result1 == 2);
@@ -167,7 +169,7 @@ static void test_0() {
     // Demonstrate abilty to hold parse state across calls
     sink.result0 = 0;
     sink.result1 = 0;
-    s = "\r\n2,CL";
+    s = "2,CL";
     p.process((const uint8_t*)s, strlen(s));
     assert(sink.result0 == 0);
     assert(sink.result1 == 0);
@@ -206,10 +208,10 @@ static int test_1() {
     uint32_t to = 0;
 
     // RESET
-    runCmd(channel, "AT+RST\r\n",
-        "\r\nready", to, preText, preTextSize, &preTextLen);
+    //runCmd(channel, "AT+RST\r\n",
+    //    "\r\nready", to, preText, preTextSize, &preTextLen);
     // Stop echo
-    runCmd(channel, "ATE1\r\n",
+    runCmd(channel, "ATE0\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
     // Display state
     cout << "Second command" << endl;
@@ -235,14 +237,18 @@ static int test_1() {
     frame[0] = 'X';
     frame[1] = '\n';
 
-    runCmd(channel, "AT+CIPSEND=1,2\r\n",
-        "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
+    const char* cmd = "AT+CIPSEND=1,2\r\n";
+    channel.write((uint8_t*)cmd, strlen(cmd));
+    // TEMP
+    sleep_ms(5);
     channel.write(frame, 2);
-    waitOnCompletion(channel, "\r\nSEND OK\r\n", to, preText, preTextSize, &preTextLen);
 
     PicoPollTimer timer2;
     timer2.setIntervalUs(250 * 1000);
     int i = 0;
+
+    TestSink sink;
+    ATProcessor proc(&sink);    
 
     while (true) {
 
@@ -264,9 +270,11 @@ static int test_1() {
         if (channel.isReadable()) {
             uint8_t buf[256];
             int len = channel.read(buf, 256);
+            // Feed into the AT processor
+            proc.process(buf, len);
             //cout << "Normal receive" << endl;
             //cout.write((const char*)buf, len);
-            prettyHexDump(buf, len, cout);
+            //prettyHexDump(buf, len, cout);
         }  
     }
 }
@@ -293,7 +301,7 @@ int main(int, const char**) {
     sleep_ms(1000);
 
    test_0();
-    // test_1();
+   //test_1();
 
     while (true) {        
     }
