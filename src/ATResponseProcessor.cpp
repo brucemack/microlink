@@ -185,7 +185,7 @@ ATResponseProcessor::Matcher ATResponseProcessor::_matchers[] = {
             p._state = State::IN_RECV;
         }
     } ,
-    { MatchType::IPD, false, "\r\n+CIPDOMAIN:\"",
+    { MatchType::IPD, false, "+CIPDOMAIN:\"",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             // Flush the accumulator
             p._accUsed = 0;

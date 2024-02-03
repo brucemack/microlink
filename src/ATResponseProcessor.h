@@ -83,21 +83,21 @@ public:
      */
     class EventSink {
     public:
-        virtual void ok() = 0;
-        virtual void sendOk() = 0;
-        virtual void error() = 0;
-        virtual void sendPrompt() = 0;
-        virtual void sendSize() = 0;
-        virtual void domain(const char* addr) = 0;
+        virtual void ok() { }
+        virtual void sendOk()  { }
+        virtual void error()  { }
+        virtual void sendPrompt() { }
+        virtual void sendSize()  { }
+        virtual void domain(const char* addr)  { }
         virtual void ipd(uint32_t channel, uint32_t chunk,
-            const uint8_t* data, uint32_t len) = 0;
-        virtual void connected(uint32_t channel) = 0;
-        virtual void closed(uint32_t channel) = 0;
-        virtual void notification(const uint8_t* data, uint32_t len) = 0;
-        virtual void confused(const uint8_t* data, uint32_t len) = 0;
+            const uint8_t* data, uint32_t len)  { }
+        virtual void connected(uint32_t channel)  { }
+        virtual void closed(uint32_t channel)  { }
+        virtual void notification(const uint8_t* data, uint32_t len)  { }
+        virtual void confused(const uint8_t* data, uint32_t len)  { }
     };
 
-    ATResponseProcessor(EventSink*sink);
+    ATResponseProcessor(EventSink* sink);
 
     void process(const uint8_t* data, uint32_t dataLen);
 

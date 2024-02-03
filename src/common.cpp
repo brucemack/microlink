@@ -18,16 +18,20 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#ifdef PICO_BUILD
+#include <pico/time.h>
+#else
 #include <sys/time.h>
 #include <arpa/inet.h>
+#endif
 
 #include <cctype>
-#include <algorithm> 
 #include <locale>
 #include <iostream>
 #include <algorithm>
 #include <cstring>
 
+#include "kc1fsz-tools/Common.h"
 #include "common.h"
 
 using namespace std;
@@ -62,13 +66,28 @@ uint32_t parseIP4Address(const char* dottedAddr) {
         }
         p++;
     }
+#ifdef PICO_BUILD
+    return result;
+#else
     return htonl(result);
+#endif
 }
 
 void formatIP4Address(uint32_t addr_nl, char* dottedAddr, uint32_t dottedAddrSize) {
+#ifndef PICO_BUILD
     inet_ntop(AF_INET, &addr_nl, dottedAddr, dottedAddrSize);
+#else
+    uint32_t a = (addr_nl & 0xff000000) >> 24;
+    uint32_t b = (addr_nl & 0x00ff0000) >> 16;
+    uint32_t c = (addr_nl & 0x0000ff00) >> 8;
+    uint32_t d = (addr_nl & 0x000000ff);
+    char buf[64];
+    sprintf(buf, "%lu.%lu.%lu.%lu", a, b, c, d);
+    strcpyLimited(dottedAddr, buf, dottedAddrSize);
+#endif
 }
 
+#ifndef PICO_BUILD
 // trim from start (in place)
 void ltrim(std::string &s) {
     s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
@@ -82,6 +101,7 @@ void rtrim(std::string &s) {
         return !std::isspace(ch);
     }).base(), s.end());
 }
+#endif
 
 static bool timeFixed = false;
 static uint32_t fakeTime = 0;
@@ -90,10 +110,15 @@ uint32_t time_ms() {
     if (timeFixed) {
         return fakeTime;
     } else {
+#ifdef PICO_BUILD
+    absolute_time_t now = get_absolute_time();
+        return to_ms_since_boot(now);
+#else
         struct timeval tp;
         gettimeofday(&tp, NULL);
         long int ms = tp.tv_sec * 1000 + tp.tv_usec / 1000;
         return ms;
+#endif
     }
 }
 
@@ -114,6 +139,7 @@ void writeInt32(uint8_t* buf, uint32_t d) {
     buf[3] = (d      ) &0xff;
 }
 
+#ifndef PICO_BUILD
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
     const uint8_t gsmFrames[4][33],
     uint8_t* p, uint32_t packetSize) {
@@ -144,6 +170,7 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
 
     return 144;
 }
+#endif
 
 // TODO ADD MORE TO THIS
 bool isRTCPPacket(const uint8_t* d, uint32_t len) {
@@ -161,6 +188,7 @@ bool isOnDataPacket(const uint8_t* d, uint32_t len) {
     return (len >= 6 && memcmp(d, "oNDATA", 6) == 0);
 }
 
+#ifndef PICO_BUILD
 uint32_t addRTCPPad(uint32_t unpaddedLength,
     uint8_t* p, uint32_t packetSize) {
 
@@ -229,5 +257,6 @@ uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
 
     return unpaddedLength + padSize;
 }
+#endif 
 
 }

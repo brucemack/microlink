@@ -167,7 +167,8 @@ static void test_0() {
     assert(sink.result0 == 6);
     assert(sink.result1 == 1);
 
-    s = "\r\n+CIPDOMAIN:\"1.2.3.4\"\r\n";
+    // Not a notification, a response
+    s = "+CIPDOMAIN:\"1.2.3.4\"\r\n";
     p.process((const uint8_t*)s, strlen(s));
     assert(sink.result0 == 12);
 

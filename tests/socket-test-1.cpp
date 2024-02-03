@@ -55,7 +55,7 @@ public:
         }
         else if (ev->getType() == UDPReceiveEvent::TYPE) {
             const UDPReceiveEvent* evt = (const UDPReceiveEvent*)ev;
-            cout << "God UDP Data: [";
+            cout << "Got UDP Data: [";
             cout.write((const char*)evt->getData(), evt->getDataLen());
             cout << "]" << endl;
             udpCount++;

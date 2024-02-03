@@ -35,6 +35,8 @@ extern const char* VERSION_ID;
 uint32_t parseIP4Address(const char* dottedAddr);
 
 /**
+ * Puts the address into a string in decimal-dotted format.
+ *
  * @param addrNetworkOrder IP4 address
  */
 void formatIP4Address(uint32_t addrNetworkOrder, char* dottedAddr, uint32_t dottedAddrSize);
