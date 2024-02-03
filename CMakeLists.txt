@@ -178,8 +178,8 @@ endif()
 # ------ esp32at-test-1 ------------------------------------------------------
 
 add_executable(esp32at-test-1
-  src/ATProcessor.cpp
-  tests/esp32at-test-1.cpp
+tests/esp32at-test-1.cpp
+src/ATResponseProcessor.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
@@ -201,7 +201,7 @@ target_include_directories(esp32at-test-1 PRIVATE kc1fsz-tools-cpp/include)
 
 add_executable(esp32at-test-2
   tests/esp32at-test-2.cpp
-  src/ATProcessor.cpp
+  src/ATResponseProcessor.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp

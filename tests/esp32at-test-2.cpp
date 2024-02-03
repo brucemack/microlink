@@ -40,7 +40,7 @@
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 #include "kc1fsz-tools/rp2040/PicoPerfTimer.h"
 
-#include "ATProcessor.h"
+#include "ATResponseProcessor.h"
 
 const uint LED_PIN = 25;
 
@@ -78,7 +78,7 @@ bool runCmd(PicoUartChannel& channel,
     return b;
 }
 
-class TestSink : public ATProcessor::EventSink {
+class TestSink : public ATResponseProcessor::EventSink {
 public:
     virtual void ok() {
         cout << "OK" << endl;
@@ -99,6 +99,10 @@ public:
     virtual void sendSize()  {
         cout << "SEND SIZE" << endl;
         result0 = 5;
+    }
+    virtual void domain(const char* addr)  {
+        cout << "Domain: " << addr << endl;
+        result0 = 12;
     }
     virtual void ipd(uint32_t channel, uint32_t chunk,
         const uint8_t* data, uint32_t len)  {
@@ -125,8 +129,9 @@ public:
         cout << endl;
         result0 = 8;
     }
-    virtual void  confused()  {
+    virtual void  confused(const uint8_t* data, uint32_t len)  {
         cout << "CONFUSED" << endl;
+        prettyHexDump(data, len, cout);
         result0 = 99;
     }
 
@@ -138,7 +143,7 @@ static void test_0() {
     cout << "Unit tests 0 starting" << endl;
 
     TestSink sink;
-    ATProcessor p(&sink);    
+    ATResponseProcessor p(&sink);    
 
     const char* s = "\r\nOK\r\n";
     p.process((const uint8_t*)s, strlen(s));
@@ -161,6 +166,10 @@ static void test_0() {
     p.process((const uint8_t*)s, strlen(s));
     assert(sink.result0 == 6);
     assert(sink.result1 == 1);
+
+    s = "\r\n+CIPDOMAIN:\"1.2.3.4\"\r\n";
+    p.process((const uint8_t*)s, strlen(s));
+    assert(sink.result0 == 12);
 
     s = "2,CLOSED\r\n";
     p.process((const uint8_t*)s, strlen(s));
@@ -238,53 +247,50 @@ static int test_1() {
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
 
     // Setup TCP connection
-    cout << "TCP Setup" << endl;
-    runCmd(channel, "AT+CIPSTART=1,\"TCP\",\"142.250.176.196\",80\r\n",
+    //runCmd(channel, "AT+CIPSTART=1,\"TCP\",\"142.250.176.196\",80\r\n",
+    //    "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
+    // EchoLink Server
+    runCmd(channel, "AT+CIPSTART=1,\"TCP\",\"129.213.119.249\",5200\r\n",
         "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
 
-    // Send message
-    uint8_t frame[256];
-    frame[0] = 'X';
-    frame[1] = '\n';
+    const char* frame = 
+        "lKC1FSZ\254\254echolink667\rONLINE0.02MLZ(20:31)\rWellesley, MA USA\r";
+    uint32_t frameLen = strlen(frame);
 
-    const char* cmd = "AT+CIPSEND=1,2\r\n";
-    channel.write((uint8_t*)cmd, strlen(cmd));
+    char cmdBuf[64];
+    sprintf(cmdBuf, "AT+CIPSEND=1,%d\r\n", frameLen);
+    //const char* cmd = "AT+CIPSEND=1,2\r\n";
+    //channel.write((uint8_t*)cmd, strlen(cmd));    
+    channel.write((uint8_t*)cmdBuf, strlen(cmdBuf));
+
     // TEMP
     sleep_ms(5);
-    channel.write(frame, 2);
+    channel.write((uint8_t*)frame, frameLen);
 
     PicoPollTimer timer2;
     timer2.setIntervalUs(250 * 1000);
     int i = 0;
 
     TestSink sink;
-    ATProcessor proc(&sink);    
+    ATResponseProcessor proc(&sink);    
 
     while (true) {
 
         // Display whatever comes in
         channel.poll();       
-        //cout << i++ << endl;
 
-        /*
-        if (timer2.poll()) {
-            cout << "==============" << endl;
-            // Send a simple ping to recover the response in the pre-text
-            //runCmd(channel, "AT\r\n",
-            //    "\r\nOK\r\n", to, preText, preTextSize, &preTextLen);
-            //prettyHexDump(preText, preTextLen, cout);
-        }
-        */
+        //if (timer2.poll()) {
+        //    cout << i++ << endl;
+        //    cout << "==============" << endl;
+        //    cmd = "AT\r\n";
+        //    channel.write((uint8_t*)cmd, strlen(cmd));
+        //}
 
-        // Check for result
         if (channel.isReadable()) {
             uint8_t buf[256];
             int len = channel.read(buf, 256);
             // Feed into the AT processor
             proc.process(buf, len);
-            //cout << "Normal receive" << endl;
-            //cout.write((const char*)buf, len);
-            //prettyHexDump(buf, len, cout);
         }  
     }
 }
