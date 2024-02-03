@@ -78,8 +78,9 @@ public:
         virtual void error() = 0;
         virtual void sendPrompt() = 0;
         virtual void sendSize() = 0;
-        virtual void ipd(uint32_t channel, 
+        virtual void ipd(uint32_t channel, uint32_t chunk,
             const uint8_t* data, uint32_t len) = 0;
+        virtual void connected(uint32_t channel) = 0;
         virtual void closed(uint32_t channel) = 0;
         virtual void notification(const uint8_t* data, uint32_t len) = 0;
         virtual void confused() = 0;
@@ -121,6 +122,7 @@ private:
         SEND_PROMPT,
         RECV_SIZE,
         IPD,
+        CONNECT,
         CLOSED,
         NOTIFICATION
     };
@@ -145,10 +147,12 @@ private:
     EventSink* _sink;
     State _state;
     uint32_t _ipdChannel;
-    // A genral-purpose value that is used in a few places
-    // where we need to remember numbers during the parse.
+    // The total size of the IPD data as reported by the +IPD message
     uint32_t _ipdTotal;
+    // How much of the IPD data has been received so far
     uint32_t _ipdRecd;
+    // How many "chunks" the IPD data have been transfered
+    uint32_t _ipdChunks;
 
     // Here is where we accumulate data looking for a match.
     static const int _accSize = 64;

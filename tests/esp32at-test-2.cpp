@@ -100,13 +100,18 @@ public:
         cout << "SEND SIZE" << endl;
         result0 = 5;
     }
-    virtual void ipd(uint32_t channel, 
+    virtual void ipd(uint32_t channel, uint32_t chunk,
         const uint8_t* data, uint32_t len)  {
 
-        cout << "IPD " << channel << "," << len << endl;
+        cout << "IPD " << channel << ", " << chunk << ", " << len << endl;
         prettyHexDump(data, len, cout);
 
         result0 = 6;
+        result1 = channel;
+    }
+    virtual void connected(uint32_t channel)  {
+        cout << "CONNECTED " << channel << endl;
+        result0 = 11;
         result1 = channel;
     }
     virtual void closed(uint32_t channel)  {
@@ -161,6 +166,11 @@ static void test_0() {
     p.process((const uint8_t*)s, strlen(s));
     assert(sink.result0 == 7);
     assert(sink.result1 == 2);
+
+    s = "0,CONNECT\r\n";
+    p.process((const uint8_t*)s, strlen(s));
+    assert(sink.result0 == 11);
+    assert(sink.result1 == 0);
 
     s = "WIFI DISCONNECTED\r\n";
     p.process((const uint8_t*)s, strlen(s));
@@ -301,7 +311,7 @@ int main(int, const char**) {
     sleep_ms(1000);
 
    test_0();
-   //test_1();
+   test_1();
 
     while (true) {        
     }

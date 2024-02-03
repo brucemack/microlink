@@ -190,6 +190,12 @@ ATProcessor::Matcher ATProcessor::_matchers[] = {
             p._state = State::IN_IPD_0;
         }
     } ,
+    { MatchType::CONNECT, false, "#,CONNECT\r\n",
+        [](ATProcessor& p, const ATProcessor::Matcher& m) { 
+            p._sink->connected(m.param);
+            p._reset();
+        }
+    } ,
     { MatchType::CLOSED, false, "#,CLOSED\r\n",
         [](ATProcessor& p, const ATProcessor::Matcher& m) { 
             p._sink->closed(m.param);
@@ -230,7 +236,8 @@ bool ATProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
             alive = false;
         }
     }
-    else if (type == MatchType::CLOSED) {
+    else if (type == MatchType::CLOSED ||
+             type == MatchType::CONNECT) {
         // Still going?
         if ((char)(target[matchPtr]) == b ||
             ((char)(target[matchPtr]) == '#' && isdigit(b))) {
@@ -358,15 +365,16 @@ void ATProcessor::_processByte(uint8_t b) {
         // final chunk and go into the state used to ignore the 
         // trailing 0x0d 0x0a (which are not part of the length)
         if (_ipdRecd == _ipdTotal) {
-            _sink->ipd(_ipdChannel, _acc, _accUsed);
+            _sink->ipd(_ipdChannel, _ipdChunks, _acc, _accUsed);
             _accUsed = 0;
             _state = IN_IPD_3;
         }
         // Accumluator full?  If so, hand off the latest chunk and 
         // keep going in the same state
         else if (_accUsed == _accSize) {
-            _sink->ipd(_ipdChannel, _acc, _accUsed);
+            _sink->ipd(_ipdChannel, _ipdChunks, _acc, _accUsed);
             _accUsed = 0;
+            _ipdChunks++;
         }
     }
     // This state is used to wait for the final 0x0a after the end of 
@@ -392,6 +400,7 @@ void ATProcessor::_reset() {
     _state = MATCHING;
     _ipdChannel = 0;
     _ipdTotal = 0;
+    _ipdChunks = 0;
     _ipdRecd = 0;
     _accUsed = 0;
     _lastByte = 0;
