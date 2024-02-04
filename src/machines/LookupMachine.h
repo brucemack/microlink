@@ -48,6 +48,7 @@ public:
     virtual bool isGood() const;
 
     void setServerName(HostName hn) { _serverHostName = hn; }
+    void setServerPort(uint32_t p) { _serverPort = p; }
     void setTargetCallSign(CallSign cs) { _targetCallSign = cs; }
     IPAddress getTargetAddress() const { return _targetAddr; }
 
@@ -60,6 +61,7 @@ private:
     UserInfo* _userInfo;
 
     HostName _serverHostName;
+    uint32_t _serverPort;
     CallSign _targetCallSign;
     IPAddress _targetAddr;
     bool _foundTarget;

@@ -131,6 +131,11 @@ void RootMachine::setServerName(HostName h) {
     _lookupMachine.setServerName(h);
 }
 
+void RootMachine::setServerPort(uint32_t p) {
+    _logonMachine.setServerPort(p);
+    _lookupMachine.setServerPort(p);
+}
+
 void RootMachine::setCallSign(CallSign cs) {
     _logonMachine.setCallSign(cs);
     _connectMachine.setCallSign(cs);

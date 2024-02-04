@@ -21,7 +21,9 @@
 #ifndef _ESP32CommContext_h
 #define _ESP32CommContext_h
 
+#include "kc1fsz-tools/Channel.h"
 #include "kc1fsz-tools/HostName.h"
+#include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/AsyncChannel.h"
 #include "kc1fsz-tools/CommContext.h"
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
@@ -56,7 +58,15 @@ public:
     */
     bool poll();
 
+    /**
+     * Used to receive and discard anything on the channel
+     * @returns The number of bytes discarded.
+    */
+    uint32_t flush(uint32_t ms);
+
     int getLiveChannelCount() const;
+
+    void setOKIgnores(int count) { _okIgnores = count; }
 
     // ------ CommContext Request Methods -------------------------------------
 
@@ -75,23 +85,42 @@ public:
     // ----- ATResponseProcessor::EventSink -----------------------------------
 
     virtual void ok();
+    void sendOk();
+    virtual void error();
+    virtual void sendPrompt();
     virtual void domain(const char* addr);
     virtual void connected(uint32_t channel);
     virtual void closed(uint32_t channel);
+    virtual void ipd(uint32_t channel, uint32_t chunk,
+        const uint8_t* data, uint32_t len);
 
 private:
 
     void _closeChannel(Channel c);
     void _cleanupTracker();
 
-    enum State { NONE, SEND_PROMPT_WAIT };
+    enum State { NONE, IN_DNS, 
+        IN_TCP_CONNECT, 
+        IN_SEND_PROMPT_WAIT,
+        IN_SEND_OK_WAIT };
 
     State _state;
     AsyncChannel* _esp32;
     ATResponseProcessor _respProc;
     EventProcessor* _eventProc;
 
-    HostName _lastHostNameRequest;
+    // A count-down counter used to ignore a specified number 
+    // of OK events.  This is useful for fixed initialization 
+    // sequences.
+    int _okIgnores;
+
+    HostName _lastHostNameReq;
+    IPAddress _lastAddrResp;
+    Channel _lastChannel;
+
+    static const uint32_t _sendHoldSize = 256;
+    uint8_t _sendHold[_sendHoldSize];
+    uint32_t _sendHoldLen;
 
     // This data structure is used to keep track of active sockets
     struct ChannelTracker {

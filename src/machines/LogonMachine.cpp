@@ -37,12 +37,13 @@ using namespace std;
 
 namespace kc1fsz {
 
-static const uint32_t ELS_PORT = 5200;
+static const uint32_t CONNECT_TIMEOUT_MS = 2000;
 
 LogonMachine::LogonMachine(CommContext* ctx, UserInfo* userInfo) 
 :   _state(IDLE),
     _ctx(ctx),
     _userInfo(userInfo),
+    _serverPort(0),
     _logonRespPtr(0) {
 }
 
@@ -61,6 +62,9 @@ void LogonMachine::cleanup() {
 }
 
 void LogonMachine::processEvent(const Event* ev) {
+
+    cout << "LogonMachine state=" << _state << " event=" << ev->getType() << endl;
+
     // In this state we are waiting for the DNS resolution to complete
     if (_state == DNS_WAIT) {
         // Look for good completion
@@ -74,9 +78,10 @@ void LogonMachine::processEvent(const Event* ev) {
             if (!_channel.isGood()) {
                 _state = FAILED;
             } else {
-                _ctx->connectTCPChannel(_channel, evt->getAddr(), ELS_PORT);
-                // We give the connect 1 second to complete
-                _setTimeoutMs(time_ms() + 1000);
+                _ctx->connectTCPChannel(_channel, evt->getAddr(), _serverPort);
+                // We give the connect some time to complete before
+                // giving up
+                _setTimeoutMs(time_ms() + CONNECT_TIMEOUT_MS);
                 _state = CONNECTING;
             }
         }
@@ -87,17 +92,29 @@ void LogonMachine::processEvent(const Event* ev) {
     }
     else if (_state == CONNECTING) {
         if (ev->getType() == TCPConnectEvent::TYPE) {
-            const TCPConnectEvent* evt = (TCPConnectEvent*)ev;
-            // Grab the channel that is connected
-            _channel = evt->getChannel();
-            // Build the logon message
-            uint8_t buf[256];
-            uint32_t bufLen = createOnlineMessage(buf, 256, _callSign, _password, _location);
-            _ctx->sendTCPChannel(_channel, buf, bufLen);
-            // We give the logon 10 seconds to complete
-            _setTimeoutMs(time_ms() + 10000);
-            _logonRespPtr = 0;
-            _state = WAITING_FOR_DISCONNECT;            
+            auto evt = static_cast<const TCPConnectEvent*>(ev);
+            if (evt->getChannel().isGood() && evt->isGood()) {
+                // Grab the channel that is connected
+                _channel = evt->getChannel();
+                // Build the logon message
+                uint8_t buf[256];
+                uint32_t bufLen = createOnlineMessage(buf, 256, _callSign, _password, _location);
+                /*
+                buf[0] = 'X';
+                buf[1] = '\n';
+                uint32_t bufLen = 2;
+                */
+                _ctx->sendTCPChannel(_channel, buf, bufLen);
+                // We give the logon 10 seconds to complete
+                _setTimeoutMs(time_ms() + 10000);
+                _logonRespPtr = 0;
+                // TODO: SEND EVENT
+                _state = WAITING_FOR_DISCONNECT;
+            } 
+            else {
+                // TODO: MESSAGE
+                _state = FAILED;
+            }            
         } 
         else if (_isTimedOut()) {
             // TODO: MESSAGE
@@ -108,8 +125,6 @@ void LogonMachine::processEvent(const Event* ev) {
         // If we get data then accept it
         if (ev->getType() == TCPReceiveEvent::TYPE) {
             const TCPReceiveEvent* evt = (TCPReceiveEvent*)ev;
-            cout << "GOT THIS" << endl;
-            prettyHexDump(evt->getData(), evt->getDataLen(), cout);
             // Accumulate the data (or as much as possible)
             uint32_t spaceLeft = _logonRespSize - _logonRespPtr;
             uint32_t l = std::min(spaceLeft, evt->getDataLen());
@@ -167,7 +182,7 @@ uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     memcpy(p, pwd.c_str(), pwd.len());
     p += pwd.len();
     (*p++) = 0x0d;
-    memcpy(p, "ONLINE", 10);
+    memcpy(p, "ONLINE", 6);
     p += 6;
     memcpy(p, VERSION_ID, strlen(VERSION_ID));
     p += strlen(VERSION_ID);

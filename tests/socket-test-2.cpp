@@ -134,8 +134,6 @@ int main(int,const char**) {
     PicoUartChannel channel(UART_ID, 
         readBuffer, readBufferSize, writeBuffer, writeBufferSize);
 
-    cout << "A" << endl;
-
     PicoPollTimer timer;
     timer.setIntervalUs(1000 * 5000);
 
@@ -143,11 +141,21 @@ int main(int,const char**) {
     TestEventProcessor evp;
     ctx.setEventProcessor(&evp);
 
+    // Do a flush of any garbage on the line
+    cout << "  Flushed " << ctx.flush() << " bytes." << endl;
+
     const char* cmd;
     uint32_t cmdLen;
 
     // TODO: MAKE A NICE WAY TO STREAM A SET OF INITIAL COMMANDS
 
+    // Stop echo
+    cmd = "AT+RST\r\n";
+    cmdLen = strlen(cmd);
+    channel.write((const uint8_t*)cmd, cmdLen);
+    sleep_ms(10);
+    
+    /*
     // Stop echo
     cmd = "ATE0\r\n";
     cmdLen = strlen(cmd);
@@ -171,6 +179,11 @@ int main(int,const char**) {
     cmdLen = strlen(cmd);
     channel.write((const uint8_t*)cmd, cmdLen);
     sleep_ms(10);
+
+    // Make sure we don't do anything with the OKs that come back
+    // from the setup steps above
+    ctx.setOKIgnores(4);
+    */
 
     // Try getting a DNS resolution        
     //ctx.startDNSLookup(HostName("www.google.com"));

@@ -48,6 +48,7 @@ public:
     virtual bool isGood() const;
 
     void setServerName(HostName h);
+    void setServerPort(uint32_t p);
     void setCallSign(CallSign cs);
     void setPassword(FixedString s);
     void setTargetCallSign(CallSign target);

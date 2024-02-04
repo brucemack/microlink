@@ -127,7 +127,8 @@ private:
         IN_DOMAIN_1,
         // This state is used when the parse stream breaks and we
         // need to preserve state for debug
-        HALTED
+        HALTED,
+        IDLE
     };
 
     enum MatchType {
@@ -171,7 +172,7 @@ private:
     uint32_t _ipdChunks;
 
     // Here is where we accumulate data looking for a match.
-    static const int _accSize = 64;
+    static const int _accSize = 256;
     uint8_t _acc[_accSize];
     uint32_t _accUsed;
     uint8_t _lastByte;

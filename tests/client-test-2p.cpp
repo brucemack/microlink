@@ -90,7 +90,7 @@ int main(int, const char**) {
     gpio_put(LED_PIN, 0);
     sleep_ms(1000);
 
-    cout << "MicroLink Test 2p" << endl;
+    cout << "===== MicroLink Test 2p ======================================" << endl;
 
     // Sertup UART and timer
     const uint32_t readBufferSize = 256;
@@ -104,19 +104,67 @@ int main(int, const char**) {
     PicoPollTimer timer;
     timer.setIntervalUs(1000 * 5000);
 
-    ESP32CommContext context(&channel);
+    ESP32CommContext ctx(&channel);
+
+    // Do a flush of any garbage on the line before we start 
+    // protocol processing.
+    cout << "  Flushed " << ctx.flush(250) << " bytes." << endl;
+
+    // TODO: MAKE A NICE WAY TO STREAM A SET OF INITIAL COMMANDS
+    {
+        const char* cmd;
+        uint32_t cmdLen;
+        /*
+        // Stop echo
+        cmd = "AT+RST\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(10);
+        */
+        // Stop echo
+        cmd = "ATE0\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(10);
+
+        // Setup station mode
+        cmd = "AT+CWMODE=1\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(10);
+
+        // Setup mux
+        cmd = "AT+CIPMUX=1\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(10);
+
+        // Close all connections
+        cmd = "AT+CIPCLOSE=5\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(10);
+
+        // Make sure we don't do anything with the OKs that come back
+        // from the setup steps above
+        ctx.setOKIgnores(4);
+    }
+
     TestUserInfo info;
     TestAudioOutputContext audioOutContext(audioFrameSize, 8000);
 
-    RootMachine rm(&context, &info, &audioOutContext);
+    RootMachine rm(&ctx, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
+    //rm.setServerName(HostName("www.google.com"));
+    rm.setServerPort(5200);
+    //rm.setServerPort(80);
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString(getenv("EL_PASSWORD")));
+    rm.setPassword(FixedString("xxxxx"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
     //rm.setTargetCallSign(CallSign("W1TKZ-L"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
-    context.setEventProcessor(&rm);
+    ctx.setEventProcessor(&rm);
 
     TickEvent tickEv;
     uint32_t lastAudioTickMs = 0;
@@ -127,7 +175,6 @@ int main(int, const char**) {
     uint32_t longestAudioUs = 0;
 
     // Here is the main event loop
-    uint32_t start = time_ms();
     uint32_t cycle = 0;
 
     rm.start();
@@ -143,24 +190,30 @@ int main(int, const char**) {
             cout << "Longest Audio " << longestAudioUs << endl;
         }
         
-        // Poll the communications system
+        // Poll the communications system and pass any inbound bytes
+        // over to the communications context.
         socketTimer.reset();
-        bool commActivity = context.poll();
+        bool commActivity = ctx.poll();
         ela = socketTimer.elapsedUs();
         if (ela > longestSocketUs) {
             longestSocketUs = ela;
             cout << "Longest Socket " << longestSocketUs << endl;
         }
 
-        bool activity = audioActivity || commActivity;
+        //bool activity = audioActivity || commActivity;
 
+        /*
         // Generate the audio clock every 20ms (160*4 samples)
         uint32_t now = time_ms();
         if (now - lastAudioTickMs >= 80) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
+        */
 
         cycle++;
+        if (cycle % 10000000 == 0) {
+            //cout << cycle << endl;
+        }
     }
 }

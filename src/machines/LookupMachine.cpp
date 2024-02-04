@@ -37,13 +37,13 @@ using namespace std;
 
 namespace kc1fsz {
 
-// TODO: CONSOLIDATE
-static const uint32_t ELS_PORT = 5200;
+static const uint32_t CONNECT_TIMEOUT_MS = 2000;
 
 LookupMachine::LookupMachine(CommContext* ctx, UserInfo* userInfo)
 :   _state(IDLE),
     _ctx(ctx),
-    _userInfo(userInfo) { 
+    _userInfo(userInfo),
+    _serverPort(0) { 
 }
 
 void LookupMachine::start() {
@@ -74,9 +74,9 @@ void LookupMachine::processEvent(const Event* ev) {
             if (!_channel.isGood()) {
                 _state = FAILED;
             } else {
-                _ctx->connectTCPChannel(_channel, evt->getAddr(), ELS_PORT);
-                // We give the connect 1 second to complete
-                _setTimeoutMs(time_ms() + 1000);
+                _ctx->connectTCPChannel(_channel, evt->getAddr(), _serverPort);
+                // We give the connect some time to complete
+                _setTimeoutMs(time_ms() + CONNECT_TIMEOUT_MS);
                 _state = CONNECTING;
             }
         }
@@ -170,6 +170,7 @@ void LookupMachine::processEvent(const Event* ev) {
                                     // In network byte order!
                                     _targetAddr = parseIP4Address(possibleIpAddr);
                                     // TODO: CONSIDER INITIATING A DISCONNECT
+                                    cout << "IP: " << possibleIpAddr << endl;
                                 }
                             }
                         }

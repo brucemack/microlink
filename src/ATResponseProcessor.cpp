@@ -279,11 +279,9 @@ bool ATResponseProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
     return false;
 }
 
-static int trace2 = 0;
-
 ATResponseProcessor::ATResponseProcessor(EventSink* sink)
 :   _sink(sink),
-    _state(State::MATCHING) {
+    _state(State::IDLE) {
     _reset();
 }
 
@@ -293,6 +291,10 @@ void ATResponseProcessor::process(const uint8_t* data, uint32_t dataLen) {
 }
 
 void ATResponseProcessor::_processByte(uint8_t b) {
+
+    if (_state == State::IDLE) {
+        _state = State::MATCHING;
+    }
 
     if (_state == State::HALTED) {
         return;

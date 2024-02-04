@@ -50,6 +50,7 @@ public:
     virtual bool isGood() const;
 
     void setServerName(HostName hn) { _serverHostName = hn; }
+    void setServerPort(uint32_t p) { _serverPort = p; }
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setPassword(FixedString pw) { _password = pw; }
     void setLocation(FixedString loc) { _location = loc; }
@@ -62,6 +63,7 @@ private:
     UserInfo* _userInfo;
 
     HostName _serverHostName;
+    uint32_t _serverPort;
     CallSign _callSign;
     FixedString _password;
     FixedString _location;
