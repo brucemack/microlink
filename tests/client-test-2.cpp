@@ -64,6 +64,7 @@ int main(int, const char**) {
 
     RootMachine rm(&context, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
+    rm.setServerPort(5200);
     rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString(getenv("EL_PASSWORD")));
     rm.setLocation(FixedString("Wellesley, MA USA"));

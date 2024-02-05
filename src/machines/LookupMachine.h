@@ -71,7 +71,8 @@ private:
     bool _headerSeen;
     // A place to accumulate characters while trying to 
     // build a complete directory entry.
-    uint8_t _saveArea[64];
+    static const uint32_t _saveAreaSize = 256;
+    uint8_t _saveArea[_saveAreaSize];
     uint32_t _saveAreaPtr;
 };
 

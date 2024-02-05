@@ -94,8 +94,7 @@ void LookupMachine::processEvent(const Event* ev) {
             uint8_t buf[1];
             buf[0] = 's';
             _ctx->sendTCPChannel(_channel, buf, 1);
-            // We give the directory 15 seconds to complete
-            _setTimeoutMs(time_ms() + 15000);
+            _setTimeoutMs(time_ms() + 30000);
             _state = WAITING_FOR_DISCONNECT;            
         } 
         else if (_isTimedOut()) {
@@ -116,7 +115,7 @@ void LookupMachine::processEvent(const Event* ev) {
                 // Our goal is to find a complete record.  Assemble 
                 // what we have already plus the new stuff for temporary 
                 // processing.  
-                const uint32_t workAreaSize = 64 + 256;
+                const uint32_t workAreaSize = _saveAreaSize + 256;
                 uint8_t workArea[workAreaSize];
                 memcpyLimited(workArea, _saveArea, _saveAreaPtr, workAreaSize);
                 memcpyLimited(workArea + _saveAreaPtr, evt->getData(), evt->getDataLen(),
@@ -165,12 +164,13 @@ void LookupMachine::processEvent(const Event* ev) {
                                     delimPoints[3] - delimPoints[2], 31);
                                 possibleIpAddr[delimPoints[3] - delimPoints[2]] = 0;
 
+                                cout << possibleCallSign << endl;
+
                                 if (_targetCallSign == possibleCallSign) {
                                     _foundTarget = true;
                                     // In network byte order!
                                     _targetAddr = parseIP4Address(possibleIpAddr);
                                     // TODO: CONSIDER INITIATING A DISCONNECT
-                                    cout << "IP: " << possibleIpAddr << endl;
                                 }
                             }
                         }
@@ -197,9 +197,9 @@ void LookupMachine::processEvent(const Event* ev) {
                 // shifted into the _saveArea for consideration after a 
                 // future data receipt (or disconnect).
                 if (workAreaLen > 0) {
-                    memcpyLimited(_saveArea, workArea, workAreaLen, 64);
+                    memcpyLimited(_saveArea, workArea, workAreaLen, _saveAreaSize);
                 }
-                _saveAreaPtr = std::min(workAreaLen, (uint32_t)64);
+                _saveAreaPtr = std::min(workAreaLen, (uint32_t)_saveAreaSize);
             }
         }
         // If we get a disconnect then move forward

@@ -159,7 +159,7 @@ int main(int, const char**) {
     rm.setServerPort(5200);
     //rm.setServerPort(80);
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString("xxxxx"));
+    rm.setPassword(FixedString("xxxxxxx"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
     //rm.setTargetCallSign(CallSign("W1TKZ-L"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
