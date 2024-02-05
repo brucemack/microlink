@@ -76,8 +76,8 @@ bool ESP32CommContext::poll() {
         const uint32_t bufSize = 256;
         uint8_t buf[bufSize];
         uint32_t bufLen = _esp32->read(buf, bufSize);
-        //cout << "ESP32CommContext GOT:" << endl;
-        //prettyHexDump(buf, bufLen, cout);
+        cout << "ESP32CommContext GOT:" << endl;
+        prettyHexDump(buf, bufLen, cout);
         _respProc.process(buf, bufLen);
         anythingHappened = true;
     }

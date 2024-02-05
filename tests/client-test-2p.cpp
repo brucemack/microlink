@@ -22,6 +22,9 @@
  * This file is unit-test code only.  None of this should be use for 
  * real applications!
  * =================================================================================
+ * 
+ * This test runs on the RP2040 hardware and provides a fairly comprehensive test
+ * of connection, logon, and receipt of audio packets from the *ECHOTEST* station.
  */
 #include <iostream>
 #include <fstream>

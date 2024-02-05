@@ -259,7 +259,7 @@ add_executable(client-test-2p
   src/contexts/ESP32CommContext.cpp
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
-  src/machines/LookupMachine.cpp
+  src/machines/LookupMachine2.cpp
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
