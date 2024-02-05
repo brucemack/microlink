@@ -56,10 +56,16 @@ public:
     virtual void connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port);
     virtual void sendTCPChannel(Channel c, const uint8_t* b, uint16_t len);
 
-    virtual Channel createUDPChannel(uint32_t localPort);
+    virtual Channel createUDPChannel();
     virtual void closeUDPChannel(Channel c);
-    virtual void sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
-        const uint8_t* b, uint16_t len);
+
+    /**
+     * In socket parlance, this performs the bind.
+     */
+    virtual void setupUDPChannel(Channel c, uint32_t localPort, 
+        IPAddress remoteIpAddr, uint32_t remotePort);
+
+    virtual void sendUDPChannel(Channel c, const uint8_t* b, uint16_t len);
 
     int getLiveChannelCount() const;
 

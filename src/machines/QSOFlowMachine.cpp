@@ -31,10 +31,6 @@ using namespace std;
 
 namespace kc1fsz {
 
-// TODO: CONSOLIDATE
-static const uint32_t RTP_PORT = 5198;
-static const uint32_t RTCP_PORT = 5199;
-
 // Significance?
 // d8 20 a2 e1 5a 50 00 49 24 92 49 24 50 00 49 24 92 49 24 50 00 49 24 92 49 24 50 00 49 24 92 49 24
 static const uint8_t SPEC_FRAME[33] = {
@@ -54,7 +50,9 @@ QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo,
 void QSOFlowMachine::start() {
     _lastKeepAliveSentMs = 0;
     _lastKeepAliveRecvMs = time_ms();
-    _state = OPEN;
+    //_state = OPEN;
+    cout << "HALTED" << endl;
+    _state = FAILED;
 }
 
 void QSOFlowMachine::processEvent(const Event* ev) {
@@ -141,7 +139,7 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             uint8_t packet[packetSize];
             // Make the SDES message and send
             uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
-            _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+            _ctx->sendUDPChannel(_rtcpChannel, packet, packetLen);
 
             // Make the initial oNDATA message for the RTP port
             const uint16_t bufferSize = 64;
@@ -158,7 +156,7 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             strcatLimited(buffer, _location.c_str(), bufferSize);
             strcatLimited(buffer, "\r", bufferSize);
             packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-            _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
+            _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
         }
 
         // Always check to make sure the other side is still there

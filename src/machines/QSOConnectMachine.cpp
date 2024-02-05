@@ -21,6 +21,8 @@
 #include "kc1fsz-tools/CommContext.h"
 
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
+#include "kc1fsz-tools/events/SendEvent.h"
+#include "kc1fsz-tools/events/ChannelSetupEvent.h"
 #include "kc1fsz-tools/Common.h"
 
 #include "../common.h"
@@ -34,6 +36,12 @@ namespace kc1fsz {
 
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
+
+static const uint32_t SEND_TIMEOUT_MS = 1000;
+static const uint32_t REMOTE_TIMEOUT_MS = 10000;
+static const uint32_t RETRY_COUNT = 3;
+
+static const char* FAILED_MSG = "Station connection failed";
 
 uint32_t QSOConnectMachine::_ssrcCounter = 0xd0000010;
 
@@ -51,28 +59,67 @@ void QSOConnectMachine::start() {
     _userInfo->setStatus(message);
 
     // Get UDP connections created
-    _rtpChannel = _ctx->createUDPChannel(RTP_PORT);
-    _rtcpChannel = _ctx->createUDPChannel(RTCP_PORT);
+    _rtcpChannel = _ctx->createUDPChannel();
+    _rtpChannel = _ctx->createUDPChannel();
 
     // Assign a unique SSRC
     _ssrc = _ssrcCounter++;
+    _state = State::IN_SETUP_0;  
 
-    // On the first try the timeout zero to force the first
-    // connect attempt
-    _setTimeoutMs(time_ms());
-
-    _state = CONNECTING;  
-    _retryCount = 0;
+    // Start the RTCP socket setup
+    _ctx->setupUDPChannel(_rtcpChannel, RTCP_PORT, _targetAddr, RTCP_PORT);
+    _state = State::IN_SETUP_1;
 }
 
 void QSOConnectMachine::processEvent(const Event* ev) {
 
+    cout << "QSOConnectMachine state=" << _state << " event=" << ev->getType() << " time=" << time_ms() << endl;
+
+    // In this state we are waiting for confirmation that the RTCP 
+    // socket was setup.
+    if (_state == State::IN_SETUP_1) {
+        if (ev->getType() == ChannelSetupEvent::TYPE) {
+            auto evt = static_cast<const ChannelSetupEvent*>(ev);
+            if (evt->isGood()) {
+                // Start the RTP socket setup
+                _ctx->setupUDPChannel(_rtpChannel, RTP_PORT, _targetAddr, RTP_PORT);
+                _state = State::IN_SETUP_2;
+                // TODO: TIMEOUT
+            } else {
+                _userInfo->setStatus(FAILED_MSG);
+                _state = State::FAILED;
+            }
+        }
+        else if (_isTimedOut()) {
+            _userInfo->setStatus(FAILED_MSG);
+            _state = FAILED;
+        }
+    }
+    // In this state we are waiting for confirmation that the RTP 
+    // socket was setup.
+    else if (_state == State::IN_SETUP_2) {
+        if (ev->getType() == ChannelSetupEvent::TYPE) {
+            auto evt = static_cast<const ChannelSetupEvent*>(ev);
+            if (evt->isGood()) {
+                // On the first try the timeout zero to force the first
+                // connect attempt
+                _setTimeoutMs(time_ms());
+                _state = CONNECTING;  
+                _retryCount = 0;
+            } else {
+                _userInfo->setStatus(FAILED_MSG);
+                _state = State::FAILED;
+            }
+        }
+        else if (_isTimedOut()) {
+            _userInfo->setStatus(FAILED_MSG);
+            _state = FAILED;
+        }
+    } 
     // In this state we are waiting for the reciprocal RTCP message
-    if (_state == CONNECTING) {
+    else if (_state == CONNECTING) {        
         if (ev->getType() == UDPReceiveEvent::TYPE) {
-
             const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
-
             if (evt->getChannel() == _rtcpChannel) {
                 
                 cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
@@ -81,7 +128,8 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
                     _state = SUCCEEDED;
                 } 
-            } else if (evt->getChannel() == _rtpChannel) {
+            } 
+            else if (evt->getChannel() == _rtpChannel) {
                 if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
                     // Make sure the message is null-terminated one way or the other
                     char temp[64];
@@ -91,12 +139,11 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                     _userInfo->setOnData(temp + 6);
                 }
             }
-
         }
         else if (_isTimedOut()) {
 
             // Check to see if it's time to give up connecting
-            if (_retryCount++ > 5) {
+            if (_retryCount++ >= RETRY_COUNT) {
                 _userInfo->setStatus("No response from station");
                 _state = FAILED;
             }
@@ -109,7 +156,19 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 // Send it on both connections
                 // The EchoLink client sends this, but things seem to work without it?
                 //_ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
-                _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+                _ctx->sendUDPChannel(_rtcpChannel, packet, packetLen);
+
+                _state = State::CONNECTING_0;
+                _setTimeoutMs(time_ms() + SEND_TIMEOUT_MS);
+            }
+        }
+    }
+    // In this state we are waiting for acknowledgement that the initial RTCP 
+    // message was sent out.
+    else if (_state == State::CONNECTING_0) {
+        if (ev->getType() == SendEvent::TYPE) {
+            auto evt = static_cast<const SendEvent*>(ev);
+            if (evt->isGood()) {
 
                 // Make the oNDATA message for the RTP port
                 const uint16_t bufferSize = 64;
@@ -125,14 +184,41 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 strcatLimited(buffer, "\r", bufferSize);
                 strcatLimited(buffer, _location.c_str(), bufferSize);
                 strcatLimited(buffer, "\r", bufferSize);
-                packetLen = formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-                _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
 
-                // We give this 5 seconds to receive a response on subsequent attempts
-                _setTimeoutMs(time_ms() + 5000);
+                const uint16_t packetSize = 128;
+                uint8_t packet[packetSize];
+                uint32_t packetLen = formatOnDataPacket(buffer, _ssrc, packet, packetSize);
+
+                _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
+
+                // Transition into the state waiting for the RTP send to complete
+                _state = State::CONNECTING_1;
+                _setTimeoutMs(time_ms() + SEND_TIMEOUT_MS);
+            } else {
+                _state = FAILED;
+            }
+        }
+        else if (_isTimedOut()) {
+            _state = FAILED;
+        }
+    }
+
+    // In this state we are waiting for acknowledgement that the initial RTP 
+    // message was sent out.
+    else if (_state == State::CONNECTING_1) {
+        if (ev->getType() == SendEvent::TYPE) {
+            auto evt = static_cast<const SendEvent*>(ev);
+            if (evt->isGood()) {
+                // Transition into the state waiting for the first RTCP 
+                // message to come back.
+                _state = State::CONNECTING;
+                _setTimeoutMs(time_ms() + REMOTE_TIMEOUT_MS);
+            } else {
+                _state = FAILED;
             }
         }
     }
+
     // It's possible to receive an oNDATA packet even after we have 
     // detected success. Pull it in an process it normally.
     else if (_state == SUCCEEDED) {
@@ -245,7 +331,7 @@ uint32_t QSOConnectMachine::formatRTCPPacket_SDES(uint32_t ssrc,
 
     // Token 4
     char buf[9];
-    sprintf(buf,"%08X", ssrc2);
+    sprintf(buf,"%08X", (unsigned int)ssrc2);
     *(p++) = 0x04;
     *(p++) = 0x08;
     memcpy(p, buf, 8);

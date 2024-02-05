@@ -63,8 +63,6 @@ void LogonMachine::cleanup() {
 
 void LogonMachine::processEvent(const Event* ev) {
 
-    cout << "LogonMachine state=" << _state << " event=" << ev->getType() << endl;
-
     // In this state we are waiting for the DNS resolution to complete
     if (_state == DNS_WAIT) {
         // Look for good completion

@@ -117,13 +117,26 @@ int main(int, const char**) {
     {
         const char* cmd;
         uint32_t cmdLen;
+        
         /*
-        // Stop echo
         cmd = "AT+RST\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(100);
+        */
+        /*
+        cmd = "AT+CWJAP?\r\n";
         cmdLen = strlen(cmd);
         channel.write((const uint8_t*)cmd, cmdLen);
         sleep_ms(10);
         */
+        /*
+        cmd = "AT+CWJAP=\"Gloucester Island Municipal WIFI\",\"xxxx\"\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(10);
+        */
+        
         // Stop echo
         cmd = "ATE0\r\n";
         cmdLen = strlen(cmd);
@@ -151,6 +164,7 @@ int main(int, const char**) {
         // Make sure we don't do anything with the OKs that come back
         // from the setup steps above
         ctx.setOKIgnores(4);
+        
     }
 
     TestUserInfo info;
@@ -162,8 +176,9 @@ int main(int, const char**) {
     rm.setServerPort(5200);
     //rm.setServerPort(80);
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString("xxxxxxx"));
+    rm.setPassword(FixedString("xxx"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
+    rm.setFullName(FixedString("Bruce R. MacKinnon"));
     //rm.setTargetCallSign(CallSign("W1TKZ-L"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
@@ -205,14 +220,12 @@ int main(int, const char**) {
 
         //bool activity = audioActivity || commActivity;
 
-        /*
-        // Generate the audio clock every 20ms (160*4 samples)
+        // Generate the tick (needed for timeouts, etc)
         uint32_t now = time_ms();
-        if (now - lastAudioTickMs >= 80) {
+        if (now - lastAudioTickMs >= 500) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
-        */
 
         cycle++;
         if (cycle % 10000000 == 0) {

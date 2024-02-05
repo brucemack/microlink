@@ -58,7 +58,7 @@ public:
 
 private:
 
-    enum State { IDLE, OPEN, SUCCEEDED } _state;
+    enum State { IDLE, OPEN, SUCCEEDED, FAILED } _state;
 
     CommContext* _ctx;
     UserInfo* _userInfo;

@@ -66,7 +66,22 @@ private:
 
     static uint32_t _ssrcCounter;
 
-    enum State { IDLE, CONNECTING, SUCCEEDED, FAILED } _state;
+    enum State { 
+        IDLE, 
+        IN_SETUP_0, 
+        IN_SETUP_1, 
+        // STATE #3
+        IN_SETUP_2, 
+        IN_SETUP_3, 
+        // STATE #5: Waiting for the reciprocal RTCP message
+        CONNECTING, 
+        // In the proecss of sending the initial RTCP message
+        CONNECTING_0, 
+        // State #7: In the proecss of sending the initial RTP message
+        CONNECTING_1, 
+        SUCCEEDED, 
+        FAILED 
+    } _state;
 
     CommContext* _ctx;
     UserInfo* _userInfo;

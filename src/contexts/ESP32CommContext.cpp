@@ -24,6 +24,7 @@
 
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/TCPConnectEvent.h"
+#include "kc1fsz-tools/events/ChannelSetupEvent.h"
 #include "kc1fsz-tools/events/TCPDisconnectEvent.h"
 #include "kc1fsz-tools/events/TCPReceiveEvent.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
@@ -39,6 +40,8 @@
 using namespace std;
 
 namespace kc1fsz {
+
+static const char* OVERFLOW_MSG = "Overflow";
 
 ESP32CommContext::ESP32CommContext(AsyncChannel* esp32) 
 :   _state(State::NONE),
@@ -76,8 +79,8 @@ bool ESP32CommContext::poll() {
         const uint32_t bufSize = 256;
         uint8_t buf[bufSize];
         uint32_t bufLen = _esp32->read(buf, bufSize);
-        cout << "ESP32CommContext GOT:" << endl;
-        prettyHexDump(buf, bufLen, cout);
+        //cout << "ESP32CommContext GOT:" << endl;
+        //prettyHexDump(buf, bufLen, cout);
         _respProc.process(buf, bufLen);
         anythingHappened = true;
     }
@@ -123,7 +126,7 @@ void ESP32CommContext::closeTCPChannel(Channel c) {
 void ESP32CommContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port) {
 
     if (!c.isGood()) {
-        //panic("Bad channel");
+        panic("Bad channel");
         return;
     }
 
@@ -140,14 +143,17 @@ void ESP32CommContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t p
 }
 
 void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {
+
     if (!c.isGood()) {
         return;
     }
+
     // Grab a copy of the the data
     if (len > _sendHoldSize) {
-        // TODO: PANIC
+        panic(OVERFLOW_MSG);
         return;
     } 
+
     memcpyLimited(_sendHold, b, len, _sendHoldSize);
     _sendHoldLen = len;
 
@@ -160,8 +166,16 @@ void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len)
     _state = State::IN_SEND_PROMPT_WAIT;
 }
 
-Channel ESP32CommContext::createUDPChannel(uint32_t localPort) {
-    return Channel(0);
+Channel ESP32CommContext::createUDPChannel() {
+    for (int i = 0; i < 9; i++) {
+        if (!_tracker[i].inUse) {
+            _tracker[i].inUse = true;
+            _tracker[i].type = ChannelTracker::Type::TYPE_UDP;
+            _tracker[i].state = ChannelTracker::State::STATE_NONE;
+            return Channel(i, true);
+        }
+    }
+    return Channel(0, false);
 }
 
 void ESP32CommContext::closeUDPChannel(Channel c) {  
@@ -171,14 +185,65 @@ void ESP32CommContext::closeUDPChannel(Channel c) {
 void ESP32CommContext::_closeChannel(Channel c) {  
 }
 
-void ESP32CommContext::sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
-    const uint8_t* b, uint16_t len) {
+/**
+    * In socket parlance, this performs the bind.
+    */
+void ESP32CommContext::setupUDPChannel(Channel c, uint32_t localPort, 
+    IPAddress remoteIpAddr, uint32_t remotePort) {
+
+    if (!c.isGood()) {
+        panic("Bad channel");
+        return;
+    }
+
+    // Update the tracker
+    if (c.getId() >= 9 || !_tracker[c.getId()].inUse ||
+        _tracker[c.getId()].type != ChannelTracker::Type::TYPE_UDP) {
+        panic("Bad channel");
+        return;
+    }
+
+    _tracker[c.getId()].addr = remoteIpAddr;
+    _tracker[c.getId()].port = remotePort;
+
+    char addr[32];
+    formatIP4Address(_tracker[c.getId()].addr.getAddr(), addr, 32);
+
+    _lastChannel = c;
+    _state = State::IN_UDP_SETUP;
 
     char buf[64];
-    formatIP4Address(targetAddr.getAddr(), buf, 64);
+    sprintf(buf, "AT+CIPSTART=%d,\"UDP\",\"%s\",%lu,%lu,2\r\n",
+        c.getId(), addr, remotePort, localPort);
+    _esp32->write((uint8_t*)buf, strlen(buf));
+}
 
-    cout << "UDP Send to " << buf << ":" << targetPort << endl;
-    prettyHexDump(b, len, cout);
+void ESP32CommContext::sendUDPChannel(Channel c,
+    const uint8_t* b, uint16_t len) {
+
+    if (!c.isGood()) {
+        return;
+    }
+
+    // Grab a copy of the the data
+    if (len > _sendHoldSize) {
+        panic(OVERFLOW_MSG);
+        return;
+    } 
+    memcpyLimited(_sendHold, b, len, _sendHoldSize);
+    _sendHoldLen = len;
+
+    char addr[32];
+    formatIP4Address(_tracker[c.getId()].addr.getAddr(), addr, 32);
+
+    // Make the send request, wich includes address/port for UDP
+    char buf[64];
+    sprintf(buf, "AT+CIPSEND=%d,%d,\"%s\",%lu\r\n", c.getId(), len,
+        addr, _tracker[c.getId()].port);
+    _esp32->write((uint8_t*)buf, strlen(buf));
+
+    // Now we wait for the prompt to tell us it's OK to send the data
+    _state = State::IN_SEND_PROMPT_WAIT;
 }
 
 void ESP32CommContext::ok() {
@@ -197,6 +262,13 @@ void ESP32CommContext::ok() {
         cout << "ESP32CommContext: OK (IN_TCP_CONNECT)" << endl;
         _state = State::NONE;
         TCPConnectEvent ev(_lastChannel);
+        _eventProc->processEvent(&ev);
+    }
+    // TODO: GENERALIZE FOR TCP
+    else if (_state == State::IN_UDP_SETUP) {
+        cout << "ESP32CommContext: OK (IN_UDP_SETUP)" << endl;
+        // Create an event and forward
+        ChannelSetupEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
     }
     else {
@@ -248,7 +320,6 @@ void ESP32CommContext::domain(const char* addr) {
 
 void ESP32CommContext::connected(uint32_t channel) {
     cout << "ESP32CommContext::connected()" << endl;
-    // Not doing anything with this
 }
 
 void ESP32CommContext::closed(uint32_t channel) {
@@ -274,14 +345,17 @@ void ESP32CommContext::closed(uint32_t channel) {
 void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
     const uint8_t* data, uint32_t len) {   
     if (len > 256) {
-        cout << "Length error!" << endl;
-        // PANIC
+        panic("Length error!");
         return;
     }
     if (channel < 9) {
         if (_tracker[channel].inUse) {
             if (_tracker[channel].type == ChannelTracker::Type::TYPE_TCP) {
                 TCPReceiveEvent ev(Channel(channel), data, len);
+                _eventProc->processEvent(&ev);
+            }    
+            else if (_tracker[channel].type == ChannelTracker::Type::TYPE_UDP) {
+                UDPReceiveEvent ev(Channel(channel), data, len);
                 _eventProc->processEvent(&ev);
             }    
         }
