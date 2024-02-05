@@ -79,6 +79,8 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
 
 uint32_t addRTCPPad(uint32_t unpaddedLength, uint8_t* p, uint32_t packetSize);
 
+void panic(const char* msg);
+
 }
 
 #endif

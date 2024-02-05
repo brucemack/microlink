@@ -25,7 +25,7 @@
 #include <Windows.h>
 
 #include "kc1fsz-tools/AudioOutputContext.h"
-#include "../PerfTimer.h"
+#include "kc1fsz-tools/win32/Win32PerfTimer.h"
 
 namespace kc1fsz {
 
@@ -66,7 +66,7 @@ private:
     WAVEHDR _silenceHdr[2];
     uint32_t _silenceQueuePtr;
 
-    PerfTimer _timer;
+    Win32PerfTimer _timer;
 };
 
 }

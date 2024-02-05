@@ -26,7 +26,7 @@
 #include "../StateMachine.h"
 
 #include "LogonMachine.h"
-#include "LookupMachine.h"
+#include "LookupMachine2.h"
 #include "QSOConnectMachine.h"
 #include "QSOFlowMachine.h"
 #include "WaitMachine.h"
@@ -64,7 +64,7 @@ private:
     CommContext* _ctx;
     UserInfo* _userInfo;
     LogonMachine _logonMachine;
-    LookupMachine _lookupMachine;
+    LookupMachine2 _lookupMachine;
     QSOConnectMachine _connectMachine;
     WaitMachine _connectRetryWaitMachine;
     QSOFlowMachine _qsoMachine;

@@ -32,12 +32,11 @@
 #include <chrono>
 
 #include "kc1fsz-tools/events/TickEvent.h"
+#include "kc1fsz-tools/win32/Win32PerfTimer.h"
 
 #include "machines/RootMachine.h"
 #include "contexts/SocketContext.h"
 #include "contexts/W32AudioOutputContext.h"
-
-#include "PerfTimer.h"
 #include "TestUserInfo.h"
 
 using namespace std;
@@ -76,8 +75,8 @@ int main(int, const char**) {
     TickEvent tickEv;
     uint32_t lastAudioTickMs = 0;
 
-    PerfTimer socketTimer;
-    PerfTimer audioTimer;
+    Win32PerfTimer socketTimer;
+    Win32PerfTimer audioTimer;
     uint32_t longestSocketUs = 0;
     uint32_t longestAudioUs = 0;
 

@@ -30,6 +30,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cstring>
+#include <cassert>
 
 #include "kc1fsz-tools/Common.h"
 #include "common.h"
@@ -258,5 +259,12 @@ uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     return unpaddedLength + padSize;
 }
 #endif 
+
+#ifndef PICO_BUILD
+void panic(const char* msg) {
+    cerr << "PANIC: " << msg << endl;
+    assert(false);
+}
+#endif
 
 }

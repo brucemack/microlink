@@ -119,6 +119,7 @@ add_executable(machine-test-1
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/LookupMachine.cpp
+  src/machines/LookupMachine2.cpp
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
@@ -144,7 +145,7 @@ add_executable(client-test-2
   src/contexts/W32AudioOutputContext.cpp
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
-  src/machines/LookupMachine.cpp
+  src/machines/LookupMachine2.cpp
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
