@@ -153,11 +153,11 @@ is required to disconnect from the network.
 
 (Format notes to follow)
 
-### Directory Request Message Format
+### Full Directory Request Message Format
 
-The directory request is very simple: connect and send a single "s" to the server.  
+The full directory request is very simple: connect and send a single "s" to the server.  
 
-### Directory Response Message Format
+### Full Directory Response Message Format
 
 A large response will be returned from the server. The result is tokenized using 0x0a characters (\n).
 
@@ -198,7 +198,7 @@ immediately after the final 0x0a of the previous entry.
 
 There is nothing unique about the end of the entire response.  
 
-### Single Callsign Authentication Request Message Format
+### Single Callsign Authentication (Verify) Request Message Format
 
 This request provides an efficient way for a node to check the status of an individual 
 callsign **without requesting the entire directory.**  This would be used for repeater/link/conference
@@ -222,7 +222,7 @@ Here's an example of a request:
 * There are some TCP header bytes at the start of this illustration that are not relevant.
 * The red mark indicates the beginning of the request.
 
-### Single Call Authentication Response Message Format
+### Single Call Authentication (Verify) Response Message Format
 
 The server response is very simple.  Either:
 
@@ -233,6 +233,56 @@ There are no other headers or delimiters.  The server disconnects immediately af
 
 Since the IP address is included in the request, it is likely that the server checks this too as an 
 added security check.
+
+### Extended Verify Request Message Format
+
+_(NOTE: Thanks to Jonathan Taylor K1RFD for providing me with the information on this additional 
+feature.)_
+
+This request provides an efficient way for a node to obtain the IP address and status of an individual 
+callsign **without requesting the entire directory.**  This would be used by a client that wants to make a request
+to a specific station without pulling down the entire EchoLink directory. This can also be used to refresh
+cached directory information. This feature is extremely useful for constrained stations that may not have the 
+memory and/or bandwidth to manage a multi-megabyte copy of the entire EchoLink directory. Stations should 
+use this to reduce the load on the EchoLink Server.
+
+The format of the request is as follows:
+
+* One byte: 0x56 (This is a capital V).
+* N bytes: The callsign
+* One byte: 0x0d (\n) delimiter
+
+There are no other headers or delimiters.  The client sends this message and waits for a response.
+
+### Extended Verify Response Message Format
+
+If the station callsign provided is valid and online the server response is as follows:
+
+* Callsign
+* One byte: 0x0d (\n) delimiter
+* Location/Connection status as follows:
+  - Location 
+  - Open square bracket (0x5b)
+  - Status (ON or BUSY)
+  - One space (0x20)
+  - The time the last status was reported in UTC HH:MM format
+  - Close square bracket (0x5d)
+* One byte: 0x0d (\n) delimiter
+* The EchoLink-assigned node number
+* One byte: 0x0d (\n) delimiter
+* The IP address of the node in dotted format (xxx.xxx.xxx.xxx)
+* One byte: 0x0d (\n) delimiter
+
+If the station callsign is not valid or is not online the server responds with one byte 0x30 (0).
+
+There are no other headers or delimiters.  The server disconnects immediately after sending this response.
+
+Here's an example:
+
+![](packet-8.png)
+
+* There are some TCP header bytes that are not relevant.  The red mark indicate the beginning of the message content.
+* There are exactly four 0x0a delimiters marked in blue.
 
 ## EchoLink QSO Protocol
 
