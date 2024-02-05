@@ -241,7 +241,7 @@ feature.)_
 
 This request provides an efficient way for a node to obtain the IP address and status of an individual 
 callsign **without requesting the entire directory.**  This would be used by a client that wants to make a request
-to a specific station without pulling down the entire EchoLink directory. This can also be used to refresh
+for information about a specific station without pulling down the entire EchoLink directory. This can also be used to refresh
 cached directory information. This feature is extremely useful for constrained stations that may not have the 
 memory and/or bandwidth to manage a multi-megabyte copy of the entire EchoLink directory. Stations should 
 use this to reduce the load on the EchoLink Server.
@@ -270,7 +270,7 @@ If the station callsign provided is valid and online the server response is as f
 * One byte: 0x0d (\n) delimiter
 * The EchoLink-assigned node number
 * One byte: 0x0d (\n) delimiter
-* The IP address of the node in dotted format (xxx.xxx.xxx.xxx)
+* The IP address of the node in dotted decimal format (xxx.xxx.xxx.xxx)
 * One byte: 0x0d (\n) delimiter
 
 If the station callsign is not valid or is not online the server responds with one byte 0x30 (0).
@@ -281,7 +281,8 @@ Here's an example:
 
 ![](packet-8.png)
 
-* There are some TCP header bytes that are not relevant.  The red mark indicate the beginning of the message content.
+* In this example there are some TCP header bytes that are not relevant.  The red mark indicate the 
+beginning of the message content.
 * There are exactly four 0x0a delimiters marked in blue.
 
 ## EchoLink QSO Protocol
