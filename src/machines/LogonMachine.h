@@ -41,6 +41,8 @@ class UserInfo;
 class LogonMachine : public StateMachine {
 public:
 
+    static int traceLevel;
+
     LogonMachine(CommContext* ctx, UserInfo* userInfo);
 
     virtual void processEvent(const Event* ev);

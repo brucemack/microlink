@@ -95,6 +95,11 @@ int main(int, const char**) {
 
     cout << "===== MicroLink Test 2p ======================================" << endl;
 
+    ESP32CommContext::traceLevel = 1;
+    QSOFlowMachine::traceLevel = 1;
+    PicoUartChannel::traceLevel = 1;
+    LogonMachine::traceLevel = 1;
+
     // Sertup UART and timer
     const uint32_t readBufferSize = 256;
     uint8_t readBuffer[readBufferSize];
@@ -168,7 +173,7 @@ int main(int, const char**) {
 
     rm.start();
 
-    while (true) {
+    while (!rm.isDone()) {
 
         // Poll the audio system 
         audioTimer.reset();
@@ -202,5 +207,10 @@ int main(int, const char**) {
         if (cycle % 10000000 == 0) {
             cout << cycle << endl;
         }
+    }
+
+    cout << "Left event loop" << endl;
+
+    while (true) {        
     }
 }

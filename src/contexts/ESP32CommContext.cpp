@@ -44,7 +44,7 @@ namespace kc1fsz {
 
 static const char* OVERFLOW_MSG = "Overflow";
 
-int ESP32CommContext::traceLevel = 1;
+int ESP32CommContext::traceLevel = 0;
 
 ESP32CommContext::ESP32CommContext(AsyncChannel* esp32) 
 :   _state(State::NONE),
@@ -276,16 +276,10 @@ void ESP32CommContext::ok() {
             _initCount = 3;
         }
         else if (_initCount == 3) {
-            const char* cmd = "AT+CIPCLOSE=5\r\n";
-            uint32_t cmdLen = strlen(cmd);
-            _esp32->write((uint8_t*)cmd, cmdLen);
-            _initCount = 4;
-        }
-        else if (_initCount == 4) {
             _state = State::NONE;
             cout << "READY!" << endl;
-            StatusEvent ev();
-            //_eventProc->processEvent(&ev);
+            StatusEvent ev;
+            _eventProc->processEvent(&ev);
         }
     }
     else if (_state == State::IN_DNS) {

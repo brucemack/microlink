@@ -46,7 +46,7 @@ static const uint8_t SPEC_FRAME[33] = {
 // How often we send activity on the UDP connections
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10000;
 
-int QSOFlowMachine::traceLevel = 1;
+int QSOFlowMachine::traceLevel = 0;
 
 QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
@@ -80,6 +80,10 @@ void QSOFlowMachine::_processUDPReceive(const UDPReceiveEvent* evt) {
         _lastKeepAliveRecvMs = time_ms();
 
         if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
+
+            if (traceLevel > 0) {
+                cout << "QSOFLowMachine: Audio" << endl;
+            }
 
             // Unload the GSM frames from the RTP packet
             //uint16_t remoteSeq = 0;
@@ -120,7 +124,7 @@ void QSOFlowMachine::_processUDPReceive(const UDPReceiveEvent* evt) {
         } 
         else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
             if (traceLevel > 0) {
-                cout << "oNDATA" << endl;
+                cout << "QSOFLowMachine: oNDATA" << endl;
                 prettyHexDump(evt->getData(), evt->getDataLen(), cout);
             }
             // Make sure the message is null-terminated one way or the other
@@ -150,7 +154,7 @@ void QSOFlowMachine::_processTick(const TickEvent* evt) {
 void QSOFlowMachine::processEvent(const Event* ev) {
 
     if (traceLevel > 0) {
-        cout << "QSOFlowMachine state=" << _state 
+        cout << "QSOFlowMachine: state=" << _state 
             << " event=" << ev->getType() <<  endl;
     }
 
