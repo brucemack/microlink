@@ -29,6 +29,7 @@
 #include "kc1fsz-tools/events/TCPReceiveEvent.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
 #include "kc1fsz-tools/events/SendEvent.h"
+#include "kc1fsz-tools/events/StatusEvent.h"
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/EventProcessor.h"
 #include "kc1fsz-tools/AsyncChannel.h"
@@ -42,6 +43,8 @@ using namespace std;
 namespace kc1fsz {
 
 static const char* OVERFLOW_MSG = "Overflow";
+
+int ESP32CommContext::traceLevel = 1;
 
 ESP32CommContext::ESP32CommContext(AsyncChannel* esp32) 
 :   _state(State::NONE),
@@ -79,8 +82,10 @@ bool ESP32CommContext::poll() {
         const uint32_t bufSize = 256;
         uint8_t buf[bufSize];
         uint32_t bufLen = _esp32->read(buf, bufSize);
-        //cout << "ESP32CommContext GOT:" << endl;
-        //prettyHexDump(buf, bufLen, cout);
+        if (traceLevel > 0) {
+            cout << "ESP32CommContext GOT:" << endl;
+            prettyHexDump(buf, bufLen, cout);
+        }
         _respProc.process(buf, bufLen);
         anythingHappened = true;
     }
@@ -93,6 +98,16 @@ void ESP32CommContext::_cleanupTracker() {
 
 int ESP32CommContext::getLiveChannelCount() const {
     return 0;
+}
+
+void ESP32CommContext::reset() {
+    
+    _initCount = 0;
+    _state = State::IN_INIT;
+
+    const char* cmd = "AT+RST\r\n";
+    uint32_t cmdLen = strlen(cmd);
+    _esp32->write((uint8_t*)cmd, cmdLen);
 }
 
 void ESP32CommContext::startDNSLookup(HostName hostName) {
@@ -247,19 +262,38 @@ void ESP32CommContext::sendUDPChannel(Channel c,
 }
 
 void ESP32CommContext::ok() {
-
-    if (_okIgnores > 0) {
-        _okIgnores--;
-        return;
+    if (_state == State::IN_INIT) {
+        if (_initCount == 1) {
+            const char* cmd = "AT+CWMODE=1\r\n";
+            uint32_t cmdLen = strlen(cmd);
+            _esp32->write((uint8_t*)cmd, cmdLen);
+            _initCount = 2;
+        }
+        else if (_initCount == 2) {
+            const char* cmd = "AT+CIPMUX=1\r\n";
+            uint32_t cmdLen = strlen(cmd);
+            _esp32->write((uint8_t*)cmd, cmdLen);
+            _initCount = 3;
+        }
+        else if (_initCount == 3) {
+            const char* cmd = "AT+CIPCLOSE=5\r\n";
+            uint32_t cmdLen = strlen(cmd);
+            _esp32->write((uint8_t*)cmd, cmdLen);
+            _initCount = 4;
+        }
+        else if (_initCount == 4) {
+            _state = State::NONE;
+            cout << "READY!" << endl;
+            StatusEvent ev();
+            //_eventProc->processEvent(&ev);
+        }
     }
-
-    if (_state == State::IN_DNS) {
-        cout << "ESP32CommContext: OK (IN_DNS)" << endl;
+    else if (_state == State::IN_DNS) {
         _state = State::NONE;
         DNSLookupEvent ev(_lastHostNameReq, _lastAddrResp);
         _eventProc->processEvent(&ev);
-    } else if (_state == State::IN_TCP_CONNECT) {
-        cout << "ESP32CommContext: OK (IN_TCP_CONNECT)" << endl;
+    } 
+    else if (_state == State::IN_TCP_CONNECT) {
         _state = State::NONE;
         TCPConnectEvent ev(_lastChannel);
         _eventProc->processEvent(&ev);
@@ -361,6 +395,23 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
         }
     }
 }
+
+void ESP32CommContext::notification(const char* msg) {
+    if (traceLevel > 0) {
+        cout << "notification: " << msg << endl;
+    }
+    if (_state == State::IN_INIT) {
+        if (_initCount == 0) {
+            if (strcmp(msg,"WIFI GOT IP") == 0) {
+                const char* cmd = "ATE0\r\n";
+                uint32_t cmdLen = strlen(cmd);
+                _esp32->write((uint8_t*)cmd, cmdLen);
+                _initCount = 1;
+            }
+        }
+    }
+}
+
 
 }
 

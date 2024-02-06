@@ -73,7 +73,7 @@ void QSOConnectMachine::start() {
 
 void QSOConnectMachine::processEvent(const Event* ev) {
 
-    cout << "QSOConnectMachine state=" << _state << " event=" << ev->getType() << " time=" << time_ms() << endl;
+    //cout << "QSOConnectMachine state=" << _state << " event=" << ev->getType() <<  endl;
 
     // In this state we are waiting for confirmation that the RTCP 
     // socket was setup.

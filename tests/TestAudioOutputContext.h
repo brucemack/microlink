@@ -21,6 +21,7 @@
 #ifndef _TestAudioOutputContext_h
 #define _TestAudioOutputContext_h
 
+#include <iostream>
 #include "kc1fsz-tools/AudioOutputContext.h"
 
 namespace kc1fsz {
@@ -36,7 +37,9 @@ public:
 
     bool poll() { return false; }
 
-    void play(int16_t* frame) { }
+    void play(int16_t* frame) { 
+        std::cout << "<Audio Frame>" << std::endl;
+    }
 };
 
 }

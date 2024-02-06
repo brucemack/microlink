@@ -21,24 +21,30 @@
 #ifndef _QSOFlowMachine_h
 #define _QSOFlowMachine_h
 
-#include "kc1fsz-tools/Event.h"
+//#include "kc1fsz-tools/Event.h"
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/Channel.h"
-#include "kc1fsz-tools//AudioOutputContext.h"
+//#include "kc1fsz-tools/AudioOutputContext.h"
 #include "gsm-0610-codec/Decoder.h"
 
 #include "../StateMachine.h"
-#include "../UserInfo.h"
+//#include "../UserInfo.h"
 
 namespace kc1fsz {
 
 class UserInfo;
 class CommContext;
+class Event;
+class UDPReceiveEvent;
+class TickEvent;
+class AudioOutputContext;
 
 class QSOFlowMachine : public StateMachine {
 public:
+
+    static int traceLevel;
 
     QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
         AudioOutputContext* audioOutput);
@@ -57,8 +63,21 @@ public:
     void setSSRC(uint32_t s) { _ssrc = s; }
 
 private:
+    
+    void _processUDPReceive(const UDPReceiveEvent* evt);
+    void _processTick(const TickEvent* evt);
 
-    enum State { IDLE, OPEN, SUCCEEDED, FAILED } _state;
+    enum State { 
+        IDLE,
+        OPEN, 
+        OPEN_RTCP_PING_0,
+        // STATE #3: 
+        OPEN_RTCP_PING_1,
+        OPEN_RTP_PING_0,
+        OPEN_RTP_PING_1,
+        SUCCEEDED, 
+        FAILED 
+    } _state;
 
     CommContext* _ctx;
     UserInfo* _userInfo;

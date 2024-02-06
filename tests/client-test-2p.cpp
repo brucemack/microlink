@@ -136,35 +136,6 @@ int main(int, const char**) {
         channel.write((const uint8_t*)cmd, cmdLen);
         sleep_ms(10);
         */
-        
-        // Stop echo
-        cmd = "ATE0\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-
-        // Setup station mode
-        cmd = "AT+CWMODE=1\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-
-        // Setup mux
-        cmd = "AT+CIPMUX=1\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-
-        // Close all connections
-        cmd = "AT+CIPCLOSE=5\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-
-        // Make sure we don't do anything with the OKs that come back
-        // from the setup steps above
-        ctx.setOKIgnores(4);
-        
     }
 
     TestUserInfo info;
@@ -229,7 +200,7 @@ int main(int, const char**) {
 
         cycle++;
         if (cycle % 10000000 == 0) {
-            //cout << cycle << endl;
+            cout << cycle << endl;
         }
     }
 }

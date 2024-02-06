@@ -57,8 +57,18 @@ public:
 
 private:
 
-    enum State { IDLE, LOGON, LOOKUP, CONNECT, CONNECT_RETRY_WAIT, 
-        QSO, BYE, FAILED, SUCCEEDED } _state;
+    enum State { 
+        IDLE, 
+        IN_RESET,
+        LOGON, 
+        LOOKUP, 
+        CONNECT, 
+        CONNECT_RETRY_WAIT, 
+        QSO, 
+        BYE, 
+        FAILED, 
+        SUCCEEDED 
+    } _state;
     uint16_t _stateCount;
 
     CommContext* _ctx;

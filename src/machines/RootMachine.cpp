@@ -18,6 +18,9 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include "kc1fsz-tools/CommContext.h"
+#include "kc1fsz-tools/events/StatusEvent.h"
+
 #include "RootMachine.h"
 
 using namespace std;
@@ -36,14 +39,21 @@ RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo,
 }
 
 void RootMachine::start() {
-    // Start the login process
-    _logonMachine.start();
-    _state = LOGON;
+    // Reset
+    _ctx->reset();
+    _state = State::IN_RESET;
 }
 
 void RootMachine::processEvent(const Event* ev) {
     // In this state we are doing nothing waiting to be started
-    if (_state == IDLE) {
+    if (_state == State::IDLE) {
+    }
+    else if (_state == State::IN_RESET) {
+        if (ev->getType() == StatusEvent::TYPE) {
+            // Start the login process
+            _logonMachine.start();
+            _state = LOGON;
+        }
     }
     // In this state we are waiting for the EL Server to process our 
     // logon request.
