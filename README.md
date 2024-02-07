@@ -2,8 +2,8 @@
 
 Is is possible to run a full EchoLink&reg; station on a microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest,
-cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink&reg;?  Please [see their 
-website](https://www.echolink.org/) for complete information.
+cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink&reg;?  Please 
+[see the official website](https://www.echolink.org/) for complete information.
 
 Here's the current demo:
 
@@ -13,17 +13,16 @@ Here's the current demo:
 
 The goal is to build a complete station from scratch, with no strings attached to PCs/servers.  The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is great and is the quickest/easiest way to get on 
-EchoLink. This project is only interesting for someone who wants to get into the nuts-and-bolts of EchoLink
-and VoIP technology in general. The final product will provide an inexpensive interface between the internet
+EchoLink. This project is only interesting for someone who wants to get into the nuts-and-bolts of EchoLink/VoIP technology. The final product will provide an inexpensive interface between the internet
 and a radio to make linking very simple.
 
 ## Current Parts List (HW)
 
 * The main processor is a Pi Pico (RP2040) development board.  $4.00 on DigiKey.
-* Internet connectivity currently comes from an ESP-32-WROOM development board. $10.00 on DigiKey. Work
+* Internet connectivity currently comes from an ESP-32-WROOM development board. $5.00 on Amazon. Work
 is underway to provide a 3G cellular data option using a SIM7600 module.
 * Audio input sampling uses the integrated ADC in the RP2040.
-* Audio output generation uses the MicroChip MCP4725 digital-to-analog converter.  $1.27 on DigiKey.
+* Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
 
 ## Current Parts List (SW)
@@ -33,6 +32,10 @@ is underway to provide a 3G cellular data option using a SIM7600 module.
 * Importantly, the GSM 06-10 Full Rate CODEC is homebrew.
 
 # Test Notes
+
+## client-test-2p
+
+This is the most comprehensive demonstration that targets the RP2040.
 
 ## client-test-2
 
