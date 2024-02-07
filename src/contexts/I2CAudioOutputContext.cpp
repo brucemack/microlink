@@ -24,19 +24,22 @@
 
 namespace kc1fsz {
 
-I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate, 
-    int16_t* audioBuf) 
+I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate,
+    uint32_t bufferDepthLog2, int16_t* audioBuf) 
 :   AudioOutputContext(frameSize, sampleRate),
+    _bufferDepthLog2(bufferDepthLog2),
     _audioBuf(audioBuf),
     _frameWriteCount(0),
     _framePlayCount(0),
     _playPtr(0),
     _intervalUs(125),
     _idleCount(0),
-    _overflowCount(0)
+    _overflowCount(0),
+    _playing(false)
 {
     _timer.setIntervalUs(_intervalUs);
     _dacAddr = 0x60;
+    _triggerDepth = (1 << _bufferDepthLog2) / 2;
 }
 
 I2CAudioOutputContext::~I2CAudioOutputContext() {    
@@ -48,39 +51,60 @@ void I2CAudioOutputContext::reset() {
     _playPtr = 0;
     _idleCount = 0;
     _overflowCount = 0;
+    _playing = false;
     _timer.reset();
 }
 
-bool I2CAudioOutputContext::poll() {    
-    // Pacing at 8kHz
-    bool activity = _timer.poll();
-    if (activity) {
-        // This is what keep us from getting ahead
-        // TODO: Make sure we don't hang forever on the wrap-aound case
-        if (_frameWriteCount > _framePlayCount) {
-            uint32_t factor = _framePlayCount & 1;
-            const int16_t* start = _audioBuf + (_frameSize * factor);
-            _play(start[_playPtr++]);
-            if (_playPtr == _frameSize) {
-                _framePlayCount++;
-                _playPtr = 0;
-            }
-        } else {
-            _idleCount++;
-        }
-    }
-    return activity;
-}
-
 void I2CAudioOutputContext::play(int16_t* frame) {
-    // Figure out starting point in double-buffer
-    uint32_t factor = _frameWriteCount & 1;
-    int16_t* start = _audioBuf + (_frameSize * factor);
-    // Copy the data into the double-buffer
+    // For example: a depth of 16 means a depthLog2 of 4.  
+    // The mask is 1, 10, 100, 1000, 10000, minus 1 -> 1111
+    uint32_t mask = (1 << _bufferDepthLog2) - 1;
+    // Figure out which slot to use in the rotating buffer
+    uint32_t slot = _frameWriteCount & mask;
+    int16_t* start = _audioBuf + (_frameSize * slot);
+    // Copy the data into the slot
     for (uint32_t i = 0; i < _frameSize; i++) {
         start[i] = frame[i];
     }
     _frameWriteCount++;
+}
+
+bool I2CAudioOutputContext::poll() {    
+    // Pacing at the audio sample clock (ex: 8kHz)
+    bool activity = _timer.poll();
+    if (activity) {
+        if (!_playing) {
+            // Decide whether to start playing
+            if ((_frameWriteCount > _framePlayCount) &&
+                (_frameWriteCount - _framePlayCount) > _triggerDepth) {
+                _playing = true;
+            }
+        } 
+        else {
+            if (_frameWriteCount > _framePlayCount) {
+
+                uint32_t mask = (1 << _bufferDepthLog2) - 1;
+                uint32_t slot = _framePlayCount & mask;
+                const int16_t* start = _audioBuf + (_frameSize * slot);
+
+                _play(start[_playPtr++]);
+
+                if (_playPtr == _frameSize) {
+                    _framePlayCount++;
+                    _playPtr = 0;
+                }
+
+                // TODO: Consider a way to speed up a bit if the 
+                // audio is still arriving but we are getting close
+                // to draining the buffer
+
+            } else {
+                _playing = false;
+                _idleCount++;
+            }
+        }
+    }
+    return activity;
 }
 
 /*

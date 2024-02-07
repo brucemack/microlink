@@ -28,22 +28,30 @@
 
 namespace kc1fsz {
 
+/**
+ * An implementation of the AudioOutputContext that assumes a
+ * MCP4725 DAC on an I2C interface using the Pi Pico SDK.
+*/
 class I2CAudioOutputContext : public AudioOutputContext {
 public:
 
     /**
-     * @param audioBuf Must be 2 x frameSize in length.
+     * @param frameSize The number of 16-bit samples in a frame. 
+     * @param bufferDepthLog2 The number of frames that can fit in the 
+     *   audio buffer (good to have about a second of back-log). The 
+     *   depth must be a power of 2.
+     * @param audioBuf Must be bufferDepth x frameSize in length.
     */
     I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate, 
-        int16_t* audioBuf);
+        uint32_t bufferDepthLog2, int16_t* audioBuf);
     virtual ~I2CAudioOutputContext();
 
     virtual void reset();
 
-    virtual bool poll();
-
     // IMPORTANT: This assumes 16-bit PCM audio
     virtual void play(int16_t* frame);
+
+    virtual bool poll();
 
     virtual uint32_t getSyncErrorCount() { return _idleCount + _overflowCount; }
 
@@ -51,16 +59,24 @@ private:
 
     void _play(int16_t pcm);
 
-    int16_t* _audioBuf;
+    uint32_t _bufferDepthLog2;
+    // How deep we should get before triggering the audio play
+    uint32_t _triggerDepth;
+    int16_t *_audioBuf;
     uint32_t _frameWriteCount;
     uint32_t _framePlayCount;
     uint32_t _playPtr;
+    // How much time to wait between sample output. This is a
+    // variable to support adaptive approaches.
     uint32_t _intervalUs;
     uint8_t _dacAddr;
     // This keeps track of the number of sample intervals
     // where nothing was ready to play yet.
     uint32_t _idleCount;
     uint32_t _overflowCount;
+    // This indicates whether we are actually playing sound
+    // vs. sitting in silence.
+    bool _playing;
 
     PicoPollTimer _timer;
 };

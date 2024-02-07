@@ -72,8 +72,10 @@ using namespace kc1fsz;
 
 // The size of one EchoLink RTP packet (after decoding)
 static const int audioFrameSize = 160;
-// Double-buffer in player
-static int16_t audioBuf[audioFrameSize * 4 * 2];
+// Provide buffer for about a second of audio.  We round up to 16 frames worth.
+static const uint32_t audioBufDepth = 16;
+static const uint32_t audioBufDepthLog2 = 4;
+static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 
 static void testTone(AudioOutputContext& ctx) {
 
@@ -201,7 +203,8 @@ int main(int, const char**) {
 
     TestUserInfo info;
     // NOTE: Audio is decoded in 4-frame chunks.
-    I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, audioBuf);
+    I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
+        audioBufDepthLog2, audioBuf);
 
     RootMachine rm(&ctx, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
