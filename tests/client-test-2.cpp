@@ -64,10 +64,9 @@ int main(int, const char**) {
     RootMachine rm(&context, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setServerPort(5200);
-    rm.setCallSign(CallSign("KC1FSZ"));
+    rm.setCallSign(CallSign("xxx"));
     rm.setPassword(FixedString(getenv("EL_PASSWORD")));
-    rm.setLocation(FixedString("Wellesley, MA USA"));
-    //rm.setTargetCallSign(CallSign("W1TKZ-L"));
+    rm.setLocation(FixedString("xxx"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
     rm.start();

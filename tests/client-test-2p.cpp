@@ -77,6 +77,7 @@ static const uint32_t audioBufDepth = 16;
 static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 
+// TODO: This has some audio quality problems
 static void testTone(AudioOutputContext& ctx) {
 
     // Make a 1kHz tone at the right sample rate
@@ -176,46 +177,20 @@ int main(int, const char**) {
     // protocol processing.
     ctx.flush(250);
 
-    // TODO: MAKE A NICE WAY TO STREAM A SET OF INITIAL COMMANDS
-    {
-        /*
-        const char* cmd;
-        uint32_t cmdLen;
-        
-        cmd = "AT+RST\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(100);
-        */
-        /*
-        cmd = "AT+CWJAP?\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-        */
-        /*
-        cmd = "AT+CWJAP=\"Gloucester Island Municipal WIFI\",\"xxxx\"\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-        */
-    }
-
     TestUserInfo info;
     // NOTE: Audio is decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
         audioBufDepthLog2, audioBuf);
 
     RootMachine rm(&ctx, &info, &audioOutContext);
+
+    // TODO: Move configuration out 
     rm.setServerName(HostName("naeast.echolink.org"));
-    //rm.setServerName(HostName("www.google.com"));
     rm.setServerPort(5200);
-    //rm.setServerPort(80);
-    rm.setCallSign(CallSign("KC1FSZ"));
+    rm.setCallSign(CallSign("xxx"));
     rm.setPassword(FixedString("xxx"));
-    rm.setLocation(FixedString("Wellesley, MA USA"));
-    rm.setFullName(FixedString("Bruce R. MacKinnon"));
-    //rm.setTargetCallSign(CallSign("W1TKZ-L"));
+    rm.setLocation(FixedString("xxx"));
+    rm.setFullName(FixedString("xxx"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
     ctx.setEventProcessor(&rm);

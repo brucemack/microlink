@@ -37,6 +37,7 @@ static void machine_test_1() {
 
     RootMachine rm(&context, &info, &audioOutput);
     rm.setServerName(HostName("naeast.echolink.org"));
+    rm.setServerPort(5200);
     rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString("XYZ123"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
