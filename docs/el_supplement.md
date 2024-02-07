@@ -102,9 +102,9 @@ Nodes can advertise any one of three statuses on the network:
 * BUSY
 * OFF
 
-(**I'm not completely sure of this detail**) Connecting to the EchoLink Server, authenticating, and advertising 
-an ONLINE or BUSY status puts the node in "logged in" state for some period of time (**what is the 
-timeout?**). This is significant since other nodes on the network will check this status before accepting a QSO from a 
+Connecting to the EchoLink Server, authenticating, and advertising 
+an ONLINE or BUSY status puts the node in "logged in" state for 
+approximately 7 minutes. This is significant since other nodes on the network will check this status before accepting a QSO from a 
 requesting station. Essentially, the EchoLink server is providing a free authentication service for the rest 
 of the peer-to-peer network. There must be a lot of volunteer hours behind the scenes for this to work 
 reliably.
