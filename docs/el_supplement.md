@@ -537,6 +537,18 @@ The four-bit 0b1101 signature makes it easy to sanity check the RTP packets sinc
 From this example it looks like there is a consistent 0xda at the start of each GSM frame, but that's a coincidence - the "a" 
 part can change depending on the audio being encoded.
 
+### Pacing of RTP Audio
+
+The RTP packets are generated every 80ms, or every 160 * 4 audio samples collected at 8 kHz.  It's important
+to keep in mind that RTP packets that travel through a network will speed up or slow down slightly based 
+on normal congestion.  Good quality audio needs to be sampled consistently at 8 kHz, *regardless of the 
+network arrival time* of the RTP packets.  This requires some clever buffering, particularly on the receive
+side.  These comments from Jonathan Taylor (K1RFD) are helpful and may provide some insight into how
+the official EchoLink behaves.  I have tested this approach in the MicroLink station and it works very 
+well:
+
+> 
+
 ### Notes on the RTP SSRC Identifier
 
 (To follow)
