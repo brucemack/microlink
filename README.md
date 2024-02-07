@@ -45,23 +45,23 @@ This is the most comprehensive demonstration that targets the RP2040.
 
 ## Building Tests on Windows (CYGWIN)
 
-git clone https://github.com/brucemack/microlink.git
-cd microlink
-git submodule update --remote
-mkdir build
-cd build
-cmake ..
-make <target>
+    git clone https://github.com/brucemack/microlink.git
+    cd microlink
+    git submodule update --remote
+    mkdir build
+    cd build
+    cmake ..
+    make <target>
 
 ## Building on PI PICO
 
-git clone https://github.com/brucemack/microlink.git
-cd microlink
-git submodule update --remote
-mkdir build
-cd build
-cmake -DTARGET_GROUP=pico ..
-make <target>
+    git clone https://github.com/brucemack/microlink.git
+    cd microlink
+    git submodule update --remote
+    mkdir build
+    cd build
+    cmake -DTARGET_GROUP=pico ..
+    make <target>
 
 ## ESP32 AT Firmware Notes
 
