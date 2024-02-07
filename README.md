@@ -1,6 +1,6 @@
 # Overview
 
-Is is possible to run a full EchoLink&reg; station on a microcontroller?  I'm not completely sure, but
+Is it possible to run a full EchoLink&reg; station on a microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest,
 cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink&reg;?  Please 
 [see the official website](https://www.echolink.org/) for complete information.
