@@ -265,6 +265,11 @@ void panic(const char* msg) {
     cerr << "PANIC: " << msg << endl;
     assert(false);
 }
+#else 
+void panic(const char* msg) {
+    cerr << "PANIC: " << msg << endl;
+    assert(false);
+}
 #endif
 
 }

@@ -86,6 +86,7 @@ public:
         virtual void ok() { }
         virtual void sendOk()  { }
         virtual void error()  { }
+        virtual void ready()  { }
         virtual void sendPrompt() { }
         virtual void sendSize()  { }
         virtual void domain(const char* addr)  { }
@@ -93,7 +94,7 @@ public:
             const uint8_t* data, uint32_t len)  { }
         virtual void connected(uint32_t channel)  { }
         virtual void closed(uint32_t channel)  { }
-        virtual void notification(const uint8_t* data, uint32_t len)  { }
+        virtual void notification(const char* msg);
         virtual void confused(const uint8_t* data, uint32_t len)  { }
     };
 
@@ -134,6 +135,7 @@ private:
     enum MatchType {
         OK,
         ERROR,
+        READY,
         SEND_OK,
         SEND_PROMPT,
         RECV_SIZE,

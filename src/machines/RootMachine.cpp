@@ -18,6 +18,10 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include "kc1fsz-tools/CommContext.h"
+#include "kc1fsz-tools/events/StatusEvent.h"
+
+#include "../UserInfo.h"
 #include "RootMachine.h"
 
 using namespace std;
@@ -36,14 +40,21 @@ RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo,
 }
 
 void RootMachine::start() {
-    // Start the login process
-    _logonMachine.start();
-    _state = LOGON;
+    // Reset
+    _ctx->reset();
+    _state = State::IN_RESET;
 }
 
 void RootMachine::processEvent(const Event* ev) {
     // In this state we are doing nothing waiting to be started
-    if (_state == IDLE) {
+    if (_state == State::IDLE) {
+    }
+    else if (_state == State::IN_RESET) {
+        if (ev->getType() == StatusEvent::TYPE) {
+            _state = LOGON;
+            // Start the login process
+            _logonMachine.start();
+        }
     }
     // In this state we are waiting for the EL Server to process our 
     // logon request.
@@ -53,15 +64,16 @@ void RootMachine::processEvent(const Event* ev) {
                 // No data transfer is needed.  If we succeeded in the 
                 // login then keep going.
                 _lookupMachine.start();
-                _state = LOOKUP;
+                _state = State::LOOKUP;
             } else {
-                _state = FAILED;
+                _userInfo->setStatus("Login failed");
+                _state = State::FAILED;
             }
         }
     }
     // In this state we are waiting for the EL Server to lookup the 
     // target callsign.
-    else if (_state == LOOKUP) {
+    else if (_state == State::LOOKUP) {
         if (isDoneAfterEvent(_lookupMachine, ev)) {
             if (_lookupMachine.isGood()) {
                 // Transfer the target address that we got from the EL Server
@@ -73,13 +85,13 @@ void RootMachine::processEvent(const Event* ev) {
                 // Number of connect tries
                 _stateCount = 5;
             } else {
-                _state = FAILED;
+                _state = State::FAILED;
             }
         }
     }
     // In this state we are waiting for our QSO connection to be 
     // acknowledged by the 
-    else if (_state == CONNECT) {
+    else if (_state == State::CONNECT) {
         if (isDoneAfterEvent(_connectMachine, ev)) {
             if (_connectMachine.isGood()) {
                 // The connect process establishes UDP communication paths, 

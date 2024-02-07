@@ -42,6 +42,8 @@ class AsyncChannel;
 class ESP32CommContext : public CommContext, public ATResponseProcessor::EventSink {
 public:
 
+    static int traceLevel;
+
     ESP32CommContext(AsyncChannel* esp32);
 
     /**
@@ -66,9 +68,9 @@ public:
 
     int getLiveChannelCount() const;
 
-    void setOKIgnores(int count) { _okIgnores = count; }
-
     // ------ CommContext Request Methods -------------------------------------
+
+    virtual void reset();
 
     virtual void startDNSLookup(HostName hostName);
 
@@ -77,10 +79,16 @@ public:
     virtual void connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port);
     virtual void sendTCPChannel(Channel c, const uint8_t* b, uint16_t len);
 
-    virtual Channel createUDPChannel(uint32_t localPort);
+    virtual Channel createUDPChannel();
     virtual void closeUDPChannel(Channel c);
-    virtual void sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
-        const uint8_t* b, uint16_t len);
+
+    /**
+     * In socket parlance, this performs the bind.
+     */
+    virtual void setupUDPChannel(Channel c, uint32_t localPort, 
+        IPAddress remoteIpAddr, uint32_t remotePort);
+
+    virtual void sendUDPChannel(Channel c, const uint8_t* b, uint16_t len);
 
     // ----- ATResponseProcessor::EventSink -----------------------------------
 
@@ -93,21 +101,28 @@ public:
     virtual void closed(uint32_t channel);
     virtual void ipd(uint32_t channel, uint32_t chunk,
         const uint8_t* data, uint32_t len);
+     virtual void notification(const char* msg);
 
 private:
 
     void _closeChannel(Channel c);
     void _cleanupTracker();
 
-    enum State { NONE, IN_DNS, 
+    enum State { 
+        NONE, 
+        IN_INIT,
+        IN_DNS, 
         IN_TCP_CONNECT, 
+        IN_UDP_SETUP, 
         IN_SEND_PROMPT_WAIT,
-        IN_SEND_OK_WAIT };
+        IN_SEND_OK_WAIT 
+    };
 
     State _state;
     AsyncChannel* _esp32;
     ATResponseProcessor _respProc;
     EventProcessor* _eventProc;
+    int _initCount;
 
     // A count-down counter used to ignore a specified number 
     // of OK events.  This is useful for fixed initialization 
@@ -129,6 +144,9 @@ private:
         Type type = Type::TYPE_NONE;
         enum State { STATE_NONE };
         State state = State::STATE_NONE;
+        // Used for UDP
+        IPAddress addr;
+        uint32_t port;
     };
 
     // There is a fixed number of channels

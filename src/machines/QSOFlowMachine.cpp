@@ -21,8 +21,11 @@
 #include "kc1fsz-tools/CommContext.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
 #include "kc1fsz-tools/events/TickEvent.h"
+#include "kc1fsz-tools/events/SendEvent.h"
+#include "kc1fsz-tools/AudioOutputContext.h"
 
 #include "../common.h"
+#include "../UserInfo.h"
 
 #include "QSOConnectMachine.h"
 #include "QSOFlowMachine.h"
@@ -30,10 +33,6 @@
 using namespace std;
 
 namespace kc1fsz {
-
-// TODO: CONSOLIDATE
-static const uint32_t RTP_PORT = 5198;
-static const uint32_t RTCP_PORT = 5199;
 
 // Significance?
 // d8 20 a2 e1 5a 50 00 49 24 92 49 24 50 00 49 24 92 49 24 50 00 49 24 92 49 24 50 00 49 24 92 49 24
@@ -43,6 +42,11 @@ static const uint8_t SPEC_FRAME[33] = {
  0x92, 0x49, 0x24, 0x50, 0x00, 0x49, 0x24, 0x92, 
  0x49, 0x24, 0x50, 0x00, 0x49, 0x24, 0x92, 0x49, 
  0x24 };
+
+// How often we send activity on the UDP connections
+static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10000;
+
+int QSOFlowMachine::traceLevel = 0;
 
 QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
@@ -57,121 +61,159 @@ void QSOFlowMachine::start() {
     _state = OPEN;
 }
 
-void QSOFlowMachine::processEvent(const Event* ev) {
-    // In this state we are waiting for the reciprocal RTCP message
-    if (_state == OPEN) {
-        if (ev->getType() == UDPReceiveEvent::TYPE) {
+void QSOFlowMachine::_processUDPReceive(const UDPReceiveEvent* evt) {
 
-            const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
+    if (evt->getChannel() == _rtcpChannel) {
 
-            if (evt->getChannel() == _rtcpChannel) {
-                
-                cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
-                prettyHexDump(evt->getData(), evt->getDataLen(), cout);
-               
-               _lastKeepAliveRecvMs = time_ms();
+        if (traceLevel > 0) {
+            cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
+            prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+        }
+        
+        _lastKeepAliveRecvMs = time_ms();
 
-                if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
-                }
+        if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
+        }
+    }
+    else if (evt->getChannel() == _rtpChannel) {
 
+        _lastKeepAliveRecvMs = time_ms();
+
+        if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
+
+            if (traceLevel > 0) {
+                cout << "QSOFLowMachine: Audio" << endl;
             }
-            else if (evt->getChannel() == _rtpChannel) {
 
-                _lastKeepAliveRecvMs = time_ms();
+            // Unload the GSM frames from the RTP packet
+            //uint16_t remoteSeq = 0;
+            //uint32_t remoteSSRC = 0;
+            const uint8_t* d = evt->getData();
 
-                if (isRTPAudioPacket(evt->getData(), evt->getDataLen())) {
+            //remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
+            //remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
+            //    ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
 
-                    // Unload the GSM frames from the RTP packet
-                    //uint16_t remoteSeq = 0;
-                    //uint32_t remoteSSRC = 0;
-                    const uint8_t* d = evt->getData();
+            const uint32_t framesPerPacket = 4;
+            const uint32_t samplesPerFrame = 160;
+            int16_t pcmData[framesPerPacket * samplesPerFrame];
+            uint32_t pcmPtr = 0;
+            Parameters params;
 
-                    //remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
-                    //remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
-                    //    ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
-
-                    const uint32_t framesPerPacket = 4;
-                    const uint32_t samplesPerFrame = 160;
-                    int16_t pcmData[framesPerPacket * samplesPerFrame];
-                    uint32_t pcmPtr = 0;
-                    Parameters params;
-
-                    // Process each of the GSM frame independently/sequentially
-                    const uint8_t* frame = (d + 12);
-                    for (uint16_t f = 0; f < framesPerPacket; f++) {
-                        // TODO: EXPLAIN?
-                        if (memcmp(SPEC_FRAME, frame, 33) == 0) {
-                            cout << "HIT" << endl;
-                            for (uint32_t i = 0; i < 160; i++) {
-                                pcmData[pcmPtr + i] = 0;
-                            }
-                        } 
-                        else {
-                            // TODO: PROVIDE AN UNPACK THAT CONTAINS STATE
-                            kc1fsz::PackingState state;
-                            params.unpack(frame, &state);
-                            _gsmDecoder.decode(&params, pcmData + pcmPtr);
-                        }
-                        pcmPtr += samplesPerFrame;
-                        frame += 33;
+            // Process each of the GSM frame independently/sequentially
+            const uint8_t* frame = (d + 12);
+            for (uint16_t f = 0; f < framesPerPacket; f++) {
+                // TODO: EXPLAIN?
+                if (memcmp(SPEC_FRAME, frame, 33) == 0) {
+                    for (uint32_t i = 0; i < 160; i++) {
+                        pcmData[pcmPtr + i] = 0;
                     }
-
-                    // Hand off to the audio context to play the audio
-                    _audioOutput->play(pcmData);
                 } 
-                else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
-                    cout << "ONDATA?" << endl;
-                    prettyHexDump(evt->getData(), evt->getDataLen(), cout);
-                    // Make sure the message is null-terminated one way or the other
-                    char temp[64];
-                    memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
-                    temp[std::min((uint32_t)63, evt->getDataLen())] = 0;
-                    // Here we skip past the oNDATA part when we report the message
-                    _userInfo->setOnData(temp + 6);
+                else {
+                    // TODO: PROVIDE AN UNPACK THAT CONTAINS STATE
+                    kc1fsz::PackingState state;
+                    params.unpack(frame, &state);
+                    _gsmDecoder.decode(&params, pcmData + pcmPtr);
                 }
+                pcmPtr += samplesPerFrame;
+                frame += 33;
             }
+
+            // Hand off to the audio context to play the audio
+            _audioOutput->play(pcmData);
+        } 
+        else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
+            if (traceLevel > 0) {
+                cout << "QSOFLowMachine: oNDATA" << endl;
+                prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+            }
+            // Make sure the message is null-terminated one way or the other
+            char temp[64];
+            memcpyLimited((uint8_t*)temp, evt->getData(), evt->getDataLen(), 63);
+            temp[std::min((uint32_t)63, evt->getDataLen())] = 0;
+            // Here we skip past the oNDATA part when we report the message
+            _userInfo->setOnData(temp + 6);
         }
+    }
+}
 
-        // Always check to make sure it's not time for keep-alive
-        if (time_ms() > _lastKeepAliveSentMs + 10000) {
+void QSOFlowMachine::_processTick(const TickEvent* evt) {
+    // Check to make sure it's not time for us to generate a 
+    // keep-alive
+    if (_state == State::OPEN) {
+        if (time_ms() > _lastKeepAliveSentMs + KEEP_ALIVE_INTERVAL_MS) {
+            _state = State::OPEN_RTCP_PING_0;
+        }
+    }
+    if (time_ms() > _lastKeepAliveRecvMs + (3 * KEEP_ALIVE_INTERVAL_MS)) {
+        _userInfo->setStatus("Remote station not responding");
+        _state = State::FAILED;
+    }
+}
 
+void QSOFlowMachine::processEvent(const Event* ev) {
+
+    if (traceLevel > 0) {
+        cout << "QSOFlowMachine: state=" << _state 
+            << " event=" << ev->getType() <<  endl;
+    }
+
+    // Deal with the async events regardless of the state
+    if (ev->getType() == UDPReceiveEvent::TYPE) {
+        _processUDPReceive(static_cast<const UDPReceiveEvent*>(ev));
+    }
+    else if (ev->getType() == TickEvent::TYPE) {
+        _processTick(static_cast<const TickEvent*>(ev));
+    }
+
+    if (_state == State::OPEN) {
+    }
+    else if (_state == State::OPEN_RTCP_PING_0) {
+        const uint16_t packetSize = 128;
+        uint8_t packet[packetSize];
+        // Make the SDES message and send
+        uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
+        _ctx->sendUDPChannel(_rtcpChannel, packet, packetLen);
+        _state = State::OPEN_RTCP_PING_1;
+    }
+    else if (_state == State::OPEN_RTCP_PING_1) {
+        if (ev->getType() == SendEvent::TYPE) {
+            _state = State::OPEN_RTP_PING_0;
+        }
+    }
+    else if (_state == State::OPEN_RTP_PING_0) {
+
+        const uint16_t packetSize = 128;
+        uint8_t packet[packetSize];
+        // Make the initial oNDATA message for the RTP port
+        const uint16_t bufferSize = 64;
+        char buffer[bufferSize];
+        buffer[0] = 0;
+        strcatLimited(buffer, "oNDATA\r", bufferSize);
+        strcatLimited(buffer, _callSign.c_str(), bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, "MicroLink V ", bufferSize);
+        strcatLimited(buffer, VERSION_ID, bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, _fullName.c_str(), bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, _location.c_str(), bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        uint32_t packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
+        _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
+
+        _state = State::OPEN_RTP_PING_1;
+    }
+    else if (_state == State::OPEN_RTP_PING_1) {
+        if (ev->getType() == SendEvent::TYPE) {
+            _state = State::OPEN;
             _lastKeepAliveSentMs = time_ms();
-
-            const uint16_t packetSize = 128;
-            uint8_t packet[packetSize];
-            // Make the SDES message and send
-            uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
-            _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
-
-            // Make the initial oNDATA message for the RTP port
-            const uint16_t bufferSize = 64;
-            char buffer[bufferSize];
-            buffer[0] = 0;
-            strcatLimited(buffer, "oNDATA\r", bufferSize);
-            strcatLimited(buffer, _callSign.c_str(), bufferSize);
-            strcatLimited(buffer, "\r", bufferSize);
-            strcatLimited(buffer, "MicroLink V ", bufferSize);
-            strcatLimited(buffer, VERSION_ID, bufferSize);
-            strcatLimited(buffer, "\r", bufferSize);
-            strcatLimited(buffer, _fullName.c_str(), bufferSize);
-            strcatLimited(buffer, "\r", bufferSize);
-            strcatLimited(buffer, _location.c_str(), bufferSize);
-            strcatLimited(buffer, "\r", bufferSize);
-            packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-            _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
-        }
-
-        // Always check to make sure the other side is still there
-        if (time_ms() > _lastKeepAliveRecvMs + 30000) {
-            // Wrap up
-            // TODO: ADD CLEANUP STATE
-            _state = SUCCEEDED;
         }
     }
 }
 
 bool QSOFlowMachine::isDone() const {
-    return (_state == SUCCEEDED);
+    return (_state == SUCCEEDED || _state == FAILED);
 }
 
 bool QSOFlowMachine::isGood() const {

@@ -24,10 +24,12 @@
 
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/TCPConnectEvent.h"
+#include "kc1fsz-tools/events/ChannelSetupEvent.h"
 #include "kc1fsz-tools/events/TCPDisconnectEvent.h"
 #include "kc1fsz-tools/events/TCPReceiveEvent.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
 #include "kc1fsz-tools/events/SendEvent.h"
+#include "kc1fsz-tools/events/StatusEvent.h"
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/EventProcessor.h"
 #include "kc1fsz-tools/AsyncChannel.h"
@@ -39,6 +41,10 @@
 using namespace std;
 
 namespace kc1fsz {
+
+static const char* OVERFLOW_MSG = "Overflow";
+
+int ESP32CommContext::traceLevel = 0;
 
 ESP32CommContext::ESP32CommContext(AsyncChannel* esp32) 
 :   _state(State::NONE),
@@ -76,8 +82,6 @@ bool ESP32CommContext::poll() {
         const uint32_t bufSize = 256;
         uint8_t buf[bufSize];
         uint32_t bufLen = _esp32->read(buf, bufSize);
-        cout << "ESP32CommContext GOT:" << endl;
-        prettyHexDump(buf, bufLen, cout);
         _respProc.process(buf, bufLen);
         anythingHappened = true;
     }
@@ -90,6 +94,16 @@ void ESP32CommContext::_cleanupTracker() {
 
 int ESP32CommContext::getLiveChannelCount() const {
     return 0;
+}
+
+void ESP32CommContext::reset() {
+    
+    _initCount = 0;
+    _state = State::IN_INIT;
+
+    const char* cmd = "AT+RST\r\n";
+    uint32_t cmdLen = strlen(cmd);
+    _esp32->write((uint8_t*)cmd, cmdLen);
 }
 
 void ESP32CommContext::startDNSLookup(HostName hostName) {
@@ -123,7 +137,7 @@ void ESP32CommContext::closeTCPChannel(Channel c) {
 void ESP32CommContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port) {
 
     if (!c.isGood()) {
-        //panic("Bad channel");
+        panic("Bad channel");
         return;
     }
 
@@ -140,14 +154,17 @@ void ESP32CommContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t p
 }
 
 void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {
+
     if (!c.isGood()) {
         return;
     }
+
     // Grab a copy of the the data
     if (len > _sendHoldSize) {
-        // TODO: PANIC
+        panic(OVERFLOW_MSG);
         return;
     } 
+
     memcpyLimited(_sendHold, b, len, _sendHoldSize);
     _sendHoldLen = len;
 
@@ -160,8 +177,16 @@ void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len)
     _state = State::IN_SEND_PROMPT_WAIT;
 }
 
-Channel ESP32CommContext::createUDPChannel(uint32_t localPort) {
-    return Channel(0);
+Channel ESP32CommContext::createUDPChannel() {
+    for (int i = 0; i < 9; i++) {
+        if (!_tracker[i].inUse) {
+            _tracker[i].inUse = true;
+            _tracker[i].type = ChannelTracker::Type::TYPE_UDP;
+            _tracker[i].state = ChannelTracker::State::STATE_NONE;
+            return Channel(i, true);
+        }
+    }
+    return Channel(0, false);
 }
 
 void ESP32CommContext::closeUDPChannel(Channel c) {  
@@ -171,32 +196,102 @@ void ESP32CommContext::closeUDPChannel(Channel c) {
 void ESP32CommContext::_closeChannel(Channel c) {  
 }
 
-void ESP32CommContext::sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
-    const uint8_t* b, uint16_t len) {
+/**
+    * In socket parlance, this performs the bind.
+    */
+void ESP32CommContext::setupUDPChannel(Channel c, uint32_t localPort, 
+    IPAddress remoteIpAddr, uint32_t remotePort) {
 
-    char buf[64];
-    formatIP4Address(targetAddr.getAddr(), buf, 64);
-
-    cout << "UDP Send to " << buf << ":" << targetPort << endl;
-    prettyHexDump(b, len, cout);
-}
-
-void ESP32CommContext::ok() {
-
-    if (_okIgnores > 0) {
-        _okIgnores--;
+    if (!c.isGood()) {
+        panic("Bad channel");
         return;
     }
 
-    if (_state == State::IN_DNS) {
-        cout << "ESP32CommContext: OK (IN_DNS)" << endl;
+    // Update the tracker
+    if (c.getId() >= 9 || !_tracker[c.getId()].inUse ||
+        _tracker[c.getId()].type != ChannelTracker::Type::TYPE_UDP) {
+        panic("Bad channel");
+        return;
+    }
+
+    _tracker[c.getId()].addr = remoteIpAddr;
+    _tracker[c.getId()].port = remotePort;
+
+    char addr[32];
+    formatIP4Address(_tracker[c.getId()].addr.getAddr(), addr, 32);
+
+    _lastChannel = c;
+    _state = State::IN_UDP_SETUP;
+
+    char buf[64];
+    sprintf(buf, "AT+CIPSTART=%d,\"UDP\",\"%s\",%lu,%lu,2\r\n",
+        c.getId(), addr, remotePort, localPort);
+    _esp32->write((uint8_t*)buf, strlen(buf));
+}
+
+void ESP32CommContext::sendUDPChannel(Channel c,
+    const uint8_t* b, uint16_t len) {
+
+    if (!c.isGood()) {
+        return;
+    }
+
+    // Grab a copy of the the data
+    if (len > _sendHoldSize) {
+        panic(OVERFLOW_MSG);
+        return;
+    } 
+    memcpyLimited(_sendHold, b, len, _sendHoldSize);
+    _sendHoldLen = len;
+
+    char addr[32];
+    formatIP4Address(_tracker[c.getId()].addr.getAddr(), addr, 32);
+
+    // Make the send request, wich includes address/port for UDP
+    char buf[64];
+    sprintf(buf, "AT+CIPSEND=%d,%d,\"%s\",%lu\r\n", c.getId(), len,
+        addr, _tracker[c.getId()].port);
+    _esp32->write((uint8_t*)buf, strlen(buf));
+
+    // Now we wait for the prompt to tell us it's OK to send the data
+    _state = State::IN_SEND_PROMPT_WAIT;
+}
+
+void ESP32CommContext::ok() {
+    if (_state == State::IN_INIT) {
+        if (_initCount == 1) {
+            const char* cmd = "AT+CWMODE=1\r\n";
+            uint32_t cmdLen = strlen(cmd);
+            _esp32->write((uint8_t*)cmd, cmdLen);
+            _initCount = 2;
+        }
+        else if (_initCount == 2) {
+            const char* cmd = "AT+CIPMUX=1\r\n";
+            uint32_t cmdLen = strlen(cmd);
+            _esp32->write((uint8_t*)cmd, cmdLen);
+            _initCount = 3;
+        }
+        else if (_initCount == 3) {
+            _state = State::NONE;
+            StatusEvent ev;
+            _eventProc->processEvent(&ev);
+        }
+    }
+    else if (_state == State::IN_DNS) {
         _state = State::NONE;
         DNSLookupEvent ev(_lastHostNameReq, _lastAddrResp);
         _eventProc->processEvent(&ev);
-    } else if (_state == State::IN_TCP_CONNECT) {
-        cout << "ESP32CommContext: OK (IN_TCP_CONNECT)" << endl;
+    } 
+    else if (_state == State::IN_TCP_CONNECT) {
         _state = State::NONE;
         TCPConnectEvent ev(_lastChannel);
+        _eventProc->processEvent(&ev);
+    }
+    // TODO: GENERALIZE FOR TCP
+    else if (_state == State::IN_UDP_SETUP) {
+        cout << "ESP32CommContext: OK (IN_UDP_SETUP)" << endl;
+        // Create an event and forward
+        ChannelSetupEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
     }
     else {
@@ -248,7 +343,6 @@ void ESP32CommContext::domain(const char* addr) {
 
 void ESP32CommContext::connected(uint32_t channel) {
     cout << "ESP32CommContext::connected()" << endl;
-    // Not doing anything with this
 }
 
 void ESP32CommContext::closed(uint32_t channel) {
@@ -274,8 +368,7 @@ void ESP32CommContext::closed(uint32_t channel) {
 void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
     const uint8_t* data, uint32_t len) {   
     if (len > 256) {
-        cout << "Length error!" << endl;
-        // PANIC
+        panic("Length error!");
         return;
     }
     if (channel < 9) {
@@ -284,9 +377,30 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
                 TCPReceiveEvent ev(Channel(channel), data, len);
                 _eventProc->processEvent(&ev);
             }    
+            else if (_tracker[channel].type == ChannelTracker::Type::TYPE_UDP) {
+                UDPReceiveEvent ev(Channel(channel), data, len);
+                _eventProc->processEvent(&ev);
+            }    
         }
     }
 }
+
+void ESP32CommContext::notification(const char* msg) {
+    if (traceLevel > 0) {
+        cout << "notification: " << msg << endl;
+    }
+    if (_state == State::IN_INIT) {
+        if (_initCount == 0) {
+            if (strcmp(msg,"WIFI GOT IP") == 0) {
+                const char* cmd = "ATE0\r\n";
+                uint32_t cmdLen = strlen(cmd);
+                _esp32->write((uint8_t*)cmd, cmdLen);
+                _initCount = 1;
+            }
+        }
+    }
+}
+
 
 }
 

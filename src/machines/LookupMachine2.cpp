@@ -143,6 +143,8 @@ void LookupMachine2::processEvent(const Event* ev) {
                         ipAddr[delimPoints[3] - delimPoints[2]] = 0;
 
                         cout << ipAddr << endl;
+                        // Spoof
+                        //strcpy(ipAddr, "192.168.8.102");
 
                         // In network byte order!
                         _targetAddr = parseIP4Address(ipAddr);

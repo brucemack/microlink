@@ -95,6 +95,11 @@ int main(int, const char**) {
 
     cout << "===== MicroLink Test 2p ======================================" << endl;
 
+    ESP32CommContext::traceLevel = 1;
+    QSOFlowMachine::traceLevel = 1;
+    PicoUartChannel::traceLevel = 1;
+    LogonMachine::traceLevel = 1;
+
     // Sertup UART and timer
     const uint32_t readBufferSize = 256;
     uint8_t readBuffer[readBufferSize];
@@ -109,48 +114,33 @@ int main(int, const char**) {
 
     ESP32CommContext ctx(&channel);
 
-    // Do a flush of any garbage on the line before we start 
+    // Do a flush of any garbage on the serial line before we start 
     // protocol processing.
-    cout << "  Flushed " << ctx.flush(250) << " bytes." << endl;
+    ctx.flush(250);
 
     // TODO: MAKE A NICE WAY TO STREAM A SET OF INITIAL COMMANDS
     {
         const char* cmd;
         uint32_t cmdLen;
+        
         /*
-        // Stop echo
         cmd = "AT+RST\r\n";
+        cmdLen = strlen(cmd);
+        channel.write((const uint8_t*)cmd, cmdLen);
+        sleep_ms(100);
+        */
+        /*
+        cmd = "AT+CWJAP?\r\n";
         cmdLen = strlen(cmd);
         channel.write((const uint8_t*)cmd, cmdLen);
         sleep_ms(10);
         */
-        // Stop echo
-        cmd = "ATE0\r\n";
+        /*
+        cmd = "AT+CWJAP=\"Gloucester Island Municipal WIFI\",\"xxxx\"\r\n";
         cmdLen = strlen(cmd);
         channel.write((const uint8_t*)cmd, cmdLen);
         sleep_ms(10);
-
-        // Setup station mode
-        cmd = "AT+CWMODE=1\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-
-        // Setup mux
-        cmd = "AT+CIPMUX=1\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-
-        // Close all connections
-        cmd = "AT+CIPCLOSE=5\r\n";
-        cmdLen = strlen(cmd);
-        channel.write((const uint8_t*)cmd, cmdLen);
-        sleep_ms(10);
-
-        // Make sure we don't do anything with the OKs that come back
-        // from the setup steps above
-        ctx.setOKIgnores(4);
+        */
     }
 
     TestUserInfo info;
@@ -162,8 +152,9 @@ int main(int, const char**) {
     rm.setServerPort(5200);
     //rm.setServerPort(80);
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString("xxxxxxx"));
+    rm.setPassword(FixedString("xxx"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
+    rm.setFullName(FixedString("Bruce R. MacKinnon"));
     //rm.setTargetCallSign(CallSign("W1TKZ-L"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
@@ -173,9 +164,11 @@ int main(int, const char**) {
     uint32_t lastAudioTickMs = 0;
 
     PicoPerfTimer socketTimer;
-    PicoPerfTimer audioTimer;
     uint32_t longestSocketUs = 0;
-    uint32_t longestAudioUs = 0;
+
+    PicoPollTimer audioTimer;
+    // Get a 8,000 cycle
+    audioTimer.setIntervalUs(125);
 
     // Here is the main event loop
     uint32_t cycle = 0;
@@ -184,14 +177,22 @@ int main(int, const char**) {
 
     while (true) {
 
-        // Poll the audio system 
-        audioTimer.reset();
-        bool audioActivity = audioOutContext.poll();
-        uint32_t ela = audioTimer.elapsedUs();
-        if (ela > longestAudioUs) {
-            longestAudioUs = ela;
-            cout << "Longest Audio " << longestAudioUs << endl;
+        int c = getchar_timeout_us(0);
+        if (c > 0) {
+            cout << (char)c;
+            cout.flush();
+            if (c == 'q') {
+                break;
+            }
         }
+
+        if (rm.isDone()) {
+            break;
+        }
+
+        // Poll the audio system at 8,000kHz
+        if (audioTimer.poll())
+            audioOutContext.poll();
         
         // Poll the communications system and pass any inbound bytes
         // over to the communications context.
@@ -205,18 +206,22 @@ int main(int, const char**) {
 
         //bool activity = audioActivity || commActivity;
 
-        /*
-        // Generate the audio clock every 20ms (160*4 samples)
+        // Generate the tick (needed for timeouts, etc)
         uint32_t now = time_ms();
-        if (now - lastAudioTickMs >= 80) {
+        if (now - lastAudioTickMs >= 1000) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
-        */
 
+        // Used to make sure we are still alive
         cycle++;
         if (cycle % 10000000 == 0) {
-            //cout << cycle << endl;
+            cout << cycle << endl;
         }
+    }
+
+    cout << "Left event loop" << endl;
+
+    while (true) {        
     }
 }

@@ -174,6 +174,12 @@ ATResponseProcessor::Matcher ATResponseProcessor::_matchers[] = {
             p._reset();
         }
     } ,
+    { MatchType::READY, false, "\r\nready\r\n",
+        [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
+            p._sink->ready();
+            p._reset();
+        }
+    } ,
     { MatchType::SEND_PROMPT, false, "\r\n>",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             p._sink->sendPrompt();
@@ -211,7 +217,9 @@ ATResponseProcessor::Matcher ATResponseProcessor::_matchers[] = {
     } ,
     { MatchType::NOTIFICATION, false, 0,
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
-            p._sink->notification(p._acc, p._accUsed - 2);
+            // Null terminate
+            p._acc[p._accUsed - 2] = 0;
+            p._sink->notification((const char*)p._acc);
             p._reset();
         }
     } 
@@ -227,6 +235,7 @@ bool ATResponseProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
     if (type == MatchType::OK ||
         type == MatchType::SEND_OK ||
         type == MatchType::ERROR ||
+        type == MatchType::READY ||
         type == MatchType::SEND_PROMPT ||
         type == MatchType::RECV_SIZE ||
         type == MatchType::DOMAIN ||
@@ -270,7 +279,7 @@ bool ATResponseProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
             alive = false;
         }
         matchPtr++;
-        // Just looking for a block of text that ends with 0x0d x00a
+        // Just looking for a block of text that ends with 0x0d x0a
         if (lastByte == 0x0d && b == 0x0a) {
             return true;
         }

@@ -37,7 +37,10 @@ using namespace std;
 
 namespace kc1fsz {
 
+static const uint32_t DNS_TIMEOUT_MS = 10000;
 static const uint32_t CONNECT_TIMEOUT_MS = 2000;
+
+int LogonMachine::traceLevel = 0;
 
 LogonMachine::LogonMachine(CommContext* ctx, UserInfo* userInfo) 
 :   _state(IDLE),
@@ -50,11 +53,11 @@ LogonMachine::LogonMachine(CommContext* ctx, UserInfo* userInfo)
 void LogonMachine::start() {
     _channel = Channel(0, false);
     _logonRespPtr = 0;
+    _state = DNS_WAIT;
     // Launch the DNS resolution process
     _ctx->startDNSLookup(_serverHostName);
     // We give the lookup 5 seconds to complete
-    _setTimeoutMs(time_ms() + 5000);
-    _state = DNS_WAIT;
+    _setTimeoutMs(time_ms() + DNS_TIMEOUT_MS);
 }
 
 void LogonMachine::cleanup() {
@@ -63,7 +66,9 @@ void LogonMachine::cleanup() {
 
 void LogonMachine::processEvent(const Event* ev) {
 
-    cout << "LogonMachine state=" << _state << " event=" << ev->getType() << endl;
+    if (traceLevel > 0) {
+        cout << "LogonMachine: state=" << _state << " event=" << ev->getType() << endl;
+    }
 
     // In this state we are waiting for the DNS resolution to complete
     if (_state == DNS_WAIT) {
@@ -86,6 +91,7 @@ void LogonMachine::processEvent(const Event* ev) {
             }
         }
         else if (_isTimedOut()) {
+            _userInfo->setStatus("DNS timed out");
             // TODO: MESSAGE
             _state = FAILED;
         }
