@@ -82,10 +82,6 @@ bool ESP32CommContext::poll() {
         const uint32_t bufSize = 256;
         uint8_t buf[bufSize];
         uint32_t bufLen = _esp32->read(buf, bufSize);
-        if (traceLevel > 0) {
-            cout << "ESP32CommContext GOT:" << endl;
-            prettyHexDump(buf, bufLen, cout);
-        }
         _respProc.process(buf, bufLen);
         anythingHappened = true;
     }
@@ -277,7 +273,6 @@ void ESP32CommContext::ok() {
         }
         else if (_initCount == 3) {
             _state = State::NONE;
-            cout << "READY!" << endl;
             StatusEvent ev;
             _eventProc->processEvent(&ev);
         }

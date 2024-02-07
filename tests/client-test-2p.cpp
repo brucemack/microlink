@@ -114,9 +114,9 @@ int main(int, const char**) {
 
     ESP32CommContext ctx(&channel);
 
-    // Do a flush of any garbage on the line before we start 
+    // Do a flush of any garbage on the serial line before we start 
     // protocol processing.
-    cout << "  Flushed " << ctx.flush(250) << " bytes." << endl;
+    ctx.flush(250);
 
     // TODO: MAKE A NICE WAY TO STREAM A SET OF INITIAL COMMANDS
     {
@@ -164,25 +164,35 @@ int main(int, const char**) {
     uint32_t lastAudioTickMs = 0;
 
     PicoPerfTimer socketTimer;
-    PicoPerfTimer audioTimer;
     uint32_t longestSocketUs = 0;
-    uint32_t longestAudioUs = 0;
+
+    PicoPollTimer audioTimer;
+    // Get a 8,000 cycle
+    audioTimer.setIntervalUs(125);
 
     // Here is the main event loop
     uint32_t cycle = 0;
 
     rm.start();
 
-    while (!rm.isDone()) {
+    while (true) {
 
-        // Poll the audio system 
-        audioTimer.reset();
-        bool audioActivity = audioOutContext.poll();
-        uint32_t ela = audioTimer.elapsedUs();
-        if (ela > longestAudioUs) {
-            longestAudioUs = ela;
-            cout << "Longest Audio " << longestAudioUs << endl;
+        int c = getchar_timeout_us(0);
+        if (c > 0) {
+            cout << (char)c;
+            cout.flush();
+            if (c == 'q') {
+                break;
+            }
         }
+
+        if (rm.isDone()) {
+            break;
+        }
+
+        // Poll the audio system at 8,000kHz
+        if (audioTimer.poll())
+            audioOutContext.poll();
         
         // Poll the communications system and pass any inbound bytes
         // over to the communications context.
@@ -198,11 +208,12 @@ int main(int, const char**) {
 
         // Generate the tick (needed for timeouts, etc)
         uint32_t now = time_ms();
-        if (now - lastAudioTickMs >= 500) {
+        if (now - lastAudioTickMs >= 1000) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
 
+        // Used to make sure we are still alive
         cycle++;
         if (cycle % 10000000 == 0) {
             cout << cycle << endl;
