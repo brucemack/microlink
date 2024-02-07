@@ -45,6 +45,8 @@ This is the most comprehensive demonstration that targets the RP2040.
 
 ## Building Tests on Windows (CYGWIN)
 
+(These notes are not comprehensive yet.)
+
     git clone https://github.com/brucemack/microlink.git
     cd microlink
     git submodule update --remote
@@ -54,6 +56,8 @@ This is the most comprehensive demonstration that targets the RP2040.
     make <target>
 
 ## Building on PI PICO
+
+(These notes are not comprehensive yet.)
 
     git clone https://github.com/brucemack/microlink.git
     cd microlink
