@@ -22,6 +22,7 @@
 #define _RootMachine_h
 
 #include "kc1fsz-tools/Event.h"
+#include "kc1fsz-tools/AudioSink.h"
 
 #include "../StateMachine.h"
 
@@ -37,7 +38,7 @@ class CommContext;
 class UserInfo;
 class AudioOutputContext;
 
-class RootMachine : public StateMachine {
+class RootMachine : public StateMachine, public AudioSink {
 public:
 
     RootMachine(CommContext* ctx, UserInfo* userInfo, AudioOutputContext* audioOutput);
@@ -54,6 +55,14 @@ public:
     void setTargetCallSign(CallSign target);
     void setFullName(FixedString n);
     void setLocation(FixedString loc);
+
+    /**
+     * @param frame 160 x 4 samples of 16-bit PCM audio.
+     * @return true if the audio was taken, or false if the 
+     *   session is busy and the TX will need to be 
+     *   retried.
+    */
+    bool play(const int16_t* frame);
 
 private:
 

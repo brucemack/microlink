@@ -51,6 +51,7 @@
 #include "machines/RootMachine.h"
 #include "contexts/ESP32CommContext.h"
 #include "contexts/I2CAudioOutputContext.h"
+#include "contexts/PicoAudioInputContext.h"
 
 #include "TestUserInfo.h"
 
@@ -178,11 +179,13 @@ int main(int, const char**) {
     ctx.flush(250);
 
     TestUserInfo info;
-    // NOTE: Audio is decoded in 4-frame chunks.
+    // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
         audioBufDepthLog2, audioBuf);
+    PicoAudioInputContext audioInContext;
 
     RootMachine rm(&ctx, &info, &audioOutContext);
+    audioInContext.setSink(&rm);
 
     // TODO: Move configuration out 
     rm.setServerName(HostName("naeast.echolink.org"));

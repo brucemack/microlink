@@ -21,16 +21,13 @@
 #ifndef _QSOFlowMachine_h
 #define _QSOFlowMachine_h
 
-//#include "kc1fsz-tools/Event.h"
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/Channel.h"
-//#include "kc1fsz-tools/AudioOutputContext.h"
 #include "gsm-0610-codec/Decoder.h"
 
 #include "../StateMachine.h"
-//#include "../UserInfo.h"
 
 namespace kc1fsz {
 
@@ -62,6 +59,14 @@ public:
     void setRTPChannel(Channel c)  { _rtpChannel = c; }
     void setSSRC(uint32_t s) { _ssrc = s; }
 
+    /**
+     * @param frame 160 x 4 samples of 16-bit PCM audio.
+     * @return true if the audio was taken, or false if the 
+     *   session is busy and the TX will need to be 
+     *   retried.
+    */
+    bool txAudio(const int16_t* frame);
+
 private:
     
     void _processUDPReceive(const UDPReceiveEvent* evt);
@@ -92,8 +97,10 @@ private:
     uint32_t _ssrc;
     uint32_t _lastKeepAliveSentMs;
     uint32_t _lastKeepAliveRecvMs;
-
     Decoder _gsmDecoder;
+
+    bool _txAudioPending;
+    int16_t _txAudio[160 * 4];
 };
 
 }
