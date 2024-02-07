@@ -100,7 +100,9 @@ void QSOFlowMachine::_processUDPReceive(const UDPReceiveEvent* evt) {
             uint32_t pcmPtr = 0;
             Parameters params;
 
-            // Process each of the GSM frame independently/sequentially
+            // Process each of the GSM frame independently/sequentially.
+            // Each packet received will result in a call to 
+            // _adioOutput->play() with 160x4 samples.
             const uint8_t* frame = (d + 12);
             for (uint16_t f = 0; f < framesPerPacket; f++) {
                 // TODO: EXPLAIN?
@@ -119,7 +121,7 @@ void QSOFlowMachine::_processUDPReceive(const UDPReceiveEvent* evt) {
                 frame += 33;
             }
 
-            // Hand off to the audio context to play the audio
+            // Hand off 160x4 samples to the audio context to play the audio
             _audioOutput->play(pcmData);
         } 
         else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {

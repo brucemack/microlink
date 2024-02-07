@@ -257,6 +257,7 @@ add_executable(client-test-2p
   src/ATResponseProcessor.cpp
   src/common.cpp
   src/contexts/ESP32CommContext.cpp
+  src/contexts/I2CAudioOutputContext.cpp
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/LookupMachine2.cpp

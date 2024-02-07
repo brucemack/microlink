@@ -96,5 +96,6 @@ References
   - http://www.techmind.org/wave/
   - http://midi.teragonaudio.com/tech/lowaud.htm
   - http://soundfile.sapp.org/doc/WaveFormat/
-  
+  - DAC: https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf
+
 

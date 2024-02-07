@@ -33,12 +33,15 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <cmath>
 
 #include "pico/stdlib.h"
 #include "pico/time.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
+#include "hardware/irq.h"
+#include "hardware/sync.h"
 
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
@@ -47,10 +50,11 @@
 
 #include "machines/RootMachine.h"
 #include "contexts/ESP32CommContext.h"
-#include "TestAudioOutputContext.h"
+#include "contexts/I2CAudioOutputContext.h"
+
 #include "TestUserInfo.h"
 
-const uint LED_PIN = 25;
+#define LED_PIN (25)
 
 #define UART_ID uart0
 #define UART_TX_PIN 0
@@ -60,16 +64,59 @@ const uint LED_PIN = 25;
 #define U_STOP_BITS 1
 #define U_PARITY UART_PARITY_NONE
 
+#define I2C0_SDA (4) // Phy Pin 6: I2C channel 0 - data
+#define I2C0_SCL (5) // Phy Pin 7: I2C channel 0 - clock
+
 using namespace std;
 using namespace kc1fsz;
 
 // The size of one EchoLink RTP packet (after decoding)
-static const int audioFrameSize = 160 * 4;
-static const int audioFrameCount = 16;
-// Double-buffer
-static int16_t audioFrameOut[audioFrameCount * audioFrameSize];
-// Double-buffer
-static int16_t silenceFrameOut[2 * audioFrameSize];
+static const int audioFrameSize = 160;
+// Double-buffer in player
+static int16_t audioBuf[audioFrameSize * 4 * 2];
+
+static void testTone(AudioOutputContext& ctx) {
+
+    // Make a 1kHz tone at the right sample rate
+    int16_t buf[audioFrameSize * 4];
+    float omega = (2.0 * 3.1415926) * (1000.0 / 8000.0);
+    float phi = 0;
+    for (uint32_t i = 0; i < audioFrameSize * 4; i++) {
+        float a = std::cos(phi);
+        phi += omega;
+        buf[i] = 32766.0 * a;
+    }
+
+    // Mini blocking event loop (2 seconds)
+    PicoPollTimer timer;
+    PicoPerfTimer timer2;
+    timer2.reset();
+    timer.setIntervalUs(125 * 160 * 4);
+    uint32_t frameCount = 0;
+    uint32_t actCount = 0;
+    uint32_t longestPoll = 0;
+
+    ctx.reset();
+
+    while (frameCount < 25) {
+        // Keep the audio going
+        timer2.reset();
+        if (ctx.poll()) {
+            actCount++;
+        }
+        if (timer2.elapsedUs() > longestPoll) {
+            longestPoll = timer2.elapsedUs();
+        }
+        // Figure out if it's time to feed more
+        if (timer.poll()) {
+            ctx.play(buf);
+            frameCount++;
+        }
+    }
+    cout << "Longest Poll   : " << longestPoll << endl;
+    cout << "Activity Count : " << actCount << endl;
+    cout << "Sync Errors    : " << ctx.getSyncErrorCount() << endl;
+}
 
 int main(int, const char**) {
 
@@ -88,16 +135,25 @@ int main(int, const char**) {
     uart_set_fifo_enabled(UART_ID, true);
     uart_set_translate_crlf(UART_ID, false);
 
+    // Setup I2C
+    i2c_init(i2c_default, 100 * 1000);
+    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
+    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
+    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
+    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+    i2c_set_baudrate(i2c_default, 400000 * 4);
+
     gpio_put(LED_PIN, 1);
     sleep_ms(1000);
     gpio_put(LED_PIN, 0);
     sleep_ms(1000);
 
-    cout << "===== MicroLink Test 2p ======================================" << endl;
+    cout << "===== MicroLink Test 2p =================" << endl;
+    cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
 
+    PicoUartChannel::traceLevel = 0;
     ESP32CommContext::traceLevel = 1;
-    QSOFlowMachine::traceLevel = 1;
-    PicoUartChannel::traceLevel = 1;
+    QSOFlowMachine::traceLevel = 0;
     LogonMachine::traceLevel = 1;
 
     // Sertup UART and timer
@@ -120,10 +176,10 @@ int main(int, const char**) {
 
     // TODO: MAKE A NICE WAY TO STREAM A SET OF INITIAL COMMANDS
     {
+        /*
         const char* cmd;
         uint32_t cmdLen;
         
-        /*
         cmd = "AT+RST\r\n";
         cmdLen = strlen(cmd);
         channel.write((const uint8_t*)cmd, cmdLen);
@@ -144,7 +200,8 @@ int main(int, const char**) {
     }
 
     TestUserInfo info;
-    TestAudioOutputContext audioOutContext(audioFrameSize, 8000);
+    // NOTE: Audio is decoded in 4-frame chunks.
+    I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, audioBuf);
 
     RootMachine rm(&ctx, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
@@ -166,14 +223,8 @@ int main(int, const char**) {
     PicoPerfTimer socketTimer;
     uint32_t longestSocketUs = 0;
 
-    PicoPollTimer audioTimer;
-    // Get a 8,000 cycle
-    audioTimer.setIntervalUs(125);
-
     // Here is the main event loop
     uint32_t cycle = 0;
-
-    rm.start();
 
     while (true) {
 
@@ -181,8 +232,16 @@ int main(int, const char**) {
         if (c > 0) {
             cout << (char)c;
             cout.flush();
-            if (c == 'q') {
+            if (c == 's') {
+                cout << endl << "Starting" << endl;
+                rm.start();
+            }
+            else if (c == 'q') {
                 break;
+            } 
+            else if (c == 't') {
+                cout << endl << "Test tone" << endl;
+                testTone(audioOutContext);
             }
         }
 
@@ -190,30 +249,27 @@ int main(int, const char**) {
             break;
         }
 
-        // Poll the audio system at 8,000kHz
-        if (audioTimer.poll())
-            audioOutContext.poll();
+        // Poll the audio system
+        audioOutContext.poll();
         
         // Poll the communications system and pass any inbound bytes
         // over to the communications context.
         socketTimer.reset();
-        bool commActivity = ctx.poll();
-        ela = socketTimer.elapsedUs();
+        ctx.poll();
+        uint32_t ela = socketTimer.elapsedUs();
         if (ela > longestSocketUs) {
             longestSocketUs = ela;
-            cout << "Longest Socket " << longestSocketUs << endl;
+            cout << "Longest Socket (us) " << longestSocketUs << endl;
         }
 
-        //bool activity = audioActivity || commActivity;
-
-        // Generate the tick (needed for timeouts, etc)
+        // Generate the one second tick (needed for timeouts, etc)
         uint32_t now = time_ms();
         if (now - lastAudioTickMs >= 1000) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
 
-        // Used to make sure we are still alive
+        // Used to show that we are still alive
         cycle++;
         if (cycle % 10000000 == 0) {
             cout << cycle << endl;
