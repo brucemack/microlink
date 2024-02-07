@@ -144,12 +144,14 @@ Here's an example of an ONLINE packet:
 * Note that there are no headers, length fields, etc.
 * Tokens are delimited by 0xac 0xac or 0x0d.
 
-The server response is generally something like "OK 2.6" with no header/delimiters/etc.
+The server response is generally something like "OK 2.6" with no header/delimiters/etc. In fact,
+I think you'll get an OK response even if the password was bad, which is good for security
+reasons.
 
 ### OFF Status Message Format
 
 The message used to set the OFF status has a slightly different format, presumably because no authentication
-is required to disconnect from the network.
+is required to disconnect from the network. (NOT RIGHT, NEED RESEARCH HERE.)
 
 (Format notes to follow)
 
@@ -537,17 +539,32 @@ The four-bit 0b1101 signature makes it easy to sanity check the RTP packets sinc
 From this example it looks like there is a consistent 0xda at the start of each GSM frame, but that's a coincidence - the "a" 
 part can change depending on the audio being encoded.
 
-### Pacing of RTP Audio
+### NOtes on the Pacing of RTP Audio
 
 The RTP packets are generated every 80ms, or every 160 * 4 audio samples collected at 8 kHz.  It's important
 to keep in mind that RTP packets that travel through a network will speed up or slow down slightly based 
-on normal congestion.  Good quality audio needs to be sampled consistently at 8 kHz, *regardless of the 
-network arrival time* of the RTP packets.  This requires some clever buffering, particularly on the receive
-side.  These comments from Jonathan Taylor (K1RFD) are helpful and may provide some insight into how
+on normal congestion.  Good quality audio needs to be sampled consistently at 8 kHz, **regardless of the 
+network arrival time** of the RTP packets.  This requires some clever buffering to avoid the phenomenon
+known as "audio jitter," particularly on the receive side.  These comments from Jonathan Taylor 
+(K1RFD) are helpful and may provide some insight into how
 the official EchoLink behaves.  I have tested this approach in the MicroLink station and it works very 
 well:
 
-> 
+> A buffer is a good idea, because packets won't be coming in at a steady rate (jitter).  Also, not all sound cards 
+run at exactly 8kHz, so you may need to accommodate a faster or slower sender.
+
+> I suggest the buffer be about a second long. Wait until it's half full before you start sending packets to the sound card. 
+If possible, let the sound card itself dictate the rate at which you feed it. (On Windows, the API "returns" old buffers 
+back to the application, which is how this can be accurately paced.) Otherwise, use a high-precision clock source.
+
+> Keep an eye on the size of the buffer.  If it gets down to zero, stop playback until it's half-full again; in fact, 
+this is a good way to detect when a transmission has ended, since there's no "end" packet. If it gets too high, consider 
+dropping a packet.
+
+> Sometimes packets are dropped along the way. You can detect this because the packets are sequentially numbered, from 
+the same sender. If you receive packet 20 right after 18, consider inserting a silent packet between them.  You 
+can also attempt to re-order packets which are received out of sequence, but I have rarely ever seen that 
+actually happen, so it might not be worth implementing.
 
 ### Notes on the RTP SSRC Identifier
 
