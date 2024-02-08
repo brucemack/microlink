@@ -32,6 +32,8 @@ namespace kc1fsz {
 class W32AudioOutputContext : public AudioOutputContext {
 public:
 
+    static int traceLevel;
+
     /**
      * @param bufferArea Must be 16 x frameSize in length.
      * @param silenceArea Must be 2 x frameSize in length.  

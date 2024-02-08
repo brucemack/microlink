@@ -37,6 +37,8 @@ class UserInfo;
 class QSOConnectMachine : public StateMachine {
 public:
 
+    static int traceLevel;
+
     static uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
         uint8_t* packet, uint32_t packetSize);
 
@@ -77,7 +79,7 @@ private:
         CONNECTING, 
         // In the proecss of sending the initial RTCP message
         CONNECTING_0, 
-        // State #7: In the proecss of sending the initial RTP message
+        // State #7: In the process of sending the initial RTP message
         CONNECTING_1, 
         SUCCEEDED, 
         FAILED 

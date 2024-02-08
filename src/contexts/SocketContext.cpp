@@ -30,14 +30,19 @@
 #include <cassert>
 #include <iostream>
 #include <algorithm>
+#include <memory>
+
+#include "kc1fsz-tools/Common.h"
+#include "kc1fsz-tools/EventProcessor.h"
 
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/TCPConnectEvent.h"
 #include "kc1fsz-tools/events/TCPDisconnectEvent.h"
 #include "kc1fsz-tools/events/TCPReceiveEvent.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
-#include "kc1fsz-tools/Common.h"
-#include "kc1fsz-tools/EventProcessor.h"
+#include "kc1fsz-tools/events/SendEvent.h"
+#include "kc1fsz-tools/events/StatusEvent.h"
+#include "kc1fsz-tools/events/ChannelSetupEvent.h"
 
 #include "../common.h"
 
@@ -47,20 +52,27 @@ using namespace  std;
 
 namespace kc1fsz {
 
+int SocketContext::traceLevel = 0;
+
 SocketContext::SocketContext()
-:   _dnsResultPending(false) {
+:   _sink(0) {
 }
 
-bool SocketContext::poll(EventProcessor* ep) {
+void SocketContext::reset() {
+    _eventQueue.clear();
+    _tracker.clear();
+    _eventQueue.push_back(make_unique<StatusEvent>());
+}
+
+bool SocketContext::poll() {
 
     bool anythingHappened = false;
+    EventProcessor* ep = _sink;
 
-    // TODO: NICE QUEUE NEEDED HERE
-    // Check for any pending DNS results (making a synchronous event look
-    // asynchronous).
-    if (_dnsResultPending) {
-        _dnsResultPending = false;
-        ep->processEvent(&_dnsResult);
+    // Drain off any pending events
+    while (!_eventQueue.empty()) {
+        _sink->processEvent(_eventQueue.front().get());
+        _eventQueue.pop_front();
         anythingHappened = true;
     }
 
@@ -122,6 +134,10 @@ bool SocketContext::poll(EventProcessor* ep) {
                         int rc = recv(t.fd, buffer, 256, 0);
                         // Got any bytes?
                         if (rc > 0) {
+                            if (traceLevel > 0) {
+                                cout << "SocketChannel TCP Receive" << endl;
+                                prettyHexDump((const uint8_t*)buffer, rc, cout);
+                            }
                             // Generate an event
                             TCPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
                             ep->processEvent(&ev);
@@ -147,8 +163,10 @@ bool SocketContext::poll(EventProcessor* ep) {
                     int rc = recv(t.fd, buffer, 256, 0);
                     // Got any bytes?
                     if (rc > 0) {
-                        //cout << "----- UDP Receive " << t.fd << endl;
-                        //prettyHexDump((const uint8_t*)buffer, rc, cout);
+                        if (traceLevel > 0) {
+                            cout << "SocketChannel UDP Receive" << endl;
+                            prettyHexDump((const uint8_t*)buffer, rc, cout);
+                        }
                         // Generate an event
                         UDPReceiveEvent ev(Channel(t.fd), (const uint8_t*)buffer, rc);
                         ep->processEvent(&ev);
@@ -195,8 +213,8 @@ void SocketContext::startDNSLookup(HostName hostName) {
     const struct hostent* remoteHost = gethostbyname(hostName.c_str());
     if (remoteHost->h_addrtype == AF_INET && remoteHost->h_length == 4) {
         uint32_t addr_nl = *(uint32_t*)remoteHost->h_addr_list[0];
-        _dnsResultPending = true;
-        _dnsResult = DNSLookupEvent(hostName, addr_nl);
+        // Simulate a notification that this is done
+        _eventQueue.push_back(make_unique<DNSLookupEvent>(hostName, addr_nl));          
     }
 }
 
@@ -257,32 +275,22 @@ void SocketContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port
 }
 
 void SocketContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {
+
+    if (traceLevel > 0) {
+        cout << "SocketChannel TCP Send" << endl;
+        prettyHexDump(b, len, cout);
+    }
+
     if (c.isGood()) {
         // TODO: IT'S POSSIBLE THAT THE SEND IS INCOMPLETE?
         int rc = send(c.getId(), (char *)b, len, 0);
-        if(rc > 0) {
-            cout << "Sent" << endl;
-            prettyHexDump(b, len, cout);
-        }
     }
 }
 
-Channel SocketContext::createUDPChannel(uint32_t localPort) {
+Channel SocketContext::createUDPChannel() {
 
     int fd = socket(AF_INET, SOCK_DGRAM, 0);
     if (fd < 0) {
-        return Channel(0, false);
-    }
-
-    struct sockaddr_in local_addr;
-    memset(&local_addr, 0, sizeof(sockaddr_in));
-    local_addr.sin_family = AF_INET;
-    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
-    local_addr.sin_port = htons(localPort);
-
-    int rc = bind(fd, (struct sockaddr*)&local_addr, sizeof(sockaddr_in));
-    if (rc < 0) {
-        close(fd);
         return Channel(0, false);
     }
 
@@ -303,36 +311,79 @@ void SocketContext::closeUDPChannel(Channel c) {
 }
 
 void SocketContext::_closeChannel(Channel c) {  
-    // The channel ID maps directly to the fd
-    close(c.getId());
     // Find/remove tracker
     auto it = std::find_if(_tracker.begin(), _tracker.end(), 
         [&c](const SocketTracker& arg) { return arg.fd == c.getId(); });
     if (it != _tracker.end()) {
+        // The channel ID maps directly to the fd
+        close(it->fd);
         _tracker.erase(it);
     }
 }
 
-void SocketContext::sendUDPChannel(Channel c, IPAddress targetAddr, uint32_t targetPort, 
-    const uint8_t* b, uint16_t len) {
+void SocketContext::setupUDPChannel(Channel c, uint32_t localPort, 
+    IPAddress remoteAddr, uint32_t remotePort) {
+
+    // Find tracker
+    auto it = std::find_if(_tracker.begin(), _tracker.end(), 
+        [&c](const SocketTracker& arg) { return arg.fd == c.getId(); });
+    if (it == _tracker.end()) {
+        panic("Invalid channel");
+        return;
+    }
+
+    // Bind to the local port
+    struct sockaddr_in local_addr;
+    memset(&local_addr, 0, sizeof(sockaddr_in));
+    local_addr.sin_family = AF_INET;
+    local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
+    local_addr.sin_port = htons(localPort);
+
+    int rc = bind(it->fd, (struct sockaddr*)&local_addr, sizeof(sockaddr_in));
+    if (rc < 0) {
+        panic("Unable to bind");
+        return;
+    }
+
+    // Update tracker
+    it->remoteAddr = remoteAddr;
+    it->remotePort = remotePort;
+
+    // Need to simulate a completion event to signal that the channel is ready
+    _eventQueue.push_back(make_unique<ChannelSetupEvent>(c, true));
+}
+
+void SocketContext::sendUDPChannel(Channel c, const uint8_t* b, uint16_t len) {
+
+    if (traceLevel > 0) {
+        cout << "SocketContext UDP Send" << endl;
+        prettyHexDump(b, len, cout);
+    }
+
+    // Find tracker
+    auto it = std::find_if(_tracker.begin(), _tracker.end(), 
+        [&c](const SocketTracker& arg) { return arg.fd == c.getId(); });
+    if (it == _tracker.end()) {
+        panic("Invalid channel");
+        return;
+    }
 
     char buf[64];
-    formatIP4Address(targetAddr.getAddr(), buf, 64);
-
-    cout << "UDP Send to " << buf << ":" << targetPort << endl;
-    prettyHexDump(b, len, cout);
+    formatIP4Address(it->remoteAddr.getAddr(), buf, 64);
 
     struct sockaddr_in remote_addr;
     memset(&remote_addr, 0, sizeof(sockaddr_in));
     remote_addr.sin_family = AF_INET;
-    remote_addr.sin_addr.s_addr = targetAddr.getAddr();
-    remote_addr.sin_port = htons(targetPort);
+    remote_addr.sin_addr.s_addr = it->remoteAddr.getAddr();
+    remote_addr.sin_port = htons(it->remotePort);
 
     int rc = sendto(c.getId(), b, len, 0, (const struct sockaddr*)&remote_addr, sizeof(sockaddr_in));
     if (rc <= 0) {
         cout << "SEND FAILED" << endl;
     }
+
+    // Need to simulate a completion event
+    _eventQueue.push_back(make_unique<SendEvent>(c, true));
 }
 
 }
-

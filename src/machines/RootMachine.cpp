@@ -28,6 +28,8 @@ using namespace std;
 
 namespace kc1fsz {
 
+int RootMachine::traceLevel = 0;
+
 RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
 :   _state(IDLE),
@@ -46,6 +48,11 @@ void RootMachine::start() {
 }
 
 void RootMachine::processEvent(const Event* ev) {
+
+    if (traceLevel > 0) {
+        cout << "RootMachine: state=" << _state << " event=" << ev->getType() << endl;
+    }
+
     // In this state we are doing nothing waiting to be started
     if (_state == State::IDLE) {
     }
@@ -127,6 +134,14 @@ void RootMachine::processEvent(const Event* ev) {
         if (isDoneAfterEvent(_qsoMachine, ev)) {
             _state = SUCCEEDED;
         }
+    }
+}
+
+bool RootMachine::play(const int16_t* frame) {
+    if (_state == State::QSO) {
+        return _qsoMachine.txAudio(frame);
+    } else {
+        return false;
     }
 }
 

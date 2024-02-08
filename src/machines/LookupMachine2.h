@@ -40,6 +40,8 @@ class UserInfo;
 class LookupMachine2 : public StateMachine {
 public:
 
+    static int traceLevel;
+
     LookupMachine2(CommContext* ctx, UserInfo* userInfo);
 
     virtual void processEvent(const Event* ev);

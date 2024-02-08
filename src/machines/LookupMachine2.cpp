@@ -45,6 +45,8 @@ static const uint32_t VERIFY_TIMEOUT_MS = 5000;
 static const char* SUCCESSFUL_MSG = "Lookup successful";
 static const char* UNSUCCESSFUL_MSG = "Callsign not valid or not online";
 
+int LookupMachine2::traceLevel = 0;
+
 LookupMachine2::LookupMachine2(CommContext* ctx, UserInfo* userInfo)
 :   _state(IDLE),
     _ctx(ctx),
@@ -67,6 +69,11 @@ void LookupMachine2::cleanup() {
 }
 
 void LookupMachine2::processEvent(const Event* ev) {
+
+    if (traceLevel > 0) {
+        cout << "LookupMachine2: state=" << _state << " event=" << ev->getType() << endl;
+    }
+
     // In this state we are waiting for the DNS resolution to complete
     if (_state == DNS_WAIT) {
         // Look for good completion

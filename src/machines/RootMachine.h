@@ -41,6 +41,8 @@ class AudioOutputContext;
 class RootMachine : public StateMachine, public AudioSink {
 public:
 
+    static int traceLevel;
+
     RootMachine(CommContext* ctx, UserInfo* userInfo, AudioOutputContext* audioOutput);
 
     virtual void processEvent(const Event* event);
@@ -68,6 +70,7 @@ private:
 
     enum State { 
         IDLE, 
+        // STATE 1:
         IN_RESET,
         LOGON, 
         LOOKUP, 

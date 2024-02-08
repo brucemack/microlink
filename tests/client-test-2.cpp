@@ -22,6 +22,8 @@
  * This file is unit-test code only.  None of this should be use for 
  * real applications!
  * =================================================================================
+ * 
+ * This test case is targeted at the Windows platform. This is a basic EL client.
  */
 #include <iostream>
 #include <fstream>
@@ -52,8 +54,20 @@ static int16_t silenceFrameOut[2 * audioFrameSize];
 
 int main(int, const char**) {
 
-    if (getenv("EL_PASSWORD") == 0) {
-        cout << "EL_PASSWORD must be set." << endl;
+    cout << "===== MicroLink Test 2 ==================" << endl;
+    cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
+
+    RootMachine::traceLevel = 0;
+    LogonMachine::traceLevel = 0;
+    LookupMachine2::traceLevel = 0;
+    QSOConnectMachine::traceLevel = 1;
+    QSOFlowMachine::traceLevel = 1;
+    SocketContext::traceLevel = 1;
+    W32AudioOutputContext::traceLevel = 1;
+
+    if (getenv("EL_CALLSIGN") == 0 || getenv("EL_PASSWORD") == 0 ||
+        getenv("EL_FULLNAME") == 0 || getenv("EL_LOCATION") == 0) {
+        cout << "EL_CALLSIGN, EL_PASSWORD, EL_FULLNAME, EL_LOCATION must be set." << endl;
         return -1;
     }
 
@@ -64,12 +78,13 @@ int main(int, const char**) {
     RootMachine rm(&context, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setServerPort(5200);
-    rm.setCallSign(CallSign("xxx"));
+    rm.setCallSign(CallSign(getenv("EL_CALLSIGN")));
     rm.setPassword(FixedString(getenv("EL_PASSWORD")));
-    rm.setLocation(FixedString("xxx"));
+    rm.setFullName(FixedString(getenv("EL_FULLNAME")));
+    rm.setLocation(FixedString(getenv("EL_LOCATION")));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
-    rm.start();
+    context.setEventProcessor(&rm);
 
     TickEvent tickEv;
     uint32_t lastAudioTickMs = 0;
@@ -82,6 +97,8 @@ int main(int, const char**) {
     // Here is the main event loop
     uint32_t start = time_ms();
     uint32_t cycle = 0;
+
+    rm.start();
 
     while ((time_ms() - start) < 30000) {
 
@@ -96,7 +113,7 @@ int main(int, const char**) {
         
         // Poll the communications system
         socketTimer.reset();
-        bool commActivity = context.poll(&rm);
+        bool commActivity = context.poll();
         ela = socketTimer.elapsedUs();
         if (ela > longestSocketUs) {
             longestSocketUs = ela;
@@ -105,7 +122,7 @@ int main(int, const char**) {
 
         bool activity = audioActivity || commActivity;
 
-        // Generate the audio clock every 20ms (160*4 samples)
+        // Generate the audio clock every 80ms (160*4 samples)
         uint32_t now = time_ms();
         if (now - lastAudioTickMs >= 80) {
             lastAudioTickMs = now;

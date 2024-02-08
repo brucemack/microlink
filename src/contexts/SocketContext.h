@@ -22,9 +22,12 @@
 #define _SocketContext_h
 
 #include <vector>
+#include <deque>
 
 #include "kc1fsz-tools/CommContext.h"
-#include "kc1fsz-tools/events/DNSLookupEvent.h"
+//#include "kc1fsz-tools/events/DNSLookupEvent.h"
+//#include "kc1fsz-tools/events/StatusEvent.h"
+//#include "kc1fsz-tools/events/ChannelSetupEvent.h"
 
 namespace kc1fsz {
 
@@ -32,12 +35,23 @@ class EventProcessor;
 
 /**
  * IMPORTANT: We are assuming that this runs in a full environment so 
- * we are using a wider range of C++ std libraries.
+ * we are using a wider range of C++ std libraries, including
+ * dynamic memory allocation.
  */
 class SocketContext : public CommContext {
 public:
 
+    static int traceLevel;
+
     SocketContext();
+
+    /**
+     * Indicates where the Event objects should be forwarded to
+     * when asynchronous events are detected.
+     */
+    void setEventProcessor(EventProcessor* ep) { _sink = ep; }
+
+    void reset();
 
     /**
      * This should be called from the event loop.  It attempts to make forward
@@ -45,7 +59,7 @@ public:
      * 
      * @returns true if any events were dispatched.
     */
-    bool poll(EventProcessor* ep);
+    bool poll();
 
     // ------ Request Methods -------------------------------------------------
 
@@ -74,10 +88,20 @@ private:
     void _closeChannel(Channel c);
     void _cleanupTracker();
 
+    std::deque<std::unique_ptr<Event>> _eventQueue;
+
+    /*
     // A one-deep queue of DNS results
     // TODO: MAKE THIS A REAL QUEUE
     bool _dnsResultPending;
     DNSLookupEvent _dnsResult;
+
+    bool _resetResultPending;
+    StatusEvent _resetResult;
+
+    bool _setupUDPResultPending;
+    ChannelSetupEvent _setupUDPResult;
+    */
 
     // This data structure is used to keep track of active sockets
     struct SocketTracker {
@@ -87,9 +111,12 @@ private:
         bool connectWaiting = false;
         bool deletePending = false;
         int fd = 0;
+        IPAddress remoteAddr;
+        uint32_t remotePort;
     };
 
     std::vector<SocketTracker> _tracker;
+    EventProcessor* _sink;
 };
 
 }

@@ -37,12 +37,16 @@ namespace kc1fsz {
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
 
+static const uint32_t CHANNEL_SETUP_TIMEOUT_MS = 250;
 static const uint32_t SEND_TIMEOUT_MS = 1000;
+// How long we wait for the remote station to respond
 static const uint32_t REMOTE_TIMEOUT_MS = 10000;
 static const uint32_t RETRY_COUNT = 3;
 
 static const char* FAILED_MSG = "Station connection failed";
+static const char* WAITING_FOR_RESPONSE_MSG = "Waiting for remote station";
 
+int QSOConnectMachine::traceLevel = 0;
 uint32_t QSOConnectMachine::_ssrcCounter = 0xd0000010;
 
 QSOConnectMachine::QSOConnectMachine(CommContext* ctx, UserInfo* userInfo)
@@ -69,11 +73,14 @@ void QSOConnectMachine::start() {
     // Start the RTCP socket setup
     _ctx->setupUDPChannel(_rtcpChannel, RTCP_PORT, _targetAddr, RTCP_PORT);
     _state = State::IN_SETUP_1;
+    _setTimeoutMs(time_ms() + CHANNEL_SETUP_TIMEOUT_MS);
 }
 
 void QSOConnectMachine::processEvent(const Event* ev) {
 
-    //cout << "QSOConnectMachine state=" << _state << " event=" << ev->getType() <<  endl;
+    if (traceLevel > 0) {
+        cout << "QSOConnectMachine state=" << _state << " event=" << ev->getType() <<  endl;
+    }
 
     // In this state we are waiting for confirmation that the RTCP 
     // socket was setup.
@@ -84,7 +91,7 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 // Start the RTP socket setup
                 _ctx->setupUDPChannel(_rtpChannel, RTP_PORT, _targetAddr, RTP_PORT);
                 _state = State::IN_SETUP_2;
-                // TODO: TIMEOUT
+                _setTimeoutMs(time_ms() + CHANNEL_SETUP_TIMEOUT_MS);
             } else {
                 _userInfo->setStatus(FAILED_MSG);
                 _state = State::FAILED;
@@ -121,9 +128,11 @@ void QSOConnectMachine::processEvent(const Event* ev) {
         if (ev->getType() == UDPReceiveEvent::TYPE) {
             const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
             if (evt->getChannel() == _rtcpChannel) {
-                
-                cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
-                prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+
+                if (traceLevel > 0) {
+                    cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
+                    prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+                }
 
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
                     _state = SUCCEEDED;
@@ -213,6 +222,7 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 // message to come back.
                 _state = State::CONNECTING;
                 _setTimeoutMs(time_ms() + REMOTE_TIMEOUT_MS);
+                _userInfo->setStatus(WAITING_FOR_RESPONSE_MSG);
             } else {
                 _state = FAILED;
             }

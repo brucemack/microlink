@@ -27,6 +27,8 @@ using namespace std;
 
 namespace kc1fsz {
 
+int W32AudioOutputContext::traceLevel = 0;
+
 W32AudioOutputContext::W32AudioOutputContext(uint32_t frameSize, 
     uint32_t sampleRate, int16_t* audioArea, int16_t* silenceArea)
 :   AudioOutputContext(frameSize, sampleRate),
@@ -169,6 +171,10 @@ bool W32AudioOutputContext::poll() {
 
 void W32AudioOutputContext::play(int16_t* frame) {
 
+    if (traceLevel >= 1) {
+        cout << "(Audio)" << endl;
+    }
+
     // Only allow a write if there are open frames in the queue
     if (_audioQueueUsed < _audioQueueSize) {
         // Calculate where to write the next frame based on the write 
@@ -179,9 +185,6 @@ void W32AudioOutputContext::play(int16_t* frame) {
             b[i] = frame[i];
         }
         _audioQueueUsed++;
-        //cout << "Wrote to " << nextBuffer << " (used=" << _audioQueueUsed << ")" << endl;
-    //} else {
-    //    cout << "Overflow" << endl;
     }
 }
 
