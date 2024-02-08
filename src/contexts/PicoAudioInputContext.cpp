@@ -18,16 +18,20 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include <iostream>
 #include "hardware/adc.h"
 
 #include "kc1fsz-tools/AudioSink.h"
 #include "PicoAudioInputContext.h"
 
+using namespace std;
+
 namespace kc1fsz {
 
 PicoAudioInputContext::PicoAudioInputContext(queue_t& queue)
 :   _queue(queue),
-    _sampleCount(0) {    
+    _sampleCount(0),
+    _keyed(false) {    
 }
 
 void PicoAudioInputContext::setSink(AudioSink* sink) {
@@ -52,7 +56,10 @@ bool PicoAudioInputContext::poll() {
             _frameBuf[_sampleCount++] = lastSample;
             // When a full frame is collected pass it along
             if (_sampleCount == 160 * 4) {
-                _sink->play(_frameBuf);
+                bool good = _sink->play(_frameBuf);
+                if (!good) {
+                    cout << "Overflow 2" << endl;
+                }
                 _sampleCount = 0;
             }
         }

@@ -66,6 +66,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #include "TestAudioInputContext.h"
 
 #define LED_PIN (25)
+// Physical pin 31
+#define AUDIO_IN_PIN (26)
 
 #define UART_ID uart0
 #define UART_TX_PIN 0
@@ -93,6 +95,7 @@ static const uint32_t adcClockHz = 48000000;
 // This is the queue used to pass ADC samples from the ISR and into the main 
 // event loop.
 static queue_t adcSampleQueue;
+static uint32_t adcAddFail = 0;
 
 // Decorates a function name, such that the function will execute from RAM 
 // (assuming it is not inlined into a flash function by the compiler)
@@ -101,6 +104,7 @@ static void __not_in_flash_func(adc_irq_handler) () {
         const int16_t lastSample = adc_fifo_get();
         bool added = queue_try_add(&adcSampleQueue, &lastSample);
         if (!added) {
+            adcAddFail++;
             return;
         }
         //maxAdcSampleQueue = std::max(maxAdcSampleQueue,
@@ -182,9 +186,9 @@ int main(int, const char**) {
     queue_init(&adcSampleQueue, 2, 64);
 
     // Get the ADC initialized
-    uint8_t adcChannel = 0;
-    adc_gpio_init(26 + adcChannel);
+    adc_gpio_init(AUDIO_IN_PIN);
     adc_init();
+    uint8_t adcChannel = 0;
     adc_select_input(adcChannel);
     adc_fifo_setup(
         true,   
@@ -251,7 +255,7 @@ int main(int, const char**) {
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setServerPort(5200);
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString("xxx"));
+    rm.setPassword(FixedString("xxxx"));
     rm.setFullName(FixedString("Bruce R. MacKinnon"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
@@ -283,12 +287,20 @@ int main(int, const char**) {
                 // Short burst of tone
                 //audioInContext.sendTone(1000, 2000);
             } 
+            else if (c == ' ') {
+                audioInContext.setPtt(!audioInContext.getPtt());
+                cout << endl << "Keyed: " << audioInContext.getPtt() << endl;
+            }
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }
             else if (c == 'z') {
                 testTone(audioOutContext);
-            } else {
+            }
+            else if (c == 'i') {
+                cout << "ADC Add Fail: " << adcAddFail << endl;
+            } 
+            else {
                 cout << (char)c;
                 cout.flush();
             }

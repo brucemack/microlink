@@ -41,6 +41,7 @@ public:
     bool poll();
 
     void setPtt(bool keyed) { _keyed = keyed; }
+    bool getPtt() const { return _keyed; }
 
 private:
 
@@ -48,11 +49,11 @@ private:
     // event loop.
     queue_t& _queue;
     AudioSink* _sink;
-    bool _keyed;
     PicoPollTimer _timer;
     int16_t _dcBias;
     int16_t _frameBuf[160 * 4];
     uint32_t _sampleCount;
+    bool _keyed;
 };
 
 }
