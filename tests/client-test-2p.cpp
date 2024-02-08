@@ -43,13 +43,14 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 
 #include "pico/stdlib.h"
 #include "pico/time.h"
+#include "pico/util/queue.h"
+#include "pico/multicore.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "hardware/sync.h"
-#include "pico/util/queue.h"
-#include "pico/multicore.h"
+#include "hardware/adc.h"
 
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
@@ -280,7 +281,7 @@ int main(int, const char**) {
             else if (c == 't') {
                 cout << endl << "TX test" << endl;
                 // Short burst of tone
-                audioInContext.sendTone(1000, 2000);
+                //audioInContext.sendTone(1000, 2000);
             } 
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;

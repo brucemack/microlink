@@ -20,12 +20,14 @@
  */
 #include "hardware/adc.h"
 
+#include "kc1fsz-tools/AudioSink.h"
 #include "PicoAudioInputContext.h"
 
 namespace kc1fsz {
 
 PicoAudioInputContext::PicoAudioInputContext(queue_t& queue)
-:   _queue(queue) {    
+:   _queue(queue),
+    _sampleCount(0) {    
 }
 
 void PicoAudioInputContext::setSink(AudioSink* sink) {
@@ -33,9 +35,30 @@ void PicoAudioInputContext::setSink(AudioSink* sink) {
 }
 
 bool PicoAudioInputContext::poll() {
-    return false;
+
+    bool activity = false;
+
+    // Grab as much as possible from the queue in each cycle
+    while (!queue_is_empty(&_queue)) {
+        activity = true;
+        // Pull off ADC queue - will be a value from 0->4095
+        int16_t lastSample = 0;
+        queue_remove_blocking(&_queue, &lastSample);
+        if (_keyed) {
+            // Center around zero
+            lastSample -= 2048;
+            // Scale up to a 16-bit PCM
+            lastSample = lastSample * 16;
+            _frameBuf[_sampleCount++] = lastSample;
+            // When a full frame is collected pass it along
+            if (_sampleCount == 160 * 4) {
+                _sink->play(_frameBuf);
+                _sampleCount = 0;
+            }
+        }
+    }
+
+    return activity;
 }
 
 }
-
-

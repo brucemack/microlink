@@ -38,7 +38,7 @@ public:
 
     void setSink(AudioSink *sink);
 
-    virtual bool poll();
+    bool poll();
 
     void setPtt(bool keyed) { _keyed = keyed; }
 
@@ -50,6 +50,9 @@ private:
     AudioSink* _sink;
     bool _keyed;
     PicoPollTimer _timer;
+    int16_t _dcBias;
+    int16_t _frameBuf[160 * 4];
+    uint32_t _sampleCount;
 };
 
 }
