@@ -48,6 +48,7 @@ bool TestAudioInputContext::poll() {
         if (now >= _toneEndMs) {
             _inTone = false;
             cout << "Done, frame count " << _frameCount << endl;
+            return true;
         }
         else if (now >= _nextFrameMs) {
             // Make a tone frame
@@ -61,11 +62,14 @@ bool TestAudioInputContext::poll() {
                 _frameCount++;
                 // TODO: REMOVE HC
                 _nextFrameMs = _nextFrameMs + 80;
+            } else {
+                cout << "Frame rejected: " << _frameCount << endl;
             }
+            return true;
         }
     }
 
-    return true;
+    return false;
 }
 
 void TestAudioInputContext::sendTone(uint32_t freq, uint32_t ms) {

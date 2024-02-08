@@ -37,6 +37,7 @@
 
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/win32/Win32PerfTimer.h"
+//#include "kc1fsz-tools/win32/Win32PollTimer.h"
 
 #include "machines/RootMachine.h"
 #include "contexts/SocketContext.h"
@@ -97,17 +98,17 @@ int main(int, const char**) {
     uint32_t lastAudioTickMs = 0;
 
     Win32PerfTimer socketTimer;
-    Win32PerfTimer audioTimer;
     uint32_t longestSocketUs = 0;
-    uint32_t longestAudioUs = 0;
 
-    // Here is the main event loop
-    uint32_t start = time_ms();
+    //Win32PollTimer slowTimer;
+    //slowTimer.setIntervalUs(1000000);
+
     uint32_t cycle = 0;
 
-    // Make stdin non-blocking 
+    // Make stdin non-blocking so that getchar() doesn't hang
     fcntl(0, F_SETFL, O_NONBLOCK); 
 
+    // Here is the main event loop
     while (true) {
 
         int c = getchar();
@@ -118,39 +119,34 @@ int main(int, const char**) {
         else if (c == 't') {
             cout << "Transmit tone" << endl;  
             // Short burst of tone
-            audioInContext.sendTone(1000, 500);
+            audioInContext.sendTone(1000, 1000);
         } 
         else if (c == 's') {
             cout << "Starting" << endl;
             rm.start();
         }
 
+        bool activity = false;
+
         // Poll the audio input system at full speed
-        audioInContext.poll();
+        activity = activity || audioInContext.poll();
 
         // Poll the audio output system at full speed
-        audioTimer.reset();
-        bool audioActivity = audioOutContext.poll();
-        uint32_t ela = audioTimer.elapsedUs();
-        if (ela > longestAudioUs) {
-            longestAudioUs = ela;
-            cout << "Longest Audio " << longestAudioUs << endl;
-        }
+        activity = activity || audioOutContext.poll();
 
-        // Poll the communications system
+        // Poll the communications system at full speed
         socketTimer.reset();
-        bool commActivity = context.poll();
-        ela = socketTimer.elapsedUs();
+        activity = activity || context.poll();
+        uint32_t ela = socketTimer.elapsedUs();
         if (ela > longestSocketUs) {
             longestSocketUs = ela;
             cout << "Longest Socket " << longestSocketUs << endl;
+        
         }
 
-        bool activity = audioActivity || commActivity;
-
-        // Generate the audio clock every 80ms (160*4 samples)
+        // Generate a clock every second for timeouts, etc.
         uint32_t now = time_ms();
-        if (now - lastAudioTickMs >= 80) {
+        if (now - lastAudioTickMs >= 1000) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }

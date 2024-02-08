@@ -48,7 +48,7 @@ static const uint8_t SPEC_FRAME[33] = {
 // How often we send activity on the UDP connections
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10000;
 // How long we wait in silence before unkeying
-static const uint32_t TX_LINGER_INTERVAL_MS = 1000;
+static const uint32_t TX_TAIL_INTERVAL_MS = 1000;
 
 int QSOFlowMachine::traceLevel = 0;
 
@@ -63,9 +63,9 @@ void QSOFlowMachine::start() {
     _lastRTCPKeepAliveSentMs = 0;
     _lastRTPKeepAliveSentMs = 0;
     _lastRecvMs = time_ms();
-    _txAudioPending = false;
+    _txAudioWriteCount = 0;
+    _txAudioSentCount = 0;
     _lastTxAudioTime = 0;
-    _txSequenceCounter = 0;
     _state = State::OPEN_RX;
     _gsmEncoder.reset();
     _gsmDecoder.reset();
@@ -194,6 +194,18 @@ void QSOFlowMachine::_sendONDATA() {
 }
 
 void QSOFlowMachine::processEvent(const Event* ev) {
+    while (true) {
+        State initialState = _state;
+        _processEvent(ev);
+        State finalState = _state;
+        // Iterate until we reach a steady state
+        if (initialState == finalState) {
+            break;
+        }
+    }
+}
+
+void QSOFlowMachine::_processEvent(const Event* ev) {
 
     if (traceLevel > 0) {
         // Suppress tick - too noisy
@@ -220,8 +232,8 @@ void QSOFlowMachine::processEvent(const Event* ev) {
 
     // Now deal with state-specific activity
     if (_state == State::OPEN_RX) {
-        // Look to see if we shoud key up and change to TX mode
-        if (_txAudioPending) {
+        // Look to see if we should key up and change to TX mode
+        if (_txAudioWriteCount > _txAudioSentCount) {
             _gsmEncoder.reset();
             _state = State::OPEN_TX;
         }
@@ -267,16 +279,16 @@ void QSOFlowMachine::processEvent(const Event* ev) {
     }
     else if (_state == State::OPEN_TX) {
 
-        // Look for outbound audio
-        if (_txAudioPending) {
+        // Look for pending outbound audio
+        if (_txAudioWriteCount > _txAudioSentCount) {
 
             if (traceLevel > 0) {
-                cout << "QSOFlowMachine: TX audio packet " << _txSequenceCounter << endl;
+                cout << "QSOFlowMachine: TX audio packet " << _txAudioSentCount << endl;
             }
 
-            // TODO: DO THE SEND STUFF HERE
             uint8_t gsmFrames[4][33];
-            int16_t* frame = _txAudio;
+            uint32_t slot = _txAudioSentCount % _txAudioBufDepth;
+            int16_t* frame = _txAudioBuf[slot];
 
             for (int f = 0; f < 4; f++) {
                 Parameters params;
@@ -287,23 +299,18 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             }
 
             uint8_t packet[144];
-            uint32_t packetLen = formatRTPPacket(_txSequenceCounter++, 
+            uint32_t packetLen = formatRTPPacket(_txAudioSentCount, 
                 0, gsmFrames, packet, 144);
             
             _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
             _state = State::OPEN_TX_AUDIO_1;
             
-            // TEMP
-            //cout << "Sending audio packet" << endl;
-            //prettyHexDump(packet, 144, cout);
-
-            _txAudioPending = false;
-            _lastTxAudioTime = time_ms();
+            _txAudioSentCount++;
             // TODO: SET TIMEOUT
         }
         // Check to see if the transmit activity has ended and we
         // should be switching back into RX mode
-        else if (time_ms() > _lastTxAudioTime + TX_LINGER_INTERVAL_MS) {
+        else if (time_ms() > _lastTxAudioTime + TX_TAIL_INTERVAL_MS) {
             if (traceLevel > 0) {
                 cout << "QSOFlowMachine: TX timed out, back to RX" << endl;
             }
@@ -343,15 +350,27 @@ void QSOFlowMachine::processEvent(const Event* ev) {
 }
 
 bool QSOFlowMachine::txAudio(const int16_t* frame) {
-    if (_txAudioPending) {
-        return false;
-    } 
-    else {
-        _txAudioPending = true;
-        for (uint32_t i = 0; i < 160 * 4; i++)
-            _txAudio[i] = frame[i];
-        return true;
+
+    // Is the buffer full?
+    if ((_txAudioWriteCount - _txAudioSentCount) >= _txAudioBufDepth) {
+        return false;        
     }
+
+    // Capture the new frame in the buffer
+    uint32_t slot = _txAudioWriteCount % _txAudioBufDepth;
+    for (uint32_t i = 0; i < 160 * 4; i++) {
+        _txAudioBuf[slot][i] = frame[i];
+    }
+    _txAudioWriteCount++;
+    // Used to manage the "tail" of the transmission
+    _lastTxAudioTime = time_ms();
+
+    // Force an immediate tick event to get things out the door as 
+    // quickly as possible
+    TickEvent ev;
+    processEvent(&ev);
+
+    return true;
 }
 
 bool QSOFlowMachine::isDone() const {

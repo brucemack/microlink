@@ -72,7 +72,9 @@ public:
     bool txAudio(const int16_t* frame);
 
 private:
-    
+
+    void _processEvent(const Event* ev);
+
     void _processRXReceive(const UDPReceiveEvent* evt);
     void _processTXReceive(const UDPReceiveEvent* evt);
     void _processONDATA(const uint8_t* d, uint32_t len);
@@ -123,10 +125,15 @@ private:
     Decoder _gsmDecoder;
     Encoder _gsmEncoder;
 
-    bool _txAudioPending;
-    int16_t _txAudio[160 * 4];
+    // The last time we had transmit audio queued, which can be 
+    // used as the basis for transmit timeouts.
     uint32_t _lastTxAudioTime;
-    uint16_t _txSequenceCounter;
+
+    // Buffer for outbound audio
+    static const uint32_t _txAudioBufDepth = 2;
+    int16_t _txAudioBuf[_txAudioBufDepth][160 * 4];
+    uint32_t _txAudioWriteCount;
+    uint32_t _txAudioSentCount;
 };
 
 }
