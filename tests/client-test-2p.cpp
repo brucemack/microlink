@@ -32,8 +32,6 @@ Launch command:
 
 openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client-test-2p.elf verify reset exit"
 */
-
-
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -50,6 +48,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "hardware/sync.h"
+#include "pico/util/queue.h"
+#include "pico/multicore.h"
 
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
@@ -86,6 +86,26 @@ static const int audioFrameSize = 160;
 static const uint32_t audioBufDepth = 16;
 static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
+
+static const uint32_t adcClockHz = 48000000;
+
+// This is the queue used to pass ADC samples from the ISR and into the main 
+// event loop.
+static queue_t adcSampleQueue;
+
+// Decorates a function name, such that the function will execute from RAM 
+// (assuming it is not inlined into a flash function by the compiler)
+static void __not_in_flash_func(adc_irq_handler) () {    
+    while (!adc_fifo_is_empty()) {
+        const int16_t lastSample = adc_fifo_get();
+        bool added = queue_try_add(&adcSampleQueue, &lastSample);
+        if (!added) {
+            return;
+        }
+        //maxAdcSampleQueue = std::max(maxAdcSampleQueue,
+        //    (uint16_t)queue_get_level(&adcSampleQueue));
+    }
+}
 
 // TODO: This has some audio quality problems
 static void testTone(AudioOutputContext& ctx) {
@@ -156,6 +176,30 @@ int main(int, const char**) {
     gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
     i2c_set_baudrate(i2c_default, 400000 * 4);
 
+    // This is the queue used to collect data from the ADC.  Each queue entry
+    // is 16 bits (uint16).
+    queue_init(&adcSampleQueue, 2, 64);
+
+    // Get the ADC initialized
+    uint8_t adcChannel = 0;
+    adc_gpio_init(26 + adcChannel);
+    adc_init();
+    adc_select_input(adcChannel);
+    adc_fifo_setup(
+        true,   
+        false,
+        1,
+        false,
+        false
+    );
+    adc_set_clkdiv(adcClockHz / 8000);
+    irq_set_exclusive_handler(ADC_IRQ_FIFO, adc_irq_handler);    
+    adc_irq_set_enabled(true);
+    irq_set_enabled(ADC_IRQ_FIFO, true);
+    adc_run(true);
+
+    // Hello indicator
+
     gpio_put(LED_PIN, 1);
     sleep_ms(1000);
     gpio_put(LED_PIN, 0);
@@ -196,8 +240,8 @@ int main(int, const char**) {
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
         audioBufDepthLog2, audioBuf);
-    //PicoAudioInputContext audioInContext;
-    TestAudioInputContext audioInContext(audioFrameSize * 4, 8000);
+    PicoAudioInputContext audioInContext(adcSampleQueue);
+    //TestAudioInputContext audioInContext(audioFrameSize * 4, 8000);
 
     RootMachine rm(&ctx, &info, &audioOutContext);
     audioInContext.setSink(&rm);

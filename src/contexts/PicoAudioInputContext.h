@@ -23,6 +23,8 @@
 
 #include <cstdint>
 
+#include "pico/util/queue.h"
+
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
 namespace kc1fsz {
@@ -32,15 +34,21 @@ class AudioSink;
 class PicoAudioInputContext {
 public:
 
-    PicoAudioInputContext();
+    PicoAudioInputContext(queue_t& queue);
 
     void setSink(AudioSink *sink);
 
-    virtual bool pool();
+    virtual bool poll();
+
+    void setPtt(bool keyed) { _keyed = keyed; }
 
 private:
 
+    // This is the queue used to pass ADC samples from the ISR and into the main 
+    // event loop.
+    queue_t& _queue;
     AudioSink* _sink;
+    bool _keyed;
     PicoPollTimer _timer;
 };
 

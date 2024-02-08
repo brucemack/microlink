@@ -24,8 +24,16 @@
 
 namespace kc1fsz {
 
+PicoAudioInputContext::PicoAudioInputContext(queue_t& queue)
+:   _queue(queue) {    
+}
+
 void PicoAudioInputContext::setSink(AudioSink* sink) {
     _sink = sink;
+}
+
+bool PicoAudioInputContext::poll() {
+    return false;
 }
 
 }
