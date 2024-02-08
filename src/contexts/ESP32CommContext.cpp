@@ -70,6 +70,17 @@ uint32_t ESP32CommContext::flush(uint32_t ms) {
     return total;
 }
 
+bool ESP32CommContext::test() {
+    if (_state == State::NONE) {
+        const char* cmd = "AT+GMR\r\n";
+        uint32_t cmdLen = strlen(cmd);
+        _esp32->write((uint8_t*)cmd, cmdLen);
+        return true;
+    } else {
+        return false;
+    }
+}
+
 bool ESP32CommContext::poll() {
 
     bool anythingHappened = false;
@@ -289,13 +300,14 @@ void ESP32CommContext::ok() {
     }
     // TODO: GENERALIZE FOR TCP
     else if (_state == State::IN_UDP_SETUP) {
-        cout << "ESP32CommContext: OK (IN_UDP_SETUP)" << endl;
         // Create an event and forward
         ChannelSetupEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
     }
     else {
-        cout << "ESP32CommContext: OK (?)" << endl;
+        if (traceLevel > 1) {
+            cout << "ESP32CommContext: OK (?)" << endl;
+        }
     }
 }
 
@@ -321,14 +333,10 @@ void ESP32CommContext::sendPrompt() {
 
 void ESP32CommContext::sendOk() {
     if (_state == State::IN_SEND_OK_WAIT) {
-        cout << "ESP32CommContext: SEND OK (IN_SEND_OK_WAIT)" << endl;
         _state = State::NONE;
         SendEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
     } 
-    else {
-        cout << "ESP32CommContext: SEND OK (?) " << _state << endl;
-    }
 }
 
 void ESP32CommContext::domain(const char* addr) {
@@ -342,11 +350,9 @@ void ESP32CommContext::domain(const char* addr) {
 }
 
 void ESP32CommContext::connected(uint32_t channel) {
-    cout << "ESP32CommContext::connected()" << endl;
 }
 
 void ESP32CommContext::closed(uint32_t channel) {
-    cout << "ESP32CommContext::close()" << endl;
     if (channel < 9) {
         if (_tracker[channel].inUse) {
             if (_tracker[channel].type == ChannelTracker::Type::TYPE_TCP) {
@@ -387,10 +393,12 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
 
 void ESP32CommContext::notification(const char* msg) {
     if (traceLevel > 0) {
-        cout << "notification: " << msg << endl;
+        cout << "ESP32CommContext: " << msg << endl;
     }
     if (_state == State::IN_INIT) {
         if (_initCount == 0) {
+            // The "Got IP" message is treated like the final sign
+            // that the ESP32 is up and running.
             if (strcmp(msg,"WIFI GOT IP") == 0) {
                 const char* cmd = "ATE0\r\n";
                 uint32_t cmdLen = strlen(cmd);

@@ -194,6 +194,8 @@ void QSOFlowMachine::_sendONDATA() {
 }
 
 void QSOFlowMachine::processEvent(const Event* ev) {
+    _processEvent(ev);
+    /*
     while (true) {
         State initialState = _state;
         _processEvent(ev);
@@ -203,6 +205,7 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             break;
         }
     }
+    */
 }
 
 void QSOFlowMachine::_processEvent(const Event* ev) {
@@ -364,11 +367,6 @@ bool QSOFlowMachine::txAudio(const int16_t* frame) {
     _txAudioWriteCount++;
     // Used to manage the "tail" of the transmission
     _lastTxAudioTime = time_ms();
-
-    // Force an immediate tick event to get things out the door as 
-    // quickly as possible
-    TickEvent ev;
-    processEvent(&ev);
 
     return true;
 }

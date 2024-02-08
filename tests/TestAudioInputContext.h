@@ -23,6 +23,10 @@
 
 #include <iostream>
 
+#ifdef PICO_BUILD
+#include "kc1fsz-tools/rp2040/PicoPollTimer.h"
+#endif
+
 namespace kc1fsz {
 
 class AudioSink;
@@ -47,12 +51,22 @@ private:
     const uint32_t _sampleRate;
     AudioSink* _sink;
     bool _inTone;
-    uint32_t _nextFrameMs;
-    uint32_t _toneEndMs;
     uint32_t _frameCount;
+    float _amplitude;
     float _omega;
     // Maintain phase consistency
     float _phi;
+    int16_t _toneFrame[160 * 4];
+
+    // This timer is used to time the overall tone
+#ifdef PICO_BUILD
+    PicoPollTimer _toneTimer;
+#endif
+
+    // This timer is used to pace the generation of the frames
+#ifdef PICO_BUILD
+    PicoPollTimer _frameTimer;
+#endif
 };
 
 }

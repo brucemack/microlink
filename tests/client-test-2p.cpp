@@ -26,6 +26,14 @@
  * This test runs on the RP2040 hardware and provides a fairly comprehensive test
  * of connection, logon, and receipt of audio packets from the *ECHOTEST* station.
  */
+
+/*
+Launch command:
+
+openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client-test-2p.elf verify reset exit"
+*/
+
+
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -54,6 +62,7 @@
 #include "contexts/PicoAudioInputContext.h"
 
 #include "TestUserInfo.h"
+#include "TestAudioInputContext.h"
 
 #define LED_PIN (25)
 
@@ -157,8 +166,13 @@ int main(int, const char**) {
 
     PicoUartChannel::traceLevel = 0;
     ESP32CommContext::traceLevel = 1;
+
+    RootMachine::traceLevel = 0;
+    LogonMachine::traceLevel = 0;
+    LogonMachine::traceLevel = 0;
+    LookupMachine2::traceLevel = 0;
+    QSOConnectMachine::traceLevel = 0;
     QSOFlowMachine::traceLevel = 0;
-    LogonMachine::traceLevel = 1;
 
     // Sertup UART and timer
     const uint32_t readBufferSize = 256;
@@ -182,7 +196,8 @@ int main(int, const char**) {
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
         audioBufDepthLog2, audioBuf);
-    PicoAudioInputContext audioInContext;
+    //PicoAudioInputContext audioInContext;
+    TestAudioInputContext audioInContext(audioFrameSize * 4, 8000);
 
     RootMachine rm(&ctx, &info, &audioOutContext);
     audioInContext.setSink(&rm);
@@ -190,10 +205,10 @@ int main(int, const char**) {
     // TODO: Move configuration out 
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setServerPort(5200);
-    rm.setCallSign(CallSign("xxx"));
+    rm.setCallSign(CallSign("KC1FSZ"));
     rm.setPassword(FixedString("xxx"));
-    rm.setLocation(FixedString("xxx"));
-    rm.setFullName(FixedString("xxx"));
+    rm.setFullName(FixedString("Bruce R. MacKinnon"));
+    rm.setLocation(FixedString("Wellesley, MA USA"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
     ctx.setEventProcessor(&rm);
@@ -211,8 +226,6 @@ int main(int, const char**) {
 
         int c = getchar_timeout_us(0);
         if (c > 0) {
-            cout << (char)c;
-            cout.flush();
             if (c == 's') {
                 cout << endl << "Starting" << endl;
                 rm.start();
@@ -221,8 +234,18 @@ int main(int, const char**) {
                 break;
             } 
             else if (c == 't') {
-                cout << endl << "Test tone" << endl;
+                cout << endl << "TX test" << endl;
+                // Short burst of tone
+                audioInContext.sendTone(1000, 2000);
+            } 
+            else if (c == 'e') {
+                cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
+            }
+            else if (c == 'z') {
                 testTone(audioOutContext);
+            } else {
+                cout << (char)c;
+                cout.flush();
             }
         }
 
@@ -232,7 +255,8 @@ int main(int, const char**) {
 
         // Poll the audio system
         audioOutContext.poll();
-        
+        audioInContext.poll();
+
         // Poll the communications system and pass any inbound bytes
         // over to the communications context.
         socketTimer.reset();
@@ -243,12 +267,17 @@ int main(int, const char**) {
             cout << "Longest Socket (us) " << longestSocketUs << endl;
         }
 
+        // Run continuously
+        rm.processEvent(&tickEv);
+
+        /*
         // Generate the one second tick (needed for timeouts, etc)
         uint32_t now = time_ms();
         if (now - lastAudioTickMs >= 1000) {
             lastAudioTickMs = now;
             rm.processEvent(&tickEv);
         }
+        */
 
         // Used to show that we are still alive
         cycle++;

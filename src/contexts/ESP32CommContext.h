@@ -68,6 +68,8 @@ public:
 
     int getLiveChannelCount() const;
 
+    bool test();
+
     // ------ CommContext Request Methods -------------------------------------
 
     virtual void reset();

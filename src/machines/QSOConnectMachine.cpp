@@ -99,7 +99,7 @@ void QSOConnectMachine::processEvent(const Event* ev) {
         }
         else if (_isTimedOut()) {
             _userInfo->setStatus(FAILED_MSG);
-            _state = FAILED;
+            _state = State::FAILED;
         }
     }
     // In this state we are waiting for confirmation that the RTP 
@@ -111,7 +111,7 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 // On the first try the timeout zero to force the first
                 // connect attempt
                 _setTimeoutMs(time_ms());
-                _state = CONNECTING;  
+                _state = State::CONNECTING;  
                 _retryCount = 0;
             } else {
                 _userInfo->setStatus(FAILED_MSG);
@@ -120,7 +120,7 @@ void QSOConnectMachine::processEvent(const Event* ev) {
         }
         else if (_isTimedOut()) {
             _userInfo->setStatus(FAILED_MSG);
-            _state = FAILED;
+            _state = State::FAILED;
         }
     } 
     // In this state we are waiting for the reciprocal RTCP message
@@ -175,7 +175,9 @@ void QSOConnectMachine::processEvent(const Event* ev) {
     // In this state we are waiting for acknowledgement that the initial RTCP 
     // message was sent out.
     else if (_state == State::CONNECTING_0) {
+
         if (ev->getType() == SendEvent::TYPE) {
+
             auto evt = static_cast<const SendEvent*>(ev);
             if (evt->isGood()) {
 
@@ -203,11 +205,14 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 // Transition into the state waiting for the RTP send to complete
                 _state = State::CONNECTING_1;
                 _setTimeoutMs(time_ms() + SEND_TIMEOUT_MS);
+
             } else {
+                _userInfo->setStatus("Send failed 1");
                 _state = FAILED;
             }
         }
         else if (_isTimedOut()) {
+            _userInfo->setStatus("Send timed out 1");
             _state = FAILED;
         }
     }
@@ -224,8 +229,13 @@ void QSOConnectMachine::processEvent(const Event* ev) {
                 _setTimeoutMs(time_ms() + REMOTE_TIMEOUT_MS);
                 _userInfo->setStatus(WAITING_FOR_RESPONSE_MSG);
             } else {
+                _userInfo->setStatus("Send failed 2");
                 _state = FAILED;
             }
+        }
+        else if (_isTimedOut()) {
+            _userInfo->setStatus("Send timed out 2");
+            _state = FAILED;
         }
     }
 

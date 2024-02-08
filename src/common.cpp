@@ -140,13 +140,12 @@ void writeInt32(uint8_t* buf, uint32_t d) {
     buf[3] = (d      ) &0xff;
 }
 
-#ifndef PICO_BUILD
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
     const uint8_t gsmFrames[4][33],
     uint8_t* p, uint32_t packetSize) {
 
     if (packetSize < 144)
-        throw std::invalid_argument("Insufficient space");
+        panic("Insufficient space");
 
     *(p++) = 0xc0;
     *(p++) = 0x03;
@@ -171,7 +170,6 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
 
     return 144;
 }
-#endif
 
 // TODO ADD MORE TO THIS
 bool isRTCPPacket(const uint8_t* d, uint32_t len) {

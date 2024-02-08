@@ -36,32 +36,19 @@ class AudioSink;
 TestAudioInputContext::TestAudioInputContext(uint32_t frameSize, uint32_t sampleRate)
 :   _frameSize(frameSize),
     _sampleRate(sampleRate),
-    _inTone(false),
-    _nextFrameMs(0),
-    _toneEndMs(0) {
+    _inTone(false) {
 }
 
 bool TestAudioInputContext::poll() {
 
     if (_inTone) {
-        uint32_t now = time_ms();
-        if (now >= _toneEndMs) {
+        if (_toneTimer.poll()) {
             _inTone = false;
-            cout << "Done, frame count " << _frameCount << endl;
             return true;
         }
-        else if (now >= _nextFrameMs) {
-            // Make a tone frame
-            // TODO: CLEAN UP HARD CODE
-            int16_t frame[160 * 4];
-            for (unsigned int i = 0; i < _frameSize; i++) {
-                frame[i] = 32767.0 * std::cos(_phi);
-                _phi += _omega;
-            }
-            if (_sink->play(frame)) {
+        else if (_frameTimer.poll()) {
+            if (_sink->play(_toneFrame)) {
                 _frameCount++;
-                // TODO: REMOVE HC
-                _nextFrameMs = _nextFrameMs + 80;
             } else {
                 cout << "Frame rejected: " << _frameCount << endl;
             }
@@ -73,12 +60,23 @@ bool TestAudioInputContext::poll() {
 }
 
 void TestAudioInputContext::sendTone(uint32_t freq, uint32_t ms) {
+    
     _inTone = true;
-    _toneEndMs = time_ms() + ms;
-    _nextFrameMs = time_ms();
     _frameCount = 0;
     _omega = 2.0 * 3.141526 * (float)freq / (float)_sampleRate;
     _phi = 0;
+    _amplitude = 0.5;
+
+    // Pre-build the tone
+    for (unsigned int i = 0; i < _frameSize; i++) {
+        _toneFrame[i] = 32767.0 * _amplitude * std::cos(_phi);
+        _phi += _omega;
+    }
+
+    // TODO: REMOVE HC
+    // NOTE: SLIGHTLY FAST?
+    _frameTimer.setIntervalUs(80 * 1000);
+    _toneTimer.setIntervalUs(ms * 1000);
 }
 
 }

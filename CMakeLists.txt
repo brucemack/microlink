@@ -228,6 +228,7 @@ target_include_directories(esp32at-test-2 PRIVATE kc1fsz-tools-cpp/include)
 
 add_executable(client-test-2p
   tests/client-test-2p.cpp
+  tests/TestAudioInputContext.cpp
   src/ATResponseProcessor.cpp
   src/common.cpp
   src/contexts/ESP32CommContext.cpp
