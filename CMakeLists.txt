@@ -221,33 +221,6 @@ endif()
 target_include_directories(esp32at-test-2 PRIVATE src)
 target_include_directories(esp32at-test-2 PRIVATE kc1fsz-tools-cpp/include)
 
-# ------ socket-test-2 ------------------------------------------------------
-#
-# Runs on the RP2040
-
-add_executable(socket-test-2
-  tests/socket-test-2.cpp
-  src/ATResponseProcessor.cpp
-  src/common.cpp
-  src/contexts/ESP32CommContext.cpp
-  kc1fsz-tools-cpp/src/Common.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
-)
-
-if(DEFINED ENV{PICO_BUILD})
-pico_enable_stdio_usb(socket-test-2 1)
-# Watch out!  Don't let the STDIO get sent to the UART
-pico_enable_stdio_uart(socket-test-2 0)
-target_compile_definitions(socket-test-2 PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
-target_compile_definitions(socket-test-2 PRIVATE PICO_BUILD=1)
-target_link_libraries(socket-test-2 pico_stdlib hardware_i2c hardware_adc pico_multicore)
-endif()
-
-target_include_directories(socket-test-2 PRIVATE src)
-target_include_directories(socket-test-2 PRIVATE kc1fsz-tools-cpp/include)
-
 # ------ client-test-2p ------------------------------------------------------
 #
 # Runs on the RP2040
@@ -258,6 +231,7 @@ add_executable(client-test-2p
   src/common.cpp
   src/contexts/ESP32CommContext.cpp
   src/contexts/I2CAudioOutputContext.cpp
+  src/contexts/PicoAudioInputContext.cpp
   src/machines/RootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/LookupMachine2.cpp

@@ -26,6 +26,7 @@
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/Channel.h"
 #include "gsm-0610-codec/Decoder.h"
+#include "gsm-0610-codec/Encoder.h"
 
 #include "../StateMachine.h"
 
@@ -69,18 +70,34 @@ public:
 
 private:
     
-    void _processUDPReceive(const UDPReceiveEvent* evt);
-    void _processTick(const TickEvent* evt);
+    void _processRXReceive(const UDPReceiveEvent* evt);
+    void _processTXReceive(const UDPReceiveEvent* evt);
+    void _processONDATA(const uint8_t* d, uint32_t len);
+    void _sendONDATA();
 
     enum State { 
         IDLE,
-        OPEN, 
-        OPEN_RTCP_PING_0,
-        // STATE #3: 
-        OPEN_RTCP_PING_1,
-        OPEN_RTP_PING_0,
-        OPEN_RTP_PING_1,
+        // This is the normal RX message flow
+        OPEN_RX, 
+        // RX - waiting to send the RTCP ping
+        OPEN_RX_RTCP_PING_0, 
+        // RX - waiting for the send ACK on the RTCP ping
+        OPEN_RX_RTCP_PING_1, 
+        // RX - waiting to send the RTP ping
+        OPEN_RX_RTP_PING_0, 
+        // RX - waiting for the send ACK on the RTP ping
+        OPEN_RX_RTP_PING_1, 
+        // This is the normal TX message flow
+        OPEN_TX,
+        // TX - waiting for the send ACK on an audio packet
+        OPEN_TX_AUDIO_1,
+        // TX - waiting to send the RTCP ping
+        OPEN_TX_RTCP_PING_0, 
+        // TX - waiting for the send ACK on the RTCP ping
+        OPEN_TX_RTCP_PING_1, 
+        // QSO finished normally
         SUCCEEDED, 
+        // QSO failed/aborted unexpectedly
         FAILED 
     } _state;
 
@@ -95,12 +112,17 @@ private:
     Channel _rtpChannel;
     Channel _rtcpChannel;
     uint32_t _ssrc;
-    uint32_t _lastKeepAliveSentMs;
-    uint32_t _lastKeepAliveRecvMs;
+    uint32_t _lastRTCPKeepAliveSentMs;
+    uint32_t _lastRTPKeepAliveSentMs;
+    uint32_t _lastRecvMs;
+
     Decoder _gsmDecoder;
+    Encoder _gsmEncoder;
 
     bool _txAudioPending;
     int16_t _txAudio[160 * 4];
+    uint32_t _lastTxAudioTime;
+    uint16_t _txSequenceCounter;
 };
 
 }

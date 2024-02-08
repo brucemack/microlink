@@ -62,7 +62,7 @@ public:
      *   session is busy and the TX will need to be 
      *   retried.
     */
-    bool play(const int16_t* frame);
+    virtual bool play(const int16_t* frame);
 
 private:
 

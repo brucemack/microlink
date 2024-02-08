@@ -40,6 +40,7 @@ public:
 
 private:
 
+    AudioSink* _sink;
     PicoPollTimer _timer;
 };
 
