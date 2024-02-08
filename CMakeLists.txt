@@ -140,6 +140,7 @@ target_include_directories(machine-test-1 PRIVATE gsm-0610-codec/include)
 add_executable(client-test-2
   tests/client-test-2.cpp
   tests/TestContext.cpp
+  tests/TestAudioInputContext.cpp
   src/common.cpp
   src/contexts/SocketContext.cpp
   src/contexts/W32AudioOutputContext.cpp

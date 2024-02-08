@@ -55,7 +55,7 @@ void I2CAudioOutputContext::reset() {
     _timer.reset();
 }
 
-void I2CAudioOutputContext::play(int16_t* frame) {
+bool I2CAudioOutputContext::play(const int16_t* frame) {
     // For example: a depth of 16 means a depthLog2 of 4.  
     // The mask is 1, 10, 100, 1000, 10000, minus 1 -> 1111
     uint32_t mask = (1 << _bufferDepthLog2) - 1;
@@ -67,6 +67,8 @@ void I2CAudioOutputContext::play(int16_t* frame) {
         start[i] = frame[i];
     }
     _frameWriteCount++;
+
+    return true;
 }
 
 bool I2CAudioOutputContext::poll() {    

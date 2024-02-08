@@ -23,21 +23,51 @@
  * real applications!
  * =================================================================================
  */
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
+#include "Windows.h"
+
 #include <iostream>
 #include <fstream>
 #include <cassert>
 #include <cstring>
 #include <string>
 
-//#include <conio.h>
-#include "Windows.h"
-
 #include "kc1fsz-tools/Common.h"
+#include "kc1fsz-tools/win32/Win32PerfTimer.h"
 #include "common.h"
-#include "PerfTimer.h"
 
 using namespace std;
 using namespace kc1fsz;
+
+static void test_stdin() {
+
+    int rc = fcntl(0, F_SETFL, O_NONBLOCK); 
+    cout << rc << endl;
+
+    // Select on STDIN
+    //fd_set readfds; 
+    //FD_ZERO(&readfds);
+    //int highestFd = 0;
+
+    //struct timeval tv;
+    //tv.tv_sec = 0;
+    //tv.tv_usec = 100;
+
+    //FD_SET(0, &readfds);
+
+    for (int i = 0; i < 100000; i++) {
+        // Do the real thing
+        //int rv = select(highestFd + 1, &readfds, 0, 0, &tv); 
+        //if (rv != 0)
+        //    cout << rv << endl;
+        int c = getchar();
+        if (c != -1)
+            cout << c << endl;
+    }
+}
 
 static void test_ip_addr() {
     uint32_t addr = parseIP4Address("1.2.3.4");
@@ -87,7 +117,7 @@ static void test_timing() {
 #endif
 
     // Test the timer class
-    PerfTimer timer;
+    Win32PerfTimer timer;
     Sleep(50);
     cout << "Elapsed uS    " << timer.elapsedUs() << endl;
 }
@@ -96,4 +126,5 @@ int main(int, const char**) {
     test_print();
     test_ip_addr();
     test_timing();
+    test_stdin();
 }

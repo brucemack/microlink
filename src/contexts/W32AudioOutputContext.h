@@ -43,7 +43,11 @@ public:
     virtual ~W32AudioOutputContext();
 
     virtual bool poll();
-    virtual void play(int16_t* frame);
+
+    /**
+     * @param frame Assumed to be a 160x4 frame.
+    */
+    virtual bool play(const int16_t* frame);
 
     virtual uint32_t getAudioQueueUsed() const {
         return _audioQueueUsed;

@@ -169,7 +169,7 @@ bool W32AudioOutputContext::poll() {
     return anythingHappened;
 }
 
-void W32AudioOutputContext::play(int16_t* frame) {
+bool W32AudioOutputContext::play(const int16_t* frame) {
 
     if (traceLevel >= 1) {
         cout << "(Audio)" << endl;
@@ -185,6 +185,9 @@ void W32AudioOutputContext::play(int16_t* frame) {
             b[i] = frame[i];
         }
         _audioQueueUsed++;
+        return true;
+    } else {
+        return false;
     }
 }
 

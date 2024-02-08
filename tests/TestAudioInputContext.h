@@ -18,29 +18,41 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _TestAudioOutputContext_h
-#define _TestAudioOutputContext_h
+#ifndef _TestAudioInputContext_h
+#define _TestAudioInputContext_h
 
 #include <iostream>
-#include "kc1fsz-tools/AudioOutputContext.h"
 
 namespace kc1fsz {
 
+class AudioSink;
+
 /**
- * A dummy implementation that does nothing.
- */
-class TestAudioOutputContext : public AudioOutputContext {
+ * Demonstration audio source that does nothing more than tone generation.
+*/
+class TestAudioInputContext {
 public:
 
-    TestAudioOutputContext(uint32_t frameSize, uint32_t samplesPerSecond)
-    : AudioOutputContext(frameSize, samplesPerSecond) { }
+    TestAudioInputContext(uint32_t frameSize, uint32_t samplesPerSecond);
 
-    bool poll() { return false; }
+    bool poll();
 
-    bool play(const int16_t* frame) { 
-        std::cout << "<Audio Frame>" << std::endl;
-        return true;
-    }
+    void setSink(AudioSink* sink) { _sink = sink; }
+
+    void sendTone(uint32_t freq, uint32_t ms);
+
+private:
+
+    const uint32_t _frameSize;
+    const uint32_t _sampleRate;
+    AudioSink* _sink;
+    bool _inTone;
+    uint32_t _nextFrameMs;
+    uint32_t _toneEndMs;
+    uint32_t _frameCount;
+    float _omega;
+    // Maintain phase consistency
+    float _phi;
 };
 
 }

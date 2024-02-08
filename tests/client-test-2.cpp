@@ -25,6 +25,8 @@
  * 
  * This test case is targeted at the Windows platform. This is a basic EL client.
  */
+#include <fcntl.h>
+
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -39,7 +41,9 @@
 #include "machines/RootMachine.h"
 #include "contexts/SocketContext.h"
 #include "contexts/W32AudioOutputContext.h"
+
 #include "TestUserInfo.h"
+#include "TestAudioInputContext.h"
 
 using namespace std;
 using namespace kc1fsz;
@@ -62,7 +66,7 @@ int main(int, const char**) {
     LookupMachine2::traceLevel = 0;
     QSOConnectMachine::traceLevel = 1;
     QSOFlowMachine::traceLevel = 1;
-    SocketContext::traceLevel = 1;
+    SocketContext::traceLevel = 0;
     W32AudioOutputContext::traceLevel = 1;
 
     if (getenv("EL_CALLSIGN") == 0 || getenv("EL_PASSWORD") == 0 ||
@@ -74,6 +78,7 @@ int main(int, const char**) {
     SocketContext context;
     TestUserInfo info;
     W32AudioOutputContext audioOutContext(audioFrameSize, 8000, audioFrameOut, silenceFrameOut);
+    TestAudioInputContext audioInContext(audioFrameSize, 8000);
 
     RootMachine rm(&context, &info, &audioOutContext);
     rm.setServerName(HostName("naeast.echolink.org"));
@@ -85,6 +90,8 @@ int main(int, const char**) {
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
     context.setEventProcessor(&rm);
+    // Send input audio into station transmit port
+    audioInContext.setSink(&rm);
 
     TickEvent tickEv;
     uint32_t lastAudioTickMs = 0;
@@ -98,11 +105,30 @@ int main(int, const char**) {
     uint32_t start = time_ms();
     uint32_t cycle = 0;
 
-    rm.start();
+    // Make stdin non-blocking 
+    fcntl(0, F_SETFL, O_NONBLOCK); 
 
-    while ((time_ms() - start) < 30000) {
+    while (true) {
 
-        // Poll the audio system 
+        int c = getchar();
+        if (c == 'q') {
+            cout << "Leaving event loop" << endl;
+            break;
+        }
+        else if (c == 't') {
+            cout << "Transmit tone" << endl;  
+            // Short burst of tone
+            audioInContext.sendTone(1000, 500);
+        } 
+        else if (c == 's') {
+            cout << "Starting" << endl;
+            rm.start();
+        }
+
+        // Poll the audio input system at full speed
+        audioInContext.poll();
+
+        // Poll the audio output system at full speed
         audioTimer.reset();
         bool audioActivity = audioOutContext.poll();
         uint32_t ela = audioTimer.elapsedUs();
@@ -110,7 +136,7 @@ int main(int, const char**) {
             longestAudioUs = ela;
             cout << "Longest Audio " << longestAudioUs << endl;
         }
-        
+
         // Poll the communications system
         socketTimer.reset();
         bool commActivity = context.poll();
@@ -134,7 +160,7 @@ int main(int, const char**) {
         //uint32_t t0 = time_ms();
         //std::this_thread::sleep_for(std::chrono::microseconds(500));
         std::this_thread::yield();
-
+ 
         if (!activity)
             Sleep(5);
 

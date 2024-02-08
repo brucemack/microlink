@@ -196,8 +196,11 @@ void QSOFlowMachine::_sendONDATA() {
 void QSOFlowMachine::processEvent(const Event* ev) {
 
     if (traceLevel > 0) {
-        cout << "QSOFlowMachine: state=" << _state 
-            << " event=" << ev->getType() <<  endl;
+        // Suppress tick - too noisy
+        if (ev->getType() != TickEvent::TYPE) {
+            cout << "QSOFlowMachine: state=" << _state 
+                << " event=" << ev->getType() <<  endl;
+        }
     }
 
     // Deal with event types that can arrive at any time
@@ -267,6 +270,10 @@ void QSOFlowMachine::processEvent(const Event* ev) {
         // Look for outbound audio
         if (_txAudioPending) {
 
+            if (traceLevel > 0) {
+                cout << "QSOFlowMachine: TX audio packet " << _txSequenceCounter << endl;
+            }
+
             // TODO: DO THE SEND STUFF HERE
             uint8_t gsmFrames[4][33];
             int16_t* frame = _txAudio;
@@ -282,16 +289,24 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             uint8_t packet[144];
             uint32_t packetLen = formatRTPPacket(_txSequenceCounter++, 
                 0, gsmFrames, packet, 144);
+            
             _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
+            _state = State::OPEN_TX_AUDIO_1;
+            
+            // TEMP
+            //cout << "Sending audio packet" << endl;
+            //prettyHexDump(packet, 144, cout);
 
             _txAudioPending = false;
             _lastTxAudioTime = time_ms();
-            _state = State::OPEN_TX_AUDIO_1;
             // TODO: SET TIMEOUT
         }
         // Check to see if the transmit activity has ended and we
         // should be switching back into RX mode
         else if (time_ms() > _lastTxAudioTime + TX_LINGER_INTERVAL_MS) {
+            if (traceLevel > 0) {
+                cout << "QSOFlowMachine: TX timed out, back to RX" << endl;
+            }
             _gsmDecoder.reset();
             _state = State::OPEN_RX;
         }
@@ -319,7 +334,7 @@ void QSOFlowMachine::processEvent(const Event* ev) {
         // TODO: SET TIMEOUT
     }
     else if (_state == State::OPEN_TX_AUDIO_1 ||
-             _state == State::OPEN_RX_RTCP_PING_1) {
+             _state == State::OPEN_TX_RTCP_PING_1) {
         if (ev->getType() == SendEvent::TYPE) {
             _state = State::OPEN_TX;
         }

@@ -39,6 +39,9 @@ class UDPReceiveEvent;
 class TickEvent;
 class AudioOutputContext;
 
+/**
+ * This is the state machine for the main flow of an EchoLink QSO.
+*/
 class QSOFlowMachine : public StateMachine {
 public:
 
@@ -76,24 +79,25 @@ private:
     void _sendONDATA();
 
     enum State { 
+        // STATE 0:
         IDLE,
-        // This is the normal RX message flow
+        // STATE 1: This is the normal RX message flow
         OPEN_RX, 
-        // RX - waiting to send the RTCP ping
+        // STATE 2: RX - waiting to send the RTCP ping
         OPEN_RX_RTCP_PING_0, 
-        // RX - waiting for the send ACK on the RTCP ping
+        // STATE 3: RX - waiting for the send ACK on the RTCP ping
         OPEN_RX_RTCP_PING_1, 
-        // RX - waiting to send the RTP ping
+        // STATE 4: RX - waiting to send the RTP ping
         OPEN_RX_RTP_PING_0, 
-        // RX - waiting for the send ACK on the RTP ping
+        // STATE 5: RX - waiting for the send ACK on the RTP ping
         OPEN_RX_RTP_PING_1, 
-        // This is the normal TX message flow
+        // STATE 6: This is the normal TX message flow
         OPEN_TX,
-        // TX - waiting for the send ACK on an audio packet
+        // STATE 7: TX - waiting for the send ACK on an audio packet
         OPEN_TX_AUDIO_1,
-        // TX - waiting to send the RTCP ping
+        // STATE 8: TX - waiting to send the RTCP ping
         OPEN_TX_RTCP_PING_0, 
-        // TX - waiting for the send ACK on the RTCP ping
+        // STATE 9: TX - waiting for the send ACK on the RTCP ping
         OPEN_TX_RTCP_PING_1, 
         // QSO finished normally
         SUCCEEDED, 
