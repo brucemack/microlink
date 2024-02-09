@@ -65,6 +65,10 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #include "TestAudioInputContext.h"
 
 #define LED_PIN (25)
+// Physical pin 9
+#define PTT_PIN (6)
+// Physical pin 10
+#define KEY_LED_PIN (7)
 
 #define UART_ID uart0
 #define UART_TX_PIN 0
@@ -139,8 +143,19 @@ int main(int, const char**) {
     // Seup PICO
     stdio_init_all();
 
+    // On-board LED
     gpio_init(LED_PIN);
     gpio_set_dir(LED_PIN, GPIO_OUT);
+
+    // PTT switch
+    gpio_init(PTT_PIN);
+    gpio_set_dir(PTT_PIN, GPIO_IN);
+    gpio_pull_up(PTT_PIN);
+
+    // Key LED
+    gpio_init(KEY_LED_PIN);
+    gpio_set_dir(KEY_LED_PIN, GPIO_OUT);
+    gpio_put(KEY_LED_PIN, 0);
        
     // UART0 setup
     uart_init(UART_ID, U_BAUD_RATE);
@@ -157,7 +172,8 @@ int main(int, const char**) {
     gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
     gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
     gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
-    i2c_set_baudrate(i2c_default, 400000 * 4);
+    //i2c_set_baudrate(i2c_default, 400000 * 4);
+    i2c_set_baudrate(i2c_default, 400000);
 
     // ADC/audio in setup
     PicoAudioInputContext::setup();
@@ -227,9 +243,26 @@ int main(int, const char**) {
 
     // Here is the main event loop
     uint32_t cycle = 0;
+    bool pttState = false;
+    uint32_t lastPttTransition = 0;
 
     while (true) {
 
+        // Physical controls
+        bool ptt = !gpio_get(PTT_PIN);
+        if (ptt != pttState && time_ms() > (lastPttTransition + 100)) {
+            lastPttTransition = time_ms();
+            pttState = ptt;
+            audioInContext.setPtt(pttState);
+
+            // Set key LED
+            if (audioInContext.getPtt())
+                gpio_put(KEY_LED_PIN, 1);
+            else
+                gpio_put(KEY_LED_PIN, 0);
+        }
+
+        // Keyboard input
         int c = getchar_timeout_us(0);
         if (c > 0) {
             if (c == 's') {
@@ -247,6 +280,11 @@ int main(int, const char**) {
             else if (c == ' ') {
                 audioInContext.setPtt(!audioInContext.getPtt());
                 cout << endl << "Keyed: " << audioInContext.getPtt() << endl;
+                // Set key LED
+                if (audioInContext.getPtt())
+                    gpio_put(KEY_LED_PIN, 1);
+                else
+                    gpio_put(KEY_LED_PIN, 0);
             }
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
@@ -258,6 +296,7 @@ int main(int, const char**) {
                 cout << endl;
                 cout << "Diagnostics" << endl;
                 cout << "Audio In Overflow : " << audioInContext.getOverflowCount() << endl;
+                cout << "ADC AVG           : " << audioInContext.getAverage() << endl;
                 cout << "UART TX IRQ       : " << channel.getIsrCountWrite() << endl;
             } 
             else {

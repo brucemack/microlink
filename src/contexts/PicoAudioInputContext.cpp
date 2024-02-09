@@ -126,8 +126,16 @@ bool PicoAudioInputContext::poll() {
     // Check to see if we have data availble 
     if (_audioInBufWriteCount.get() > _audioInBufReadCount.get()) {
         activity = true;
+
+        uint32_t slot = _audioInBufReadCount.get() & _audioInBufDepthMask;
+
+        // TEMP - Calculate average
+        int32_t sum = 0;
+        for (uint32_t i = 0; i < 160 * 4; i++)
+            sum += _audioInBuf[slot][i];
+        _averageOfLastFrame = (sum / (160 * 4));
+        
         if (_keyed) {
-            uint32_t slot = _audioInBufReadCount.get() & _audioInBufDepthMask;
             // Pull down a 4xframe and try to move it into the transmitter
             bool accepted = _sink->play(_audioInBuf[slot]);
             if (accepted) {
