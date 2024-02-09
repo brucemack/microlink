@@ -1,19 +1,22 @@
 # Overview
 
-Is it possible to run a full EchoLink&reg; station on a microcontroller?  I'm not completely sure, but
+Is it possible to run a full EchoLink&reg; station on a $4 microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest,
 cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink&reg;?  Please 
 [see the official website](https://www.echolink.org/) for complete information.
 
 Here's the current demo:
 
-[![MicroLink RX Demo](https://img.youtube.com/vi/rONuahJaLdY/0.jpg)](https://www.youtube.com/watch?v=rONuahJaLdY)
+[![MicroLink RX Demo](https://img.youtube.com/vi/q-pVzedB9Kg/0.jpg)](https://www.youtube.com/watch?v=q-pVzedB9Kg)
+
+The microphone/analog section still needs a lot of work. :-)
 
 # Architecture/Parts
 
-The goal is to build a complete station from scratch, with no strings attached to PCs/servers.  The official 
+My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is great and is the quickest/easiest way to get on 
-EchoLink. This project is only interesting for someone who wants to get into the nuts-and-bolts of EchoLink/VoIP technology. The final product will provide an inexpensive interface between the internet
+EchoLink. [Download it here](https://www.echolink.org/download.htm).  My project is only
+interesting for someone who wants to get way into the nuts-and-bolts of EchoLink/VoIP technology. The final product will provide an inexpensive interface between the internet
 and a radio to make linking very simple.
 
 ## Current Parts List (HW)
@@ -21,9 +24,11 @@ and a radio to make linking very simple.
 * The main processor is a Pi Pico (RP2040) development board.  $4.00 on DigiKey.
 * Internet connectivity currently comes from an ESP-32-WROOM development board. $5.00 on Amazon. Work
 is underway to provide a 3G cellular data option using a SIM7600 module.
+* Microphone is an electret condenser with a LVM321 pre-amp (not satisfactory).
 * Audio input sampling uses the integrated ADC in the RP2040.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
+* The T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
 
 ## Current Parts List (SW)
 
@@ -35,7 +40,8 @@ is underway to provide a 3G cellular data option using a SIM7600 module.
 
 ## client-test-2p
 
-This is the most comprehensive demonstration that targets the RP2040.
+This is the most comprehensive demonstration that targets the RP2040. This is 
+the code shown in the video demonstration.
 
 ## client-test-2
 
