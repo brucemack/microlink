@@ -2,7 +2,7 @@
 
 Is it possible to run a full EchoLink&reg; station on a $4 microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest,
-cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink&reg;?  Please 
+cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink?  Please 
 [see the official website](https://www.echolink.org/) for complete information. 
 
 There are much easier ways to get onto EchoLink. The MicroLink project is only
