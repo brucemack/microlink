@@ -221,7 +221,6 @@ int main(int, const char**) {
     ctx.setEventProcessor(&rm);
 
     TickEvent tickEv;
-    uint32_t lastAudioTickMs = 0;
 
     PicoPerfTimer socketTimer;
     uint32_t longestSocketUs = 0;

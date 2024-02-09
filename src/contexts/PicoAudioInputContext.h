@@ -87,6 +87,7 @@ private:
     int16_t _gain = 8;
 
     bool _keyed = false;
+    bool _running = false;
 };
 
 }

@@ -53,7 +53,8 @@ void PicoAudioInputContext::setup() {
     irq_set_exclusive_handler(ADC_IRQ_FIFO, PicoAudioInputContext::_adc_irq_handler);    
     adc_irq_set_enabled(true);
     irq_set_enabled(ADC_IRQ_FIFO, true);
-    adc_run(true);
+    // Moved to first poll
+    //adc_run(true);
 }
 
 // Decorates a function name, such that the function will execute from RAM 
@@ -101,18 +102,24 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
                     _audioInBufWriteCount.inc();
                 } else {
                     // In this case we just start writing on the same 4xframe
-                    // again and loose the previous values.
+                    // again and lose the previous values.
                     _audioInBufOverflow++;
                 }
             } 
             else {
-                panic("Sanity check");
+                panic("Sanity check 1");
             }
         }
     }
 }
 
 bool PicoAudioInputContext::poll() {
+
+    // When we start polling we can start the ADC
+    if (!_running) {
+        _running = true;
+        adc_run(true);
+    }
 
     bool activity = false;
 
@@ -135,7 +142,7 @@ bool PicoAudioInputContext::poll() {
         }
     }
     else if (_audioInBufWriteCount.get() < _audioInBufReadCount.get()) {
-        panic("Sanity check");
+        panic("Sanity check 2");
     }
 
     return activity;
