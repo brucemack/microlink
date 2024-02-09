@@ -40,17 +40,16 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #include <thread>
 #include <chrono>
 #include <cmath>
+#include <atomic>
 
 #include "pico/stdlib.h"
 #include "pico/time.h"
-#include "pico/util/queue.h"
 #include "pico/multicore.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "hardware/sync.h"
-#include "hardware/adc.h"
 
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
@@ -66,8 +65,6 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #include "TestAudioInputContext.h"
 
 #define LED_PIN (25)
-// Physical pin 31
-#define AUDIO_IN_PIN (26)
 
 #define UART_ID uart0
 #define UART_TX_PIN 0
@@ -83,34 +80,15 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 using namespace std;
 using namespace kc1fsz;
 
-// The size of one EchoLink RTP packet (after decoding)
+// The size of one EchoLink audio frame (after decoding)
 static const int audioFrameSize = 160;
+// The number of audio frames packed into an RTP packet
+static const uint32_t audioFrameBlockFactor = 4;
+
 // Provide buffer for about a second of audio.  We round up to 16 frames worth.
 static const uint32_t audioBufDepth = 16;
 static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
-
-static const uint32_t adcClockHz = 48000000;
-
-// This is the queue used to pass ADC samples from the ISR and into the main 
-// event loop.
-static queue_t adcSampleQueue;
-static uint32_t adcAddFail = 0;
-
-// Decorates a function name, such that the function will execute from RAM 
-// (assuming it is not inlined into a flash function by the compiler)
-static void __not_in_flash_func(adc_irq_handler) () {    
-    while (!adc_fifo_is_empty()) {
-        const int16_t lastSample = adc_fifo_get();
-        bool added = queue_try_add(&adcSampleQueue, &lastSample);
-        if (!added) {
-            adcAddFail++;
-            return;
-        }
-        //maxAdcSampleQueue = std::max(maxAdcSampleQueue,
-        //    (uint16_t)queue_get_level(&adcSampleQueue));
-    }
-}
 
 // TODO: This has some audio quality problems
 static void testTone(AudioOutputContext& ctx) {
@@ -181,30 +159,10 @@ int main(int, const char**) {
     gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
     i2c_set_baudrate(i2c_default, 400000 * 4);
 
-    // This is the queue used to collect data from the ADC.  Each queue entry
-    // is 16 bits (uint16).
-    queue_init(&adcSampleQueue, 2, 64);
-
-    // Get the ADC initialized
-    adc_gpio_init(AUDIO_IN_PIN);
-    adc_init();
-    uint8_t adcChannel = 0;
-    adc_select_input(adcChannel);
-    adc_fifo_setup(
-        true,   
-        false,
-        1,
-        false,
-        false
-    );
-    adc_set_clkdiv(adcClockHz / 8000);
-    irq_set_exclusive_handler(ADC_IRQ_FIFO, adc_irq_handler);    
-    adc_irq_set_enabled(true);
-    irq_set_enabled(ADC_IRQ_FIFO, true);
-    adc_run(true);
+    // ADC/audio in setup
+    PicoAudioInputContext::setup();
 
     // Hello indicator
-
     gpio_put(LED_PIN, 1);
     sleep_ms(1000);
     gpio_put(LED_PIN, 0);
@@ -245,7 +203,7 @@ int main(int, const char**) {
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
         audioBufDepthLog2, audioBuf);
-    PicoAudioInputContext audioInContext(adcSampleQueue);
+    PicoAudioInputContext audioInContext;
     //TestAudioInputContext audioInContext(audioFrameSize * 4, 8000);
 
     RootMachine rm(&ctx, &info, &audioOutContext);
@@ -255,7 +213,7 @@ int main(int, const char**) {
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setServerPort(5200);
     rm.setCallSign(CallSign("KC1FSZ"));
-    rm.setPassword(FixedString("xxxx"));
+    rm.setPassword(FixedString("xxx"));
     rm.setFullName(FixedString("Bruce R. MacKinnon"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
@@ -298,7 +256,10 @@ int main(int, const char**) {
                 testTone(audioOutContext);
             }
             else if (c == 'i') {
-                cout << "ADC Add Fail: " << adcAddFail << endl;
+                cout << endl;
+                cout << "Diagnostics" << endl;
+                cout << "Audio In Overflow : " << audioInContext.getOverflowCount() << endl;
+                cout << "UART TX IRQ       : " << channel.getIsrCountWrite() << endl;
             } 
             else {
                 cout << (char)c;

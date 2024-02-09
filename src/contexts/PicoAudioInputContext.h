@@ -21,11 +21,14 @@
 #ifndef _PicoAudioInputContext_h
 #define _PicoAudioInputContext_h
 
+#include "hardware/adc.h"
+
 #include <cstdint>
 
 #include "pico/util/queue.h"
 
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
+#include "AtomicInteger.h"
 
 namespace kc1fsz {
 
@@ -34,7 +37,12 @@ class AudioSink;
 class PicoAudioInputContext {
 public:
 
-    PicoAudioInputContext(queue_t& queue);
+    static int traceLevel;
+    static PicoAudioInputContext* INSTANCE;
+
+    static void setup();
+
+    PicoAudioInputContext();
 
     void setSink(AudioSink *sink);
 
@@ -42,18 +50,43 @@ public:
 
     void setPtt(bool keyed) { _keyed = keyed; }
     bool getPtt() const { return _keyed; }
+    uint32_t getOverflowCount() const { return _audioInBufOverflow; }
 
-private:
+private:   
 
-    // This is the queue used to pass ADC samples from the ISR and into the main 
-    // event loop.
-    queue_t& _queue;
-    AudioSink* _sink;
+    static void _adc_irq_handler();
+
+    void _interruptHandler();
+
+    AudioSink* _sink = 0;
     PicoPollTimer _timer;
-    int16_t _dcBias;
-    int16_t _frameBuf[160 * 4];
-    uint32_t _sampleCount;
-    bool _keyed;
+
+    static const uint32_t _adcClockHz = 48000000;
+    static const uint32_t _audioSampleRate = 8000;
+    static const uint32_t _audioFrameSize = 160;
+    static const uint32_t _audioFrameBlockFactor = 4;
+    // This is a buffer where the data sampled from the ADC is staged on the
+    // way to the TX chain. As usual, we process 4 audio frames at a time.
+    static const uint32_t _audioInBufDepth = 2;
+    static const uint32_t _audioInBufDepthMask = 0x01;
+    int16_t _audioInBuf[_audioInBufDepth][_audioFrameSize * _audioFrameBlockFactor];
+    // Keeps track of how many 4xframes have been written. The ISR
+    // is the ONLY WRITER of this value.
+    AtomicInteger _audioInBufWriteCount;
+    // Keeps track of how many 4xframes have been read. The main poll() loop
+    // is the ONLY WRITER of this value.
+    AtomicInteger _audioInBufReadCount;
+    // Write pointer - ONLY ACCESSED BY ISR!
+    uint32_t _audioInBufWritePtr = 0;
+    // Keep count of overflows/underflows
+    uint32_t _audioInBufOverflow = 0;
+    // Used to trim the centering
+    int16_t _dcBias = 0;
+    // This includes x16 for 12 to 16 bit PCM conversion and a gain
+    // of 0.5.
+    int16_t _gain = 8;
+
+    bool _keyed = false;
 };
 
 }
