@@ -3,28 +3,36 @@
 Is it possible to run a full EchoLink&reg; station on a $4 microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest,
 cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink&reg;?  Please 
-[see the official website](https://www.echolink.org/) for complete information.
+[see the official website](https://www.echolink.org/) for complete information. 
 
-Here's the current demo:
+There are much easier ways to get onto EchoLink. The MicroLink project is only
+interesting for someone who wants to get deep into the nuts-and-bolts of EchoLink/VoIP technology. In fact, you 
+should start to question the sanity of anyone who spends this much time building their own EL station. 
+
+Here's the current demo video:
 
 [![MicroLink RX Demo](https://img.youtube.com/vi/q-pVzedB9Kg/0.jpg)](https://www.youtube.com/watch?v=q-pVzedB9Kg)
 
 The microphone/analog section still needs a lot of work. :-)
 
+The official 
+PC-based EchoLink client written by Jonathan Taylor (K1RFD) is great and is the quickest/easiest way to get on 
+EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones.
+
 # Architecture/Parts
 
-My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  The official 
-PC-based EchoLink client written by Jonathan Taylor (K1RFD) is great and is the quickest/easiest way to get on 
-EchoLink. [Download it here](https://www.echolink.org/download.htm).  My project is only
-interesting for someone who wants to get way into the nuts-and-bolts of EchoLink/VoIP technology. The final product will provide an inexpensive interface between the internet
-and a radio to make linking very simple.
+My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  
+
+At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
+
+This project required an in-depth examination of how the the EchoLink protocol works. [My analysis can be found here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
 
 ## Current Parts List (HW)
 
 * The main processor is a Pi Pico (RP2040) development board.  $4.00 on DigiKey.
 * Internet connectivity currently comes from an ESP-32-WROOM development board. $5.00 on Amazon. Work
 is underway to provide a 3G cellular data option using a SIM7600 module.
-* Microphone is an electret condenser with a LVM321 pre-amp (not satisfactory).
+* The microphone is an electret condenser with a LVM321 pre-amp (not satisfactory).
 * Audio input sampling uses the integrated ADC in the RP2040.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
@@ -32,13 +40,27 @@ is underway to provide a 3G cellular data option using a SIM7600 module.
 
 ## Current Parts List (SW)
 
-* The main station firmware is completely homebrew (see GitHub repo).
+* The main station firmware is completely homebrew (C++, see GitHub repo).
 * The ESP-32 runs the Espresif AT firmware (version 3.2.0.0).
-* Importantly, the GSM 06-10 Full Rate CODEC is homebrew.
+* Importantly, audio compression/decompression uses a GSM 06-10 Full Rate CODEC which is homebrew 
+in C++. Getting that to work required studying
+the European Telecommunications Standards Institute specification for GSM and a lot of testing,
+but this was extremely interesting.
 
 Here's a picture of the parts on the bench so you can tell what you're looking at.
 
 ![MicroLink Station](docs/demo-1.png)
+
+## Speeds and Feeds
+
+* The standard audio sample rate for EchoLink is 8 kHz at 12-bits.
+* The audio CODEC creates/consumes one 640 byte packet every 80ms.  One of these packets is moved 12.5 times per second.
+* It takes the RP2040 about 75uS to decode a 160 byte GSM frame.
+* The UDP data rate needed to sustain audio quality is 
+approximately 14,000 baud.
+* The RP2040 runs at 125 MHz.  Only one of the two processors is used at this time.
+* The DAC runs on an I2C bus running at 400 kHz.
+* The ESP-32 is on a serial port that runs at 115,200 baud.
 
 # Test Notes
 

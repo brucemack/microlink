@@ -2,7 +2,7 @@
 
 [By Bruce MacKinnon, KC1FSZ](https://www.qrz.com/db/kc1fsz)
 
-As far as I can tell the EchoLink protocol isn't officially documented. Maybe I'm missing something. This page attempts 
+As far as I can tell the EchoLink&reg; protocol isn't officially documented. Maybe I'm missing something. This page attempts 
 to fill in the details. My 
 notes are based on examinations of EL packet captures and a review of the various open source EchoLink implementations in GitHub. I 
 am not affiliated with the EchoLink team and I have no inside information.  Please take these notes for what they are 
@@ -13,6 +13,9 @@ with caution.** We all love EchoLink but none of us pay when we use it, so I can
 going on behind the scenes. The last thing anyone needs is an accidental denial-of-service incident on the EL network. I
 would strongly encourage anyone attempting to implement their own EchoLink hardware/software to reach out to the 
 EchoLink team first to discuss your idea.
+
+The information on this page was used to homebrew a working EchoLink&reg; station called MicroLink.  [The code/information 
+is here](https://github.com/brucemack/microlink).
 
 If you have any questions/corrections/concerns on this 
 document please contact me directly (good in QRZ). Don't bother the real 
