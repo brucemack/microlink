@@ -36,6 +36,10 @@ is underway to provide a 3G cellular data option using a SIM7600 module.
 * The ESP-32 runs the Espresif AT firmware (version 3.2.0.0).
 * Importantly, the GSM 06-10 Full Rate CODEC is homebrew.
 
+Here's a picture of the parts on the bench so you can tell what you're looking at.
+
+![MicroLink Station](docs/demo-1.png)
+
 # Test Notes
 
 ## client-test-2p
