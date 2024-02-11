@@ -53,6 +53,8 @@ public:
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
     // Used to assess DC bias
     int16_t getAverage() const { return _averageOfLastFrame; }
+    int16_t getGain() const { return _gain; }
+    void setGain(int16_t g) { _gain = g; }
 
 private:   
 
@@ -83,10 +85,11 @@ private:
     // Keep count of overflows/underflows
     uint32_t _audioInBufOverflow = 0;
     // Used to trim the centering
-    int16_t _dcBias = -45;
+    int16_t _dcBias = -95;
     // This includes x16 for 12 to 16 bit PCM conversion and a gain
     // of 0.5.
-    int16_t _gain = 17;
+    int16_t _gain = 15;
+    //int16_t _gain = 1;
 
     bool _keyed = false;
     bool _running = false;

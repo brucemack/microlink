@@ -69,6 +69,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #define PTT_PIN (6)
 // Physical pin 10
 #define KEY_LED_PIN (7)
+// Physical pin 11
+#define ESP_EN_PIN (8)
 
 #define UART_ID uart0
 #define UART_TX_PIN 0
@@ -156,6 +158,11 @@ int main(int, const char**) {
     gpio_init(KEY_LED_PIN);
     gpio_set_dir(KEY_LED_PIN, GPIO_OUT);
     gpio_put(KEY_LED_PIN, 0);
+
+    // ESP EN
+    gpio_init(ESP_EN_PIN);
+    gpio_set_dir(ESP_EN_PIN, GPIO_OUT);
+    gpio_put(ESP_EN_PIN, 1);
        
     // UART0 setup
     uart_init(UART_ID, U_BAUD_RATE);
@@ -178,11 +185,20 @@ int main(int, const char**) {
     // ADC/audio in setup
     PicoAudioInputContext::setup();
 
+    // Reset ESP
+    gpio_put(ESP_EN_PIN, 1);
+    sleep_ms(500);
+    gpio_put(ESP_EN_PIN, 0);
+    sleep_ms(500);
+    gpio_put(ESP_EN_PIN, 1);
+
     // Hello indicator
-    gpio_put(LED_PIN, 1);
-    sleep_ms(1000);
-    gpio_put(LED_PIN, 0);
-    sleep_ms(1000);
+    for (int i = 0; i < 4; i++) {
+        gpio_put(LED_PIN, 1);
+        sleep_ms(250);
+        gpio_put(LED_PIN, 0);
+        sleep_ms(250);
+    }
 
     cout << "===== MicroLink Test 2p =================" << endl;
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
@@ -297,8 +313,18 @@ int main(int, const char**) {
                 cout << "Diagnostics" << endl;
                 cout << "Audio In Overflow : " << audioInContext.getOverflowCount() << endl;
                 cout << "ADC AVG           : " << audioInContext.getAverage() << endl;
-                cout << "UART TX IRQ       : " << channel.getIsrCountWrite() << endl;
+                cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
+                cout << "UART RX LOSTT     : " << channel.getReadBytesLost() << endl;
+                cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
             } 
+            else if (c == '=') {
+                audioInContext.setGain(audioInContext.getGain() + 1);
+                cout << "Gain is " << audioInContext.getGain() << endl;
+            }
+            else if (c == '-') {
+                audioInContext.setGain(audioInContext.getGain() - 1);
+                cout << "Gain is " << audioInContext.getGain() << endl;
+            }
             else {
                 cout << (char)c;
                 cout.flush();
