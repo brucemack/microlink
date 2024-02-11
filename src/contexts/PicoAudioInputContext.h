@@ -51,12 +51,17 @@ public:
     void setPtt(bool keyed) { _keyed = keyed; }
     bool getPtt() const { return _keyed; }
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
-    // Used to assess DC bias
-    int16_t getAverage() const { return _averageOfLastFrame; }
     int16_t getGain() const { return _gain; }
     void setGain(int16_t g) { _gain = g; }
 
+    // Used to assess DC bias
+    int16_t getAverage() const;
+    int16_t getMax() const;
+    int16_t getClips() const;
+
 private:   
+
+    void _updateStats(int16_t* audio);
 
     static void _adc_irq_handler();
 
@@ -93,7 +98,17 @@ private:
 
     bool _keyed = false;
     bool _running = false;
-    int16_t _averageOfLastFrame = 0;
+
+    // Used for capturing audio statistics
+    struct FrameStats {
+        int16_t avg;
+        int16_t max;
+        uint32_t clips;
+    };
+
+    static const uint32_t _statsSize = 4;
+    FrameStats _stats[_statsSize];
+    uint32_t _statsPtr;
 };
 
 }

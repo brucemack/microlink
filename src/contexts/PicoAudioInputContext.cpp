@@ -65,7 +65,8 @@ void __not_in_flash_func(PicoAudioInputContext::_adc_irq_handler) () {
     }
 }
 
-PicoAudioInputContext::PicoAudioInputContext() {
+PicoAudioInputContext::PicoAudioInputContext() 
+:   _statsPtr(0) {
 
     if (INSTANCE != 0) {
         panic("Init error");
@@ -82,15 +83,22 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     // We clear as much as possible on every interrupt
     while (!adc_fifo_is_empty()) {
         uint32_t slot = _audioInBufWriteCount.get() & _audioInBufDepthMask;
-        // This will be a number from 0->4095 (12 bits)
-        int16_t sample = adc_fifo_get();
+        // This will be a number from 0->4095 (12 bits).  
+        // We are using a 32-bit integer to implement saturation
+        int32_t sample = adc_fifo_get();
         // Center to give a number from -2048->2047 (12 bits)
         sample -= 2048;
         // Small tweaks
         sample += _dcBias;
         // Apply a gain and shift up to form 16-bit PCM.
         sample *= _gain;
-        _audioInBuf[slot][_audioInBufWritePtr++] = sample;
+        // Saturate to 16 bits
+        if (sample > 32767) {
+            sample = 32767;
+        } else if (sample < -32768) {
+            sample = -32768;
+        }
+        _audioInBuf[slot][_audioInBufWritePtr++] = (int16_t)sample;
         // Check to see if we've reached the end of the 4xframe
         if (_audioInBufWritePtr == _audioFrameSize * _audioFrameBlockFactor) {
             _audioInBufWritePtr = 0;
@@ -113,6 +121,51 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     }
 }
 
+int16_t PicoAudioInputContext::getAverage() const {
+    int16_t r = 0;
+    for (uint32_t s = 0; s < _statsSize; s++) 
+        r += _stats[s].avg;
+    return r / _statsSize;
+}
+
+int16_t PicoAudioInputContext::getMax() const {
+    int16_t r = 0;
+    for (uint32_t s = 0; s < _statsSize; s++) 
+        r = std::max(_stats[s].max, r);
+    return r;
+}
+
+int16_t PicoAudioInputContext::getClips() const {
+    int16_t r = 0;
+    for (uint32_t s = 0; s < _statsSize; s++) 
+        r += _stats[s].clips;
+    return r;
+}
+
+void PicoAudioInputContext::_updateStats(int16_t* audio) {
+
+    _stats[_statsPtr].avg = 0;
+    _stats[_statsPtr].max = 0;
+    _stats[_statsPtr].clips = 0;
+    
+    for (uint32_t i = 0; i < 160 * 4; i++) {
+        int16_t sample = audio[i];
+        _stats[_statsPtr].avg += sample;
+        _stats[_statsPtr].max = std::max(_stats[_statsPtr].max,
+            (int16_t)std::abs(sample));
+        if (sample == 32767 || sample == -32768) {
+            _stats[_statsPtr].clips++;
+        }
+    }
+
+    _stats[_statsPtr].avg /= (160 * 4);
+    
+    _statsPtr++;
+    if (_statsPtr == _statsSize) {
+        _statsPtr = 0;
+    }
+}
+
 bool PicoAudioInputContext::poll() {
 
     // When we start polling we can start the ADC
@@ -129,11 +182,8 @@ bool PicoAudioInputContext::poll() {
 
         uint32_t slot = _audioInBufReadCount.get() & _audioInBufDepthMask;
 
-        // TEMP - Calculate average
-        int32_t sum = 0;
-        for (uint32_t i = 0; i < 160 * 4; i++)
-            sum += _audioInBuf[slot][i];
-        _averageOfLastFrame = (sum / (160 * 4));
+        // (This is optional)
+        _updateStats(_audioInBuf[slot]);
         
         if (_keyed) {
             // Pull down a 4xframe and try to move it into the transmitter
