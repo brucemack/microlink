@@ -13,11 +13,15 @@ Here's the current demo video:
 
 [![MicroLink RX Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
 
-The microphone/analog section still needs a lot of work. :-)
+The microphone/analog section still needs work.  
+
+Once things are working smoothly I will be integrating this onto a single PCB for 
+ease of integration with radios (link mode) and/or repeaters.
 
 The official 
-PC-based EchoLink client written by Jonathan Taylor (K1RFD) is great and is the quickest/easiest way to get on 
-EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones.
+PC-based EchoLink client written by Jonathan Taylor (K1RFD) is and excellent
+product and is the quickest/easiest way to get on 
+EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink product suite.
 
 # Architecture/Parts
 
