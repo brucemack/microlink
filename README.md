@@ -28,7 +28,7 @@ My goal was to build a complete station from scratch, with no strings attached t
 
 At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
 
-This project required an in-depth examination of how the the EchoLink protocol works. [My analysis can be found here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
+This project required an in-depth examination of how the EchoLink protocol works. [My analysis can be found here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
 
 ## Current Parts List (HW)
 
