@@ -103,3 +103,6 @@ References
 Pi PICO Stuff
 * [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
 * Analysis of ADC: https://pico-adc.markomo.me/
+
+Rig Integration
+* Microphone Connector Reference: https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf
