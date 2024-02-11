@@ -16,7 +16,7 @@ Here's the current demo video:
 The microphone/analog section still needs work.  
 
 Once things are working smoothly I will be integrating this onto a single PCB for 
-ease of integration with radios (link mode) and/or repeaters.
+ease of use with radios (link mode) and/or repeaters.
 
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is and excellent
