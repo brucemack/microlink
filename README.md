@@ -123,9 +123,14 @@ References
 ==========
 
 * Official EchoLink: https://www.echolink.org/
-* ESP-32 AT Command Reference: https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html
-* SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
-* SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
+* Pi PICO Stuff
+  - [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
+  - Analysis of ADC: https://pico-adc.markomo.me/
+* ESP-32 
+  - AT Command Reference: https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html
+* SIM7600 Cellular
+  - SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
+  - SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
 * Windows Audio Related: 
   - http://www.techmind.org/wave/
   - http://midi.teragonaudio.com/tech/lowaud.htm
@@ -134,10 +139,5 @@ References
   - [MCP4725 DAC](https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf)
   - [Audio Amp](https://www.ti.com/lit/ds/symlink/lm4862.pdf?HQS=dis-dk-null-digikeymode-dsf-pf-null-wwe&ts=1707335785542&ref_url=https%253A%252F%252Fwww.ti.com%252Fgeneral%252Fdocs%252Fsuppproductinfo.tsp%253FdistId%253D10%2526gotoUrl%253Dhttps%253A%252F%252Fwww.ti.com%252Flit%252Fgpn%252Flm4862)
   - Timers: https://vanhunteradams.com/Pico/TimerIRQ/SPI_DDS.html
-
-Pi PICO Stuff
-* [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
-* Analysis of ADC: https://pico-adc.markomo.me/
-
 Rig Integration
 * Microphone Connector Reference: https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf
