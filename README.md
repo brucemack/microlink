@@ -19,8 +19,7 @@ Once things are working smoothly I will be integrating this onto a single PCB fo
 ease of use with radios (link mode) and/or repeaters.
 
 The official 
-PC-based EchoLink client written by Jonathan Taylor (K1RFD) is and excellent
-product and is the quickest/easiest way to get on 
+PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest/most reliable way to get on 
 EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink product suite.
 
 # Architecture/Parts
