@@ -45,7 +45,7 @@ filter.  The microphone part needs work.
 ## Current Parts List (SW)
 
 * The main station firmware is completely homebrew (C++, see GitHub repo).
-* The ESP-32 runs the Espresif AT firmware (version 3.2.0.0).
+* The ESP-32 runs the Espressif AT firmware (version 3.2.0.0).
 * Importantly, audio compression/decompression uses a GSM 06-10 Full Rate CODEC which is homebrew 
 in C++. Getting that to work required studying
 the European Telecommunications Standards Institute specification for GSM and a lot of testing,
