@@ -96,50 +96,6 @@ static const uint32_t audioBufDepth = 16;
 static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 
-// TODO: This has some audio quality problems
-static void testTone(AudioOutputContext& ctx) {
-
-    // Make a 1kHz tone at the right sample rate
-    int16_t buf[audioFrameSize * 4];
-    float omega = (2.0 * 3.1415926) * (1000.0 / 8000.0);
-    float phi = 0;
-    for (uint32_t i = 0; i < audioFrameSize * 4; i++) {
-        float a = std::cos(phi);
-        phi += omega;
-        buf[i] = 32766.0 * a;
-    }
-
-    // Mini blocking event loop (2 seconds)
-    PicoPollTimer timer;
-    PicoPerfTimer timer2;
-    timer2.reset();
-    timer.setIntervalUs(125 * 160 * 4);
-    uint32_t frameCount = 0;
-    uint32_t actCount = 0;
-    uint32_t longestPoll = 0;
-
-    ctx.reset();
-
-    while (frameCount < 25) {
-        // Keep the audio going
-        timer2.reset();
-        if (ctx.poll()) {
-            actCount++;
-        }
-        if (timer2.elapsedUs() > longestPoll) {
-            longestPoll = timer2.elapsedUs();
-        }
-        // Figure out if it's time to feed more
-        if (timer.poll()) {
-            ctx.play(buf);
-            frameCount++;
-        }
-    }
-    cout << "Longest Poll   : " << longestPoll << endl;
-    cout << "Activity Count : " << actCount << endl;
-    cout << "Sync Errors    : " << ctx.getSyncErrorCount() << endl;
-}
-
 int main(int, const char**) {
 
     // Seup PICO
@@ -254,8 +210,9 @@ int main(int, const char**) {
 
     TickEvent tickEv;
 
-    PicoPerfTimer socketTimer;
-    uint32_t longestSocketUs = 0;
+    PicoPerfTimer cycleTimer;
+    uint32_t longestCycleUs = 0;
+    uint32_t longCycleCounter = 0;
 
     // Here is the main event loop
     uint32_t cycle = 0;
@@ -263,6 +220,8 @@ int main(int, const char**) {
     uint32_t lastPttTransition = 0;
 
     while (true) {
+
+        cycleTimer.reset();
 
         // Physical controls
         bool ptt = !gpio_get(PTT_PIN);
@@ -290,14 +249,12 @@ int main(int, const char**) {
             } 
             else if (c == 't') {
                 cout << endl << "TX test" << endl;
-                // Short burst of tone
-                //audioInContext.sendTone(1000, 2000);
             } 
             else if (c == ' ') {
                 audioInContext.setPtt(!audioInContext.getPtt());
                 cout << endl << "Keyed: " << audioInContext.getPtt() << endl;
                 // Set key LED
-                if (audioInContext.getPtt())
+                if (audioInContext.getPtt()) 
                     gpio_put(KEY_LED_PIN, 1);
                 else
                     gpio_put(KEY_LED_PIN, 0);
@@ -306,16 +263,25 @@ int main(int, const char**) {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }
             else if (c == 'z') {
-                testTone(audioOutContext);
+                audioOutContext.tone(800, 1000);
+            }
+            else if (c == 'c') {
+                audioOutContext.tone(400, 250);
             }
             else if (c == 'i') {
                 cout << endl;
                 cout << "Diagnostics" << endl;
                 cout << "Audio In Overflow : " << audioInContext.getOverflowCount() << endl;
-                cout << "ADC AVG           : " << audioInContext.getAverage() << endl;
+                cout << "Audio In Avg      : " << audioInContext.getAverage() << endl;
+                cout << "Audio In Avg%     : " << (100 * audioInContext.getAverage()) / 32767 << endl;
+                cout << "Audio In Max      : " << audioInContext.getMax() << endl;
+                cout << "Audio In Max%     : " << (100 * audioInContext.getMax()) / 32767 << endl;
+                cout << "Audio In Clips    : " << audioInContext.getClips() << endl;
+                cout << "Audio Gain        : " << audioInContext.getGain() << endl;
                 cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
-                cout << "UART RX LOSTT     : " << channel.getReadBytesLost() << endl;
+                cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
                 cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
+                cout << "Long Cycles       : " << longCycleCounter << endl;
             } 
             else if (c == '=') {
                 audioInContext.setGain(audioInContext.getGain() + 1);
@@ -341,30 +307,18 @@ int main(int, const char**) {
 
         // Poll the communications system and pass any inbound bytes
         // over to the communications context.
-        socketTimer.reset();
         ctx.poll();
-        uint32_t ela = socketTimer.elapsedUs();
-        if (ela > longestSocketUs) {
-            longestSocketUs = ela;
-            cout << "Longest Socket (us) " << longestSocketUs << endl;
-        }
 
-        // Run continuously
+        // Run the state machines
         rm.processEvent(&tickEv);
 
-        /*
-        // Generate the one second tick (needed for timeouts, etc)
-        uint32_t now = time_ms();
-        if (now - lastAudioTickMs >= 1000) {
-            lastAudioTickMs = now;
-            rm.processEvent(&tickEv);
+        uint32_t ela = cycleTimer.elapsedUs();
+        if (ela > longestCycleUs) {
+            longestCycleUs = ela;
+            cout << "Longest Cycle (us) " << longestCycleUs << endl;
         }
-        */
-
-        // Used to show that we are still alive
-        cycle++;
-        if (cycle % 10000000 == 0) {
-            cout << cycle << endl;
+        if (ela > 125) {
+            longCycleCounter++;
         }
     }
 

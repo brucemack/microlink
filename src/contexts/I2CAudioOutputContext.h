@@ -55,6 +55,8 @@ public:
 
     virtual uint32_t getSyncErrorCount() { return _idleCount + _overflowCount; }
 
+    virtual void tone(uint32_t freq, uint32_t durationMs);
+
 private:
 
     void _play(int16_t pcm);
@@ -77,6 +79,14 @@ private:
     // This indicates whether we are actually playing sound
     // vs. sitting in silence.
     bool _playing;
+
+    // Tone features
+    static const uint32_t _toneBufSize = 20;
+    int16_t _toneBuf[_toneBufSize];
+    bool _inTone;
+    uint32_t _toneCount;
+    uint32_t _toneStep;
+    uint32_t _tonePtr;
 
     PicoPollTimer _timer;
 };

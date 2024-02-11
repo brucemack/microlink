@@ -11,7 +11,7 @@ should start to question the sanity of anyone who spends this much time building
 
 Here's the current demo video:
 
-[![MicroLink RX Demo](https://img.youtube.com/vi/q-pVzedB9Kg/0.jpg)](https://www.youtube.com/watch?v=q-pVzedB9Kg)
+[![MicroLink RX Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
 
 The microphone/analog section still needs a lot of work. :-)
 
@@ -32,7 +32,8 @@ This project required an in-depth examination of how the the EchoLink protocol w
 * The main processor is a Pi Pico (RP2040) development board.  $4.00 on DigiKey.
 * Internet connectivity currently comes from an ESP-32-WROOM development board. $5.00 on Amazon. Work
 is underway to provide a 3G cellular data option using a SIM7600 module.
-* The microphone is an electret condenser with a LVM321 pre-amp (not satisfactory).
+* Microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
+filter.  The microphone part needs work.
 * Audio input sampling uses the integrated ADC in the RP2040.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
@@ -69,9 +70,12 @@ approximately 14,000 baud.
 This is the most comprehensive demonstration that targets the RP2040. This is 
 the code shown in the video demonstration.
 
+At the moment this uses a serial console to take commands and display 
+status.
+
 ## client-test-2
 
-* Set environment variable EL_PASSWORD with password.
+* Set environment variables EL_CALLSIGN, EL_PASSWORD, EL_FULLNAME, EL_LOCATION.
 
 # Technical/Development Notes
 

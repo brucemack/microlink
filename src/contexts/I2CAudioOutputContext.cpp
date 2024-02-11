@@ -18,6 +18,7 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+ #include <cmath>
 #include "hardware/i2c.h"
 
 #include "I2CAudioOutputContext.h"
@@ -40,6 +41,16 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
     _timer.setIntervalUs(_intervalUs);
     _dacAddr = 0x60;
     _triggerDepth = (1 << _bufferDepthLog2) / 2;
+
+    // Build a fixed table with an 800 Hz tone
+    float omega = (2.0 * 3.14159 * 800.0) / (float)sampleRate;
+    float phi = 0;
+    for (unsigned int i = 0; i < _toneBufSize; i++) {
+        _toneBuf[i] = 32767.0 * std::cos(phi);
+        phi += omega;
+    }
+
+    reset();
 }
 
 I2CAudioOutputContext::~I2CAudioOutputContext() {    
@@ -52,7 +63,25 @@ void I2CAudioOutputContext::reset() {
     _idleCount = 0;
     _overflowCount = 0;
     _playing = false;
+    _inTone = false;
+    _toneCount = 0;
+    _toneStep = 0;
     _timer.reset();
+}
+
+void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
+    
+    _toneCount = (durationMs * 8000 / 1000);
+    _tonePtr = 0;
+    _inTone = true;
+
+    if (freq == 800) {
+        _toneStep = 4;
+    } else if (freq == 400) {
+        _toneStep = 2;
+    } else {
+        _toneStep = 1;
+    }
 }
 
 bool I2CAudioOutputContext::play(const int16_t* frame) {
@@ -72,10 +101,26 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
 }
 
 bool I2CAudioOutputContext::poll() {    
+
     // Pacing at the audio sample clock (ex: 8kHz)
     bool activity = _timer.poll();
+
     if (activity) {
-        if (!_playing) {
+        if (_inTone) {
+            _play(_toneBuf[_tonePtr >> 2]);
+            // Move across tone, looking for wrap
+            _tonePtr += _toneStep;
+            if (_tonePtr == (_toneBufSize << 2)) {
+                _tonePtr = 0;
+            }   
+            // Manage duration
+            _toneCount--;
+            if (_toneCount == 0) {
+                _inTone = false;
+            }
+
+        }
+        else if (!_playing) {
             // Decide whether to start playing
             if ((_frameWriteCount > _framePlayCount) &&
                 (_frameWriteCount - _framePlayCount) > _triggerDepth) {
