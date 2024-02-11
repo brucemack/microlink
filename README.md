@@ -2,12 +2,13 @@
 
 Is it possible to run a full EchoLink&reg; station on a $4 microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest,
-cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink?  Please 
+cheapest possible way to put a radio onto the EchoLink network. If you are new 
+to the workd of EchoLink please 
 [see the official website](https://www.echolink.org/) for complete information. 
 
 There are much easier ways to get onto EchoLink. The MicroLink project is only
 interesting for someone who wants to get deep into the nuts-and-bolts of EchoLink/VoIP technology. In fact, you 
-should start to question the sanity of anyone who spends this much time building their own EL station. 
+should start to question the sanity of anyone who spends this much time building their own EchoLink station. 
 
 Here's the current demo video:
 
@@ -15,7 +16,7 @@ Here's the current demo video:
 
 The microphone/analog section still needs work.  
 
-Once things are working smoothly I will be integrating this onto a single PCB for 
+Once things are working smoothly I will integrate this onto a single PCB for 
 ease of use with radios (link mode) and/or repeaters.
 
 The official 
