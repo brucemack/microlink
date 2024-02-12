@@ -192,10 +192,13 @@ int main(int, const char**) {
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
         audioBufDepthLog2, audioBuf);
     PicoAudioInputContext audioInContext;
-    //TestAudioInputContext audioInContext(audioFrameSize * 4, 8000);
 
     RootMachine rm(&ctx, &info, &audioOutContext);
+
+    // Cross-connects
+    info.setAudioOut(&audioOutContext);
     audioInContext.setSink(&rm);
+    ctx.setEventProcessor(&rm);
 
     // TODO: Move configuration out 
     rm.setServerName(HostName("naeast.echolink.org"));
@@ -206,7 +209,6 @@ int main(int, const char**) {
     rm.setLocation(FixedString("Wellesley, MA USA"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
-    ctx.setEventProcessor(&rm);
 
     const uint32_t taskCount = 4;
     Runnable* tasks[taskCount] = {

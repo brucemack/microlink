@@ -107,7 +107,8 @@ bool I2CAudioOutputContext::run() {
 
     if (activity) {
         if (_inTone) {
-            _play(_toneBuf[_tonePtr >> 2]);
+            // TODO: HAVE A GAIN SETTING
+            _play((_toneBuf[_tonePtr >> 2]) >> 1);
             // Move across tone, looking for wrap
             _tonePtr += _toneStep;
             if (_tonePtr == (_toneBufSize << 2)) {
