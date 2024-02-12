@@ -118,7 +118,6 @@ bool I2CAudioOutputContext::run() {
             if (_toneCount == 0) {
                 _inTone = false;
             }
-
         }
         else if (!_playing) {
             // Decide whether to start playing

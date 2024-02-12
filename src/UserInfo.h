@@ -40,6 +40,12 @@ public:
      * Used to set the "oNDATA message" that comes from the other station.
     */
     virtual void setOnData(const char* msg) { }
+
+    /**
+     * Used to indicate when the receiver is actively receiving 
+     * audio packets. Will only be called on transitions.
+    */
+    virtual void setSquelchOpen(bool sq) { }
 };
 
 }

@@ -71,6 +71,8 @@ public:
     */
     bool txAudio(const int16_t* frame);
 
+    uint32_t getAudioSeqErrors() const { return _audioSeqErrors; }
+
 private:
 
     void _processEvent(const Event* ev);
@@ -120,6 +122,8 @@ private:
     uint32_t _ssrc;
     uint32_t _lastRTCPKeepAliveSentMs;
     uint32_t _lastRTPKeepAliveSentMs;
+    // The last time we received any kind of activity from the remote
+    // station.  Used to manage keep-alive.
     uint32_t _lastRecvMs;
 
     Decoder _gsmDecoder;
@@ -129,11 +133,24 @@ private:
     // used as the basis for transmit timeouts.
     uint32_t _lastTxAudioTime;
 
+    // The last time we saw receive audio from the remote station, 
+    // which can be used to manage squelch.
+    uint32_t _lastRxAudioTime;
+
+    // The sequence number of the last audio packet received.
+    uint16_t _lastRxAudioSeq;
+
+    // Indicates whether the system is actively receiving. 
+    bool _squelchOpen;
+
     // Buffer for outbound audio
     static const uint32_t _txAudioBufDepth = 2;
     int16_t _txAudioBuf[_txAudioBufDepth][160 * 4];
     uint32_t _txAudioWriteCount;
     uint32_t _txAudioSentCount;
+
+    // Performance counters
+    uint32_t _audioSeqErrors;
 };
 
 }

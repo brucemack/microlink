@@ -45,10 +45,14 @@ static const uint8_t SPEC_FRAME[33] = {
  0x49, 0x24, 0x50, 0x00, 0x49, 0x24, 0x92, 0x49, 
  0x24 };
 
-// How often we send activity on the UDP connections
+// How often we send activity on the UDP connections to keep the 
+// connection alive.
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10000;
-// How long we wait in silence before unkeying
+// How long we wait in silence before unkeying on TX
 static const uint32_t TX_TAIL_INTERVAL_MS = 1000;
+// How long we wait in silence before deciding that the remote
+// station has unkeyed.
+static const uint32_t SQUELCH_INTERVAL_MS = 1000;
 
 int QSOFlowMachine::traceLevel = 0;
 
@@ -66,6 +70,10 @@ void QSOFlowMachine::start() {
     _txAudioWriteCount = 0;
     _txAudioSentCount = 0;
     _lastTxAudioTime = 0;
+    _lastRxAudioTime = 0;
+    _lastRxAudioSeq = 0;
+    _audioSeqErrors = 0;
+    _squelchOpen = false;
     _state = State::OPEN_RX;
     _gsmEncoder.reset();
     _gsmDecoder.reset();
@@ -86,15 +94,27 @@ void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
             if (traceLevel > 0) {
                 cout << "QSOFLowMachine: (RX) Audio" << endl;
             }
+            
+            _lastRxAudioTime = time_ms();
+
+            if (!_squelchOpen) {
+                _squelchOpen = true;
+                _userInfo->setSquelchOpen(_squelchOpen);
+            }
 
             // Unload the GSM frames from the RTP packet
-            //uint16_t remoteSeq = 0;
+            uint16_t remoteSeq = 0;
             //uint32_t remoteSSRC = 0;
             const uint8_t* d = evt->getData();
 
-            //remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
+            remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
             //remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
             //    ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
+
+            // Check for out-of-sequence
+            if (remoteSeq <= _lastRxAudioSeq) {
+                _audioSeqErrors++;
+            }
 
             const uint32_t framesPerPacket = 4;
             const uint32_t samplesPerFrame = 160;
@@ -195,17 +215,6 @@ void QSOFlowMachine::_sendONDATA() {
 
 void QSOFlowMachine::processEvent(const Event* ev) {
     _processEvent(ev);
-    /*
-    while (true) {
-        State initialState = _state;
-        _processEvent(ev);
-        State finalState = _state;
-        // Iterate until we reach a steady state
-        if (initialState == finalState) {
-            break;
-        }
-    }
-    */
 }
 
 void QSOFlowMachine::_processEvent(const Event* ev) {
@@ -230,6 +239,13 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
             _state == State::OPEN_TX_RTCP_PING_0 ||
             _state == State::OPEN_TX_RTCP_PING_1) {
             _processTXReceive(static_cast<const UDPReceiveEvent*>(ev));
+        }
+    }
+    else if (ev->getType() == TickEvent::TYPE) {
+        // Timeout on squelch?
+        if (_squelchOpen && time_ms() - _lastRxAudioTime > SQUELCH_INTERVAL_MS) {
+            _squelchOpen = false;
+            _userInfo->setSquelchOpen(_squelchOpen);
         }
     }
 

@@ -53,8 +53,6 @@ void PicoAudioInputContext::setup() {
     irq_set_exclusive_handler(ADC_IRQ_FIFO, PicoAudioInputContext::_adc_irq_handler);    
     adc_irq_set_enabled(true);
     irq_set_enabled(ADC_IRQ_FIFO, true);
-    // Moved to first poll
-    //adc_run(true);
 }
 
 // Decorates a function name, such that the function will execute from RAM 
@@ -66,13 +64,23 @@ void __not_in_flash_func(PicoAudioInputContext::_adc_irq_handler) () {
 }
 
 PicoAudioInputContext::PicoAudioInputContext() 
-:   _statsPtr(0) {
+:   _keyed(false),
+    _statsPtr(0) {
 
     if (INSTANCE != 0) {
         panic("Init error");
     }
 
     INSTANCE = this;
+}
+
+void PicoAudioInputContext::setPtt(bool keyed) { 
+
+    _keyed = keyed; 
+
+    // Turn on/off the ADC to minimize interrupt activity when not 
+    // actually transmitting.
+    adc_run(_keyed);
 }
 
 void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
@@ -163,12 +171,6 @@ void PicoAudioInputContext::_updateStats(int16_t* audio) {
 }
 
 bool PicoAudioInputContext::run() {
-
-    // When we start polling we can start the ADC
-    if (!_running) {
-        _running = true;
-        adc_run(true);
-    }
 
     bool activity = false;
 

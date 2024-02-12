@@ -229,16 +229,11 @@ int main(int, const char**) {
 
         // Physical controls
         bool ptt = !gpio_get(PTT_PIN);
-        if (ptt != pttState && time_ms() > (lastPttTransition + 100)) {
+        // Simple de-bounce
+        if (ptt != pttState && time_ms() > (lastPttTransition + 250)) {
             lastPttTransition = time_ms();
             pttState = ptt;
             audioInContext.setPtt(pttState);
-
-            // Set key LED
-            if (audioInContext.getPtt())
-                gpio_put(KEY_LED_PIN, 1);
-            else
-                gpio_put(KEY_LED_PIN, 0);
         }
 
         // Keyboard input
@@ -254,11 +249,6 @@ int main(int, const char**) {
             else if (c == ' ') {
                 audioInContext.setPtt(!audioInContext.getPtt());
                 cout << endl << "Keyed: " << audioInContext.getPtt() << endl;
-                // Set key LED
-                if (audioInContext.getPtt()) 
-                    gpio_put(KEY_LED_PIN, 1);
-                else
-                    gpio_put(KEY_LED_PIN, 0);
             }
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
@@ -303,6 +293,15 @@ int main(int, const char**) {
                 cout << (char)c;
                 cout.flush();
             }
+        }
+
+        // Indicator lights
+        if (audioInContext.getPtt() || 
+            (info.getSquelch() && (time_ms() % 1024) > 512)) {
+            gpio_put(KEY_LED_PIN, 1);
+        } 
+        else {
+            gpio_put(KEY_LED_PIN, 0);
         }
 
         // Temporary

@@ -49,7 +49,7 @@ public:
 
     void setSink(AudioProcessor *sink) { _sink = sink; }
 
-    void setPtt(bool keyed) { _keyed = keyed; }
+    void setPtt(bool keyed);
     bool getPtt() const { return _keyed; }
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
     int16_t getGain() const { return _gain; }
@@ -99,10 +99,8 @@ private:
     // This includes x16 for 12 to 16 bit PCM conversion and a gain
     // of 0.5.
     int16_t _gain = 15;
-    //int16_t _gain = 1;
 
     bool _keyed = false;
-    bool _running = false;
 
     // Used for capturing audio statistics
     struct FrameStats {
