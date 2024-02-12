@@ -167,7 +167,7 @@ int main(int, const char**) {
     LogonMachine::traceLevel = 0;
     LookupMachine2::traceLevel = 0;
     QSOConnectMachine::traceLevel = 0;
-    QSOFlowMachine::traceLevel = 0;
+    QSOFlowMachine::traceLevel = 1;
 
     // Sertup UART and timer
     const uint32_t readBufferSize = 256;
@@ -242,8 +242,14 @@ int main(int, const char**) {
         int c = getchar_timeout_us(0);
         if (c > 0) {
             if (c == 's') {
-                cout << endl << "Starting" << endl;
-                rm.start();
+                if (!rm.isInQSO()) {
+                    cout << endl << "Starting" << endl;
+                    rm.start();
+                }
+            }
+            else if (c == 'x') {
+                cout << endl << "Stoppng" << endl;
+                rm.requestCleanStop();
             }
             else if (c == 'q') {
                 break;
@@ -256,7 +262,7 @@ int main(int, const char**) {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }
             else if (c == 'z') {
-                audioOutContext.tone(800, 2000);
+                audioOutContext.tone(800, 500);
             }
             else if (c == 'i') {
                 cout << endl;
@@ -307,9 +313,9 @@ int main(int, const char**) {
         }
 
         // Temporary
-        if (rm.isDone()) {
-            break;
-        }
+        //if (rm.isDone()) {
+        //    break;
+        //}
 
         // Run the tasks, keeping track of the time for each
         for (uint32_t t = 0; t < 4; t++) {

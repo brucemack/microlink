@@ -46,11 +46,6 @@ public:
 
     RootMachine(CommContext* ctx, UserInfo* userInfo, AudioOutputContext* audioOutput);
 
-    virtual void processEvent(const Event* event);
-    virtual void start();
-    virtual bool isDone() const;
-    virtual bool isGood() const;
-
     void setServerName(HostName h);
     void setServerPort(uint32_t p);
     void setCallSign(CallSign cs);
@@ -58,6 +53,21 @@ public:
     void setTargetCallSign(CallSign target);
     void setFullName(FixedString n);
     void setLocation(FixedString loc);
+
+    bool isInQSO() const;
+
+    /**
+     * Call this to put a QSO into a clean shutdown.  This will not be 
+     * a synchronous event so the state machine needs to continue to run.
+    */
+    bool requestCleanStop();
+
+    // ----- From StateMachine ------------------------------------------------
+
+    virtual void processEvent(const Event* event);
+    virtual void start();
+    virtual bool isDone() const;
+    virtual bool isGood() const;
 
     // ----- From AudioProcessor -----------------------------------------------
 

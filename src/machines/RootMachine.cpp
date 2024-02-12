@@ -44,6 +44,10 @@ RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo,
     _qsoMachine(ctx, userInfo, audioOutput) {
 }
 
+bool RootMachine::isInQSO() const {
+    return !(isDone() || _state == State::IDLE);
+}
+
 bool RootMachine::run() {
     processEvent(&tickEv);
     return true;
@@ -194,6 +198,14 @@ void RootMachine::setLocation(FixedString loc) {
     _logonMachine.setLocation(loc); 
     _connectMachine.setLocation(loc);
     _qsoMachine.setLocation(loc);
+}
+
+bool RootMachine::requestCleanStop() {
+    if (_state == State::QSO) {
+        return _qsoMachine.requestCleanStop();
+    } else {
+        return false;
+    }
 }
 
 }

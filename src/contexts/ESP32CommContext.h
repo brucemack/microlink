@@ -123,16 +123,12 @@ private:
         IN_SEND_OK_WAIT 
     };
 
-    State _state;
     AsyncChannel* _esp32;
     ATResponseProcessor _respProc;
     EventProcessor* _eventProc;
-    int _initCount;
 
-    // A count-down counter used to ignore a specified number 
-    // of OK events.  This is useful for fixed initialization 
-    // sequences.
-    int _okIgnores;
+    State _state;
+    int _initCount;
 
     HostName _lastHostNameReq;
     IPAddress _lastAddrResp;

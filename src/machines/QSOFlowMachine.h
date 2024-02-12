@@ -50,11 +50,6 @@ public:
     QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
         AudioOutputContext* audioOutput);
 
-    virtual void processEvent(const Event* ev);
-    virtual void start();
-    virtual bool isDone() const;
-    virtual bool isGood() const;
-
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setFullName(FixedString fn) { _fullName = fn; }
     void setLocation(FixedString l) { _location = l; }
@@ -62,6 +57,8 @@ public:
     void setRTCPChannel(Channel c) { _rtcpChannel = c; }
     void setRTPChannel(Channel c)  { _rtpChannel = c; }
     void setSSRC(uint32_t s) { _ssrc = s; }
+
+    bool requestCleanStop();
 
     /**
      * @param frame 160 x 4 samples of 16-bit PCM audio.
@@ -73,6 +70,14 @@ public:
 
     uint32_t getAudioSeqErrors() const { return _audioSeqErrors; }
 
+    // ----- From StateMachine ------------------------------------------------
+
+    virtual void processEvent(const Event* ev);
+    virtual void start();
+    virtual void cleanup();
+    virtual bool isDone() const;
+    virtual bool isGood() const;
+
 private:
 
     void _processEvent(const Event* ev);
@@ -81,6 +86,7 @@ private:
     void _processTXReceive(const UDPReceiveEvent* evt);
     void _processONDATA(const uint8_t* d, uint32_t len);
     void _sendONDATA();
+    void _sendBYE();
 
     enum State { 
         // STATE 0:
@@ -103,6 +109,8 @@ private:
         OPEN_TX_RTCP_PING_0, 
         // STATE 9: TX - waiting for the send ACK on the RTCP ping
         OPEN_TX_RTCP_PING_1, 
+        // STATE 10: RX - waiting for the send ACK on the BYE message
+        OPEN_RX_STOP_0,
         // QSO finished normally
         SUCCEEDED, 
         // QSO failed/aborted unexpectedly
@@ -117,6 +125,7 @@ private:
     FixedString _fullName;
     FixedString _location;
     IPAddress _targetAddr;
+
     Channel _rtpChannel;
     Channel _rtcpChannel;
     uint32_t _ssrc;
@@ -128,6 +137,10 @@ private:
 
     Decoder _gsmDecoder;
     Encoder _gsmEncoder;
+
+    // This flag is set when the user wants to close an open QSO.
+    // This triggers a clean exit.
+    bool _stopRequested;
 
     // The last time we had transmit audio queued, which can be 
     // used as the basis for transmit timeouts.

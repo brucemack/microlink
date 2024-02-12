@@ -212,7 +212,6 @@ uint32_t addRTCPPad(uint32_t unpaddedLength,
     return padSize;
 }
 
-#ifndef PICO_BUILD
 uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint8_t* p, uint32_t packetSize) {
 
@@ -256,7 +255,6 @@ uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
 
     return unpaddedLength + padSize;
 }
-#endif 
 
 #ifndef PICO_BUILD
 void panic(const char* msg) {

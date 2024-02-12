@@ -47,10 +47,9 @@ static const char* OVERFLOW_MSG = "Overflow";
 int ESP32CommContext::traceLevel = 0;
 
 ESP32CommContext::ESP32CommContext(AsyncChannel* esp32) 
-:   _state(State::NONE),
-    _esp32(esp32),
+:   _esp32(esp32),
     _respProc(this),
-    _okIgnores(0) {
+    _state(State::NONE) {
 }
 
 void ESP32CommContext::setEventProcessor(EventProcessor* ep) {
@@ -101,6 +100,9 @@ bool ESP32CommContext::run() {
 }
 
 void ESP32CommContext::_cleanupTracker() {
+    for (ChannelTracker& t : _tracker) {
+        t.inUse = false;
+    }
 }
 
 int ESP32CommContext::getLiveChannelCount() const {
@@ -111,6 +113,7 @@ void ESP32CommContext::reset() {
     
     _initCount = 0;
     _state = State::IN_INIT;
+    _cleanupTracker();
 
     const char* cmd = "AT+RST\r\n";
     uint32_t cmdLen = strlen(cmd);
@@ -204,7 +207,7 @@ void ESP32CommContext::closeUDPChannel(Channel c) {
     _closeChannel(c);
 }
 
-void ESP32CommContext::_closeChannel(Channel c) {  
+void ESP32CommContext::_closeChannel(Channel c) {
 }
 
 /**

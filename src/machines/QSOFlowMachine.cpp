@@ -74,9 +74,13 @@ void QSOFlowMachine::start() {
     _lastRxAudioSeq = 0;
     _audioSeqErrors = 0;
     _squelchOpen = false;
+    _stopRequested = false;
     _state = State::OPEN_RX;
     _gsmEncoder.reset();
     _gsmDecoder.reset();
+}
+
+void QSOFlowMachine::cleanup() {
 }
 
 void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
@@ -213,6 +217,14 @@ void QSOFlowMachine::_sendONDATA() {
     _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
 }
 
+void QSOFlowMachine::_sendBYE() {
+
+    const uint16_t packetSize = 128;
+    uint8_t packet[packetSize];
+    uint32_t packetLen = formatRTCPPacket_BYE(0, packet, packetSize);
+    _ctx->sendUDPChannel(_rtcpChannel, packet, packetLen);
+}
+
 void QSOFlowMachine::processEvent(const Event* ev) {
     _processEvent(ev);
 }
@@ -233,7 +245,8 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
             _state == State::OPEN_RX_RTCP_PING_0 ||
             _state == State::OPEN_RX_RTCP_PING_1 ||
             _state == State::OPEN_RX_RTP_PING_0 ||
-            _state == State::OPEN_RX_RTP_PING_1) {
+            _state == State::OPEN_RX_RTP_PING_1 ||
+            _state == State::OPEN_RX_STOP_0) {
             _processRXReceive(static_cast<const UDPReceiveEvent*>(ev));
         } else if (_state == State::OPEN_TX ||
             _state == State::OPEN_TX_RTCP_PING_0 ||
@@ -251,8 +264,14 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
 
     // Now deal with state-specific activity
     if (_state == State::OPEN_RX) {
+        // Look for a shutdown request
+        if (_stopRequested) {
+            _sendBYE();
+            _state = State::OPEN_RX_STOP_0;
+            // TODO: SETUP TIMEOUT
+        }
         // Look to see if we should key up and change to TX mode
-        if (_txAudioWriteCount > _txAudioSentCount) {
+        else if (_txAudioWriteCount > _txAudioSentCount) {
             _gsmEncoder.reset();
             _state = State::OPEN_TX;
         }
@@ -268,7 +287,7 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
         // Check to see if a RTP keep-alive is needed
         else if (time_ms() > _lastRTPKeepAliveSentMs + KEEP_ALIVE_INTERVAL_MS) {
             _state = State::OPEN_RX_RTP_PING_0;
-        }
+        } 
     }
     else if (_state == State::OPEN_RX_RTCP_PING_0) {
 
@@ -295,6 +314,12 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
             _state = State::OPEN_RX;
         }
         // TODO: SETUP TIMOUT
+    }
+    else if (_state == State::OPEN_RX_STOP_0) {
+        if (ev->getType() == SendEvent::TYPE) {
+            _userInfo->setStatus("QSO ended");
+            _state = State::SUCCEEDED;
+        }
     }
     else if (_state == State::OPEN_TX) {
 
@@ -366,6 +391,11 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
         }
         // TODO: SET TIMEOUT
     }
+}
+
+bool QSOFlowMachine::requestCleanStop() {
+    _stopRequested = true;
+    return true;    
 }
 
 bool QSOFlowMachine::txAudio(const int16_t* frame) {
