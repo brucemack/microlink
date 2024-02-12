@@ -93,18 +93,18 @@ are a few points that will help anyone getting into this.
 
 1. Accurate/consistent clocking of the audio chain is essential.  GSM uses
 an 8 kHz clock, which means we need an audio sample once every
-125 microseconds. I know this seems hard to beleive, but inconsistencies
+125 microseconds. I know this seems hard to believe, but inconsistencies
 in this clock can be "heard."  This is where hardware timers with efficient
 interrupt service architectures are important. The highest priority activity
 of the microcontroller should be the creation/consumption of an audio sample
-every 125 uS *exactly* - everything else in the system has some leeway.
+every 125 uS **exactly** - everything else in the system has some leeway.
 2. An EchoLink receiver gets an audio packet *approximately* every 80ms.  Each 
 packet contains
 4 frames that each represent exactly 20 ms of audio. Finally, each frame contains 160
 samples which each represent exactly 125 uS of audio.  From point #1 above, we already 
 know that the timing of the 160 samples within each frame is critical.  However, 
 we also need ensure that the 20 ms frames are played continuously 
-*without the slighest gap between them.* This gets into an interesting problem
+**without the slighest gap between them.** This gets into an interesting problem
 because the frames are streaming across the busy internet (not to mention 
 low-cost WIFI hardware) and may be subject to 
 small timing inconsistencies. There is simply no way to ensure that an EchoLink packet
