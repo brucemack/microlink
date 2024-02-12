@@ -1,13 +1,14 @@
 # Overview
 
-Is it possible to build a full EchoLink&reg; station on a $4 microcontroller?  I'm not completely sure, but
-let's find out. The goal of this project is to create the smallest, simplest, 
-cheapest way to put a radio onto the EchoLink network. Are you new to EchoLink?  Please 
+Is it possible to build a full EchoLink&reg; station using a $4 microcontroller?  I'm not completely sure, but
+let's find out. The goal of this project is to create the smallest, 
+cheapest way to put a radio onto the EchoLink network. If you are new 
+to the world of EchoLink please 
 [see the official website](https://www.echolink.org/) for complete information. 
 
 There are much easier ways to get onto EchoLink. The MicroLink project is only
 interesting for someone who wants to get deep into the nuts-and-bolts of EchoLink/VoIP technology. In fact, you 
-should start to question the sanity of anyone who spends this much time building their own EL station. I am a homebrew enthusiast and I find the use of off-the-shelf software/components to be less exciting. 
+should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I find the use of off-the-shelf software/components to be less exciting. 
 
 Here's the current demo video:
 
@@ -15,13 +16,13 @@ Here's the current demo video:
 
 The microphone/analog section still needs work.  
 
-Once things are working smoothly I will be integrating this onto a single PCB for 
-ease of integration with radios (link mode) and/or repeaters.
+Once things are working smoothly I will integrate this onto a single PCB for 
+ease of use with radios (link mode) and/or repeaters.
 
 The official 
-PC-based EchoLink client written by Jonathan Taylor (K1RFD) is and excellent
-product and is the quickest/easiest way to get on 
-EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink product suite.
+PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
+EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink family 
+of products.
 
 # Architecture/Parts
 
@@ -29,7 +30,7 @@ My goal was to build a complete station from scratch, with no strings attached t
 
 At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
 
-This project required an in-depth examination of how the the EchoLink protocol works. [My analysis can be found here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
+This project required an in-depth examination of how the EchoLink protocol works.
 
 ## Current Parts List (HW)
 
@@ -46,7 +47,7 @@ filter.  The microphone part needs work.
 ## Current Parts List (SW)
 
 * The main station firmware is completely homebrew (C++, see GitHub repo).
-* The ESP-32 runs the Espresif AT firmware (version 3.2.0.0).
+* The ESP-32 runs the Espressif AT firmware (version 3.2.0.0).
 * Importantly, audio compression/decompression uses a GSM 06-10 Full Rate CODEC which is homebrew 
 in C++. Getting that to work required studying
 the European Telecommunications Standards Institute specification for GSM and a lot of testing,
@@ -87,7 +88,7 @@ status.
 
 One of the most difficult challenges I had with this project was getting audio
 that was "smooth" in both directions. This stuff is probably obvious to people
-who are versed in the state-of-the-art of VoIP, but it's all new to me.  Here
+who are well versed in the state-of-the-art of VoIP, but it's all new to me.  Here
 are a few points that will help anyone getting into this.
 
 1. Accurate/consistent clocking of the audio chain is essential.  GSM uses
@@ -157,9 +158,14 @@ References
 ==========
 
 * Official EchoLink: https://www.echolink.org/
-* ESP-32 AT Command Reference: https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html
-* SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
-* SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
+* Pi PICO Stuff
+  - [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
+  - Analysis of ADC: https://pico-adc.markomo.me/
+* ESP-32 
+  - AT Command Reference: https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html
+* SIM7600 Cellular
+  - SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
+  - SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
 * Windows Audio Related: 
   - http://www.techmind.org/wave/
   - http://midi.teragonaudio.com/tech/lowaud.htm
@@ -168,10 +174,8 @@ References
   - [MCP4725 DAC](https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf)
   - [Audio Amp](https://www.ti.com/lit/ds/symlink/lm4862.pdf?HQS=dis-dk-null-digikeymode-dsf-pf-null-wwe&ts=1707335785542&ref_url=https%253A%252F%252Fwww.ti.com%252Fgeneral%252Fdocs%252Fsuppproductinfo.tsp%253FdistId%253D10%2526gotoUrl%253Dhttps%253A%252F%252Fwww.ti.com%252Flit%252Fgpn%252Flm4862)
   - Timers: https://vanhunteradams.com/Pico/TimerIRQ/SPI_DDS.html
+* Rig Integration
+  - Microphone Connector Reference: https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf
+* Other
+  - https://tools.analog.com/en/filterwizard/
 
-Pi PICO Stuff
-* [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
-* Analysis of ADC: https://pico-adc.markomo.me/
-
-Rig Integration
-* Microphone Connector Reference: https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf
