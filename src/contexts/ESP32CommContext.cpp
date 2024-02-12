@@ -237,6 +237,7 @@ void ESP32CommContext::setupUDPChannel(Channel c, uint32_t localPort,
     _lastChannel = c;
     _state = State::IN_UDP_SETUP;
 
+    // MODE 2 means that we are inflexible about the source address
     char buf[64];
     sprintf(buf, "AT+CIPSTART=%d,\"UDP\",\"%s\",%lu,%lu,2\r\n",
         c.getId(), addr, remotePort, localPort);
@@ -261,7 +262,7 @@ void ESP32CommContext::sendUDPChannel(Channel c,
     char addr[32];
     formatIP4Address(_tracker[c.getId()].addr.getAddr(), addr, 32);
 
-    // Make the send request, wich includes address/port for UDP
+    // Make the send request, which includes address/port for UDP
     char buf[64];
     sprintf(buf, "AT+CIPSEND=%d,%d,\"%s\",%lu\r\n", c.getId(), len,
         addr, _tracker[c.getId()].port);

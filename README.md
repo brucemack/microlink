@@ -24,6 +24,8 @@ PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is 
 EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink family 
 of products.
 
+MicroLink identifies itself using a version string of **0.02MLZ**.
+
 # Architecture/Parts
 
 My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  

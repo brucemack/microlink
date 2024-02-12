@@ -30,7 +30,7 @@
 /*
 Launch command:
 
-openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client-test-2p.elf verify reset exit"
+openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-test-1p.elf verify reset exit"
 */
 #include <iostream>
 #include <fstream>
@@ -56,10 +56,13 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 #include "kc1fsz-tools/rp2040/PicoPerfTimer.h"
 
-#include "machines/RootMachine.h"
 #include "contexts/ESP32CommContext.h"
 #include "contexts/I2CAudioOutputContext.h"
 #include "contexts/PicoAudioInputContext.h"
+
+#include "machines/LinkRootMachine.h"
+#include "machines/QSOFlowMachine.h"
+#include "machines/QSOAcceptMachine.h"
 
 #include "TestUserInfo.h"
 #include "TestAudioInputContext.h"
@@ -156,17 +159,14 @@ int main(int, const char**) {
         sleep_ms(250);
     }
 
-    cout << "===== MicroLink Client Test 2p ==========" << endl;
+    cout << "===== MicroLink Link Test 1p ============" << endl;
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
 
     PicoUartChannel::traceLevel = 0;
     ESP32CommContext::traceLevel = 1;
 
-    RootMachine::traceLevel = 0;
-    LogonMachine::traceLevel = 0;
-    LogonMachine::traceLevel = 0;
-    LookupMachine2::traceLevel = 0;
-    QSOConnectMachine::traceLevel = 0;
+    LinkRootMachine::traceLevel = 1;
+    QSOAcceptMachine::traceLevel = 1;
     QSOFlowMachine::traceLevel = 0;
 
     // Sertup UART and timer
@@ -193,7 +193,7 @@ int main(int, const char**) {
         audioBufDepthLog2, audioBuf);
     PicoAudioInputContext audioInContext;
 
-    RootMachine rm(&ctx, &info, &audioOutContext);
+    LinkRootMachine rm(&ctx, &info, &audioOutContext);
 
     // Cross-connects
     info.setAudioOut(&audioOutContext);
@@ -203,18 +203,19 @@ int main(int, const char**) {
     // TODO: Move configuration out 
     rm.setServerName(HostName("naeast.echolink.org"));
     rm.setServerPort(5200);
-    rm.setCallSign(CallSign("KC1FSZ"));
+    rm.setCallSign(CallSign("W1TKZ-L"));
     rm.setPassword(FixedString("xxx"));
-    rm.setFullName(FixedString("Bruce R. MacKinnon"));
-    rm.setLocation(FixedString("Wellesley, MA USA"));
-    rm.setTargetCallSign(CallSign("*ECHOTEST*"));
+    //rm.setFullName(FixedString("Bruce R. MacKinnon"));
+    //rm.setLocation(FixedString("Wellesley, MA USA"));
 
-
-    const uint32_t taskCount = 4;
+    const uint32_t taskCount = 2;
     Runnable* tasks[taskCount] = {
-        &audioOutContext, &audioInContext, &ctx, &rm
+        //&audioOutContext, &audioInContext, 
+        &ctx, &rm
     };
-    uint32_t maxTaskTime[taskCount] = { 0, 0, 0, 0 };
+    uint32_t maxTaskTime[taskCount] = { 
+        //0, 0, 
+        0, 0 };
 
     PicoPerfTimer cycleTimer;
     uint32_t longestCycleUs = 0;
@@ -242,10 +243,10 @@ int main(int, const char**) {
         int c = getchar_timeout_us(0);
         if (c > 0) {
             if (c == 's') {
-                if (!rm.isInQSO()) {
+                //if (!rm.isInQSO()) {
                     cout << endl << "Starting" << endl;
                     rm.start();
-                }
+                //}
             }
             else if (c == 'x') {
                 cout << endl << "Stoppng" << endl;
@@ -312,13 +313,8 @@ int main(int, const char**) {
             gpio_put(KEY_LED_PIN, 0);
         }
 
-        // Temporary
-        //if (rm.isDone()) {
-        //    break;
-        //}
-
         // Run the tasks, keeping track of the time for each
-        for (uint32_t t = 0; t < 4; t++) {
+        for (uint32_t t = 0; t < taskCount; t++) {
             taskTimer.reset();
             tasks[t]->run();
             maxTaskTime[t] = std::max(maxTaskTime[t], taskTimer.elapsedUs());

@@ -263,3 +263,44 @@ endif()
 target_include_directories(client-test-2p PRIVATE src)
 target_include_directories(client-test-2p PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(client-test-2p PRIVATE gsm-0610-codec/include)
+
+# ------ link-test-1p ---------------------------------------------------------
+#
+# Runs on the RP2040
+
+add_executable(link-test-1p
+  tests/link-test-1p.cpp
+  tests/TestAudioInputContext.cpp
+  src/ATResponseProcessor.cpp
+  src/common.cpp
+  src/contexts/ESP32CommContext.cpp
+  src/contexts/I2CAudioOutputContext.cpp
+  src/contexts/PicoAudioInputContext.cpp
+  src/machines/LinkRootMachine.cpp
+  src/machines/QSOAcceptMachine.cpp
+  src/machines/QSOConnectMachine.cpp
+  src/machines/QSOFlowMachine.cpp
+  src/machines/WaitMachine.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
+)
+
+if(DEFINED ENV{PICO_BUILD})
+pico_enable_stdio_usb(link-test-1p 1)
+# Watch out!  Don't let the STDIO get sent to the UART
+pico_enable_stdio_uart(link-test-1p 0)
+target_compile_definitions(link-test-1p PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
+target_compile_definitions(link-test-1p PRIVATE PICO_BUILD=1)
+target_link_libraries(link-test-1p pico_stdlib hardware_i2c hardware_adc pico_multicore)
+endif()
+
+target_include_directories(link-test-1p PRIVATE src)
+target_include_directories(link-test-1p PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(link-test-1p PRIVATE gsm-0610-codec/include)
