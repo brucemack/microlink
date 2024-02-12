@@ -81,11 +81,11 @@ bool ESP32CommContext::test() {
     }
 }
 
-bool ESP32CommContext::poll() {
+bool ESP32CommContext::run() {
 
     bool anythingHappened = false;
 
-    anythingHappened = _esp32->poll();
+    anythingHappened = _esp32->run();
 
     // Bridge inbound data from the ESP32 into the AT response
     // processor

@@ -22,7 +22,8 @@
 #define _RootMachine_h
 
 #include "kc1fsz-tools/Event.h"
-#include "kc1fsz-tools/AudioSink.h"
+#include "kc1fsz-tools/Runnable.h"
+#include "kc1fsz-tools/AudioProcessor.h"
 
 #include "../StateMachine.h"
 
@@ -38,7 +39,7 @@ class CommContext;
 class UserInfo;
 class AudioOutputContext;
 
-class RootMachine : public StateMachine, public AudioSink {
+class RootMachine : public StateMachine, public AudioProcessor, public Runnable {
 public:
 
     static int traceLevel;
@@ -58,6 +59,8 @@ public:
     void setFullName(FixedString n);
     void setLocation(FixedString loc);
 
+    // ----- From AudioProcessor -----------------------------------------------
+
     /**
      * @param frame 160 x 4 samples of 16-bit PCM audio.
      * @return true if the audio was taken, or false if the 
@@ -65,6 +68,10 @@ public:
      *   retried.
     */
     virtual bool play(const int16_t* frame);
+
+    // ----- From Runnable ----------------------------------------------------
+
+    virtual bool run();
 
 private:
 

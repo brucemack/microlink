@@ -35,7 +35,7 @@ public:
     TestAudioOutputContext(uint32_t frameSize, uint32_t samplesPerSecond)
     : AudioOutputContext(frameSize, samplesPerSecond) { }
 
-    bool poll() { return false; }
+    bool run() { return false; }
 
     bool play(const int16_t* frame) { 
         std::cout << "<Audio Frame>" << std::endl;

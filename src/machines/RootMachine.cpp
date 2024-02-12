@@ -19,6 +19,7 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include "kc1fsz-tools/CommContext.h"
+#include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/events/StatusEvent.h"
 
 #include "../UserInfo.h"
@@ -27,6 +28,8 @@
 using namespace std;
 
 namespace kc1fsz {
+
+static TickEvent tickEv;
 
 int RootMachine::traceLevel = 0;
 
@@ -39,6 +42,11 @@ RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo,
     _lookupMachine(ctx, userInfo),
     _connectMachine(ctx, userInfo),
     _qsoMachine(ctx, userInfo, audioOutput) {
+}
+
+bool RootMachine::run() {
+    processEvent(&tickEv);
+    return true;
 }
 
 void RootMachine::start() {

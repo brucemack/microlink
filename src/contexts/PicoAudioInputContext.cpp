@@ -24,7 +24,7 @@
 // Physical pin 31
 #define AUDIO_IN_PIN (26)
 
-#include "kc1fsz-tools/AudioSink.h"
+#include "kc1fsz-tools/AudioProcessor.h"
 #include "PicoAudioInputContext.h"
 
 using namespace std;
@@ -73,10 +73,6 @@ PicoAudioInputContext::PicoAudioInputContext()
     }
 
     INSTANCE = this;
-}
-
-void PicoAudioInputContext::setSink(AudioSink* sink) {
-    _sink = sink;
 }
 
 void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
@@ -166,7 +162,7 @@ void PicoAudioInputContext::_updateStats(int16_t* audio) {
     }
 }
 
-bool PicoAudioInputContext::poll() {
+bool PicoAudioInputContext::run() {
 
     // When we start polling we can start the ADC
     if (!_running) {

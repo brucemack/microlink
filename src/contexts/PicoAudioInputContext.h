@@ -27,14 +27,16 @@
 
 #include "pico/util/queue.h"
 
+#include "kc1fsz-tools/Runnable.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
+
 #include "AtomicInteger.h"
 
 namespace kc1fsz {
 
-class AudioSink;
+class AudioProcessor;
 
-class PicoAudioInputContext {
+class PicoAudioInputContext : public Runnable {
 public:
 
     static int traceLevel;
@@ -43,10 +45,9 @@ public:
     static void setup();
 
     PicoAudioInputContext();
+    virtual ~PicoAudioInputContext() { }
 
-    void setSink(AudioSink *sink);
-
-    bool poll();
+    void setSink(AudioProcessor *sink) { _sink = sink; }
 
     void setPtt(bool keyed) { _keyed = keyed; }
     bool getPtt() const { return _keyed; }
@@ -59,6 +60,10 @@ public:
     int16_t getMax() const;
     int16_t getClips() const;
 
+    // ----- From Runnable ---------------------------------------------------
+
+    virtual bool run();
+
 private:   
 
     void _updateStats(int16_t* audio);
@@ -67,7 +72,7 @@ private:
 
     void _interruptHandler();
 
-    AudioSink* _sink = 0;
+    AudioProcessor* _sink = 0;
     PicoPollTimer _timer;
 
     static const uint32_t _adcClockHz = 48000000;
@@ -114,5 +119,3 @@ private:
 }
 
 #endif
-
-

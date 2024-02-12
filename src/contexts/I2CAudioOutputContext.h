@@ -51,7 +51,7 @@ public:
     // IMPORTANT: This assumes 16-bit PCM audio
     virtual bool play(const int16_t* frame);
 
-    virtual bool poll();
+    virtual bool run();
 
     virtual uint32_t getSyncErrorCount() { return _idleCount + _overflowCount; }
 

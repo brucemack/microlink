@@ -100,7 +100,7 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
     return true;
 }
 
-bool I2CAudioOutputContext::poll() {    
+bool I2CAudioOutputContext::run() {    
 
     // Pacing at the audio sample clock (ex: 8kHz)
     bool activity = _timer.poll();

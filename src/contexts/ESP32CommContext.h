@@ -39,7 +39,8 @@ class AsyncChannel;
  * IMPORTANT: We are assuming that this runs on an embedded processor
  * we so limit the use of C++ features.
  */
-class ESP32CommContext : public CommContext, public ATResponseProcessor::EventSink {
+class ESP32CommContext : public CommContext, public ATResponseProcessor::EventSink,
+    public Runnable {
 public:
 
     static int traceLevel;
@@ -53,14 +54,6 @@ public:
     void setEventProcessor(EventProcessor* ep);
 
     /**
-     * This should be called from the event loop.  It attempts to make forward
-     * progress and passes all events to the event processor.
-     * 
-     * @returns true if any events were dispatched.
-    */
-    bool poll();
-
-    /**
      * Used to receive and discard anything on the channel
      * @returns The number of bytes discarded.
     */
@@ -69,6 +62,16 @@ public:
     int getLiveChannelCount() const;
 
     bool test();
+
+    // ----- Runnable Methods ------------------------------------------------
+
+    /**
+     * This should be called from the event loop.  It attempts to make forward
+     * progress and passes all events to the event processor.
+     * 
+     * @returns true if any events were dispatched.
+    */
+    virtual bool run();
 
     // ------ CommContext Request Methods -------------------------------------
 

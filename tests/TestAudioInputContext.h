@@ -23,33 +23,34 @@
 
 #include <iostream>
 
+#include "kc1fsz-tools/Runnable.h"
 #ifdef PICO_BUILD
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 #endif
 
 namespace kc1fsz {
 
-class AudioSink;
+class AudioProcessor;
 
 /**
  * Demonstration audio source that does nothing more than tone generation.
 */
-class TestAudioInputContext {
+class TestAudioInputContext : public Runnable {
 public:
 
     TestAudioInputContext(uint32_t frameSize, uint32_t samplesPerSecond);
 
-    bool poll();
-
-    void setSink(AudioSink* sink) { _sink = sink; }
+    void setSink(AudioProcessor* sink) { _sink = sink; }
 
     void sendTone(uint32_t freq, uint32_t ms);
+
+    bool run();
 
 private:
 
     const uint32_t _frameSize;
     const uint32_t _sampleRate;
-    AudioSink* _sink;
+    AudioProcessor* _sink;
     bool _inTone;
     uint32_t _frameCount;
     float _amplitude;

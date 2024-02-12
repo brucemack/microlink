@@ -208,14 +208,18 @@ int main(int, const char**) {
 
     ctx.setEventProcessor(&rm);
 
-    TickEvent tickEv;
+    const uint32_t taskCount = 4;
+    Runnable* tasks[taskCount] = {
+        &audioOutContext, &audioInContext, &ctx, &rm
+    };
+    uint32_t maxTaskTime[taskCount] = { 0, 0, 0, 0 };
 
     PicoPerfTimer cycleTimer;
     uint32_t longestCycleUs = 0;
     uint32_t longCycleCounter = 0;
+    PicoPerfTimer taskTimer;
 
     // Here is the main event loop
-    uint32_t cycle = 0;
     bool pttState = false;
     uint32_t lastPttTransition = 0;
 
@@ -247,9 +251,6 @@ int main(int, const char**) {
             else if (c == 'q') {
                 break;
             } 
-            else if (c == 't') {
-                cout << endl << "TX test" << endl;
-            } 
             else if (c == ' ') {
                 audioInContext.setPtt(!audioInContext.getPtt());
                 cout << endl << "Keyed: " << audioInContext.getPtt() << endl;
@@ -263,10 +264,7 @@ int main(int, const char**) {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }
             else if (c == 'z') {
-                audioOutContext.tone(800, 1000);
-            }
-            else if (c == 'c') {
-                audioOutContext.tone(400, 250);
+                audioOutContext.tone(800, 2000);
             }
             else if (c == 'i') {
                 cout << endl;
@@ -282,6 +280,10 @@ int main(int, const char**) {
                 cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
                 cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
                 cout << "Long Cycles       : " << longCycleCounter << endl;
+
+                for (uint32_t t = 0; t < taskCount; t++) {
+                    cout << "Task " << t << " max " << maxTaskTime[t] << endl;
+                }
             } 
             else if (c == '=') {
                 audioInContext.setGain(audioInContext.getGain() + 1);
@@ -291,26 +293,29 @@ int main(int, const char**) {
                 audioInContext.setGain(audioInContext.getGain() - 1);
                 cout << "Gain is " << audioInContext.getGain() << endl;
             }
+            else if (c == 'c') {
+                cout << "Clear Stats" << endl;
+                for (uint32_t t = 0; t < taskCount; t++) {
+                    maxTaskTime[t] = 0;
+                }
+            }
             else {
                 cout << (char)c;
                 cout.flush();
             }
         }
 
+        // Temporary
         if (rm.isDone()) {
             break;
         }
 
-        // Poll the audio system
-        audioOutContext.poll();
-        audioInContext.poll();
-
-        // Poll the communications system and pass any inbound bytes
-        // over to the communications context.
-        ctx.poll();
-
-        // Run the state machines
-        rm.processEvent(&tickEv);
+        // Run the tasks, keeping track of the time for each
+        for (uint32_t t = 0; t < 4; t++) {
+            taskTimer.reset();
+            tasks[t]->run();
+            maxTaskTime[t] = std::max(maxTaskTime[t], taskTimer.elapsedUs());
+        }
 
         uint32_t ela = cycleTimer.elapsedUs();
         if (ela > longestCycleUs) {

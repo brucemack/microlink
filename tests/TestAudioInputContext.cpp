@@ -22,7 +22,7 @@
 #include <cmath>
 
 #include "kc1fsz-tools/Common.h"
-#include "kc1fsz-tools/AudioSink.h"
+#include "kc1fsz-tools/AudioProcessor.h"
 
 #include "common.h"
 #include "TestAudioInputContext.h"
@@ -39,7 +39,7 @@ TestAudioInputContext::TestAudioInputContext(uint32_t frameSize, uint32_t sample
     _inTone(false) {
 }
 
-bool TestAudioInputContext::poll() {
+bool TestAudioInputContext::run() {
 
     if (_inTone) {
         if (_toneTimer.poll()) {

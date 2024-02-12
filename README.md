@@ -1,13 +1,13 @@
 # Overview
 
-Is it possible to run a full EchoLink&reg; station on a $4 microcontroller?  I'm not completely sure, but
-let's find out. The goal of this project is to create the smallest,
-cheapest possible way to put a radio onto the EchoLink network. Are you new to EchoLink?  Please 
+Is it possible to build a full EchoLink&reg; station on a $4 microcontroller?  I'm not completely sure, but
+let's find out. The goal of this project is to create the smallest, simplest, 
+cheapest way to put a radio onto the EchoLink network. Are you new to EchoLink?  Please 
 [see the official website](https://www.echolink.org/) for complete information. 
 
 There are much easier ways to get onto EchoLink. The MicroLink project is only
 interesting for someone who wants to get deep into the nuts-and-bolts of EchoLink/VoIP technology. In fact, you 
-should start to question the sanity of anyone who spends this much time building their own EL station. 
+should start to question the sanity of anyone who spends this much time building their own EL station. I am a homebrew enthusiast and I find the use of off-the-shelf software/components to be less exciting. 
 
 Here's the current demo video:
 
@@ -82,6 +82,41 @@ status.
 * Set environment variables EL_CALLSIGN, EL_PASSWORD, EL_FULLNAME, EL_LOCATION.
 
 # Technical/Development Notes
+
+## Regarding Audio Smoothness
+
+One of the most difficult challenges I had with this project was getting audio
+that was "smooth" in both directions. This stuff is probably obvious to people
+who are versed in the state-of-the-art of VoIP, but it's all new to me.  Here
+are a few points that will help anyone getting into this.
+
+1. Accurate/consistent clocking of the audio chain is essential.  GSM uses
+an 8 kHz clock, which means we need an audio sample once every
+125 microseconds. I know this seems hard to beleive, but inconsistencies
+in this clock can be "heard."  This is where hardware timers with efficient
+interrupt service architectures are important. The highest priority activity
+of the microcontroller should be the creation/consumption of an audio sample
+every 125 uS *exactly* - everything else in the system has some leeway.
+2. An EchoLink receiver gets an audio packet *approximately* every 80ms.  Each 
+packet contains
+4 frames that each represent exactly 20 ms of audio. Finally, each frame contains 160
+samples which each represent exactly 125 uS of audio.  From point #1 above, we already 
+know that the timing of the 160 samples within each frame is critical.  However, 
+we also need ensure that the 20 ms frames are played continuously 
+*without the slighest gap between them.* This gets into an interesting problem
+because the frames are streaming across the busy internet (not to mention 
+low-cost WIFI hardware) and may be subject to 
+small timing inconsistencies. There is simply no way to ensure that an EchoLink packet
+will arrive every 80 ms. Sometimes the gap might be 81 ms, sometimes 79 ms, etc. 
+This variability is known as "jitter" and it is a common issue in VoIP systems.
+The fix is simple: we need to delay/buffer the audio generation in the receiver 
+slighly to give ourselves a margin of error to accumulate packets. The
+MicroLink system keeps a buffer of 16 audio packets and holds back the start 
+of audio generation (after sqelch break) until the buffer is half full.  This 
+means that the receive path is delayed by 8 x 80 ms *above and beyond* any delay
+in the internet itself. Experimential work is ongoing to make this delay adaptive
+so that the delay is minimized.  Of course if the buffer emplies out (i.e. several
+slow packets in a row), all bets are off.
 
 ## Building Tests on Windows (CYGWIN)
 
