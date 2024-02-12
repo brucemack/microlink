@@ -98,7 +98,7 @@ in this clock can be "heard."  This is where hardware timers with efficient
 interrupt service architectures are important. The highest priority activity
 of the microcontroller should be the creation/consumption of an audio sample
 every 125 uS **exactly** - everything else in the system has some leeway.
-2. An EchoLink receiver gets an audio packet *approximately* every 80ms.  Each 
+2. An EchoLink receiver gets an audio packet _approximately_ every 80 ms.  Each 
 packet contains
 4 frames that each represent exactly 20 ms of audio. Finally, each frame contains 160
 samples which each represent exactly 125 uS of audio.  From point #1 above, we already 
@@ -114,8 +114,8 @@ The fix is simple: we need to delay/buffer the audio generation in the receiver
 slighly to give ourselves a margin of error to accumulate packets. The
 MicroLink system keeps a buffer of 16 audio packets and holds back the start 
 of audio generation (after sqelch break) until the buffer is half full.  This 
-means that the receive path is delayed by 8 x 80 ms *above and beyond* any delay
-in the internet itself. Experimential work is ongoing to make this delay adaptive
+means that the receive path is delayed by around 8 x 80 ms *above and beyond* any delay
+in the Internet itself. Experimential work is ongoing to make this adaptive
 so that the delay is minimized.  Of course if the buffer emplies out (i.e. several
 slow packets in a row), all bets are off.
 
