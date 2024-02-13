@@ -135,9 +135,33 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
 
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
 
-                    // Pull out the callsign    
+                    // Pull out the callsign
+                    DESItem items[8];
+                    uint32_t ssrc = 0;
+                    uint32_t itemCount = parseSDES(evt->getData(), evt->getDataLen(), 
+                        &ssrc, items, 8);
+                    CallSign callSign;
+                    bool found = false;
+                    for (uint32_t item = 0; item < itemCount; i++) {
+                        if (items[item].type == 2) {
+                            char callSignAndName[64];
+                            items[item].toString(callSignAndName, 64);
+                            // Strip off the call
+                            char callSignStr[32];
+                            uint32_t i = 0;
+                            for (i = 0; i < 31 && callSignAndName[i] != ' '; i++)
+                                callSignStr[i] = callSignAndName[i];
+                            callSignStr[i] = 0;
+                            callSign = CallSign(callSignStr);
+                            found = true;
+                            break;
+                        }
+                    }
 
-
+                    if (found) {
+                        cout << "Connection from " << callSign.c_str() << endl;
+                    }
+                    
                     //_state = SUCCEEDED;
                 } 
             } 
