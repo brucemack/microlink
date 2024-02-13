@@ -67,6 +67,8 @@ void I2CAudioOutputContext::reset() {
     _toneCount = 0;
     _toneStep = 0;
     _timer.reset();
+    // Park at middle of range
+    _play(0);
 }
 
 void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
@@ -118,6 +120,8 @@ bool I2CAudioOutputContext::run() {
             _toneCount--;
             if (_toneCount == 0) {
                 _inTone = false;
+                // Park at middle of range
+                _play(0);
             }
         }
         else if (!_playing) {
@@ -148,6 +152,8 @@ bool I2CAudioOutputContext::run() {
             } else {
                 _playing = false;
                 _idleCount++;
+                // Park at middle of range
+                _play(0);
             }
         }
     }
@@ -195,4 +201,3 @@ void I2CAudioOutputContext::_play(int16_t sample) {
 }
 
 }
-
