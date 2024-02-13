@@ -134,10 +134,21 @@ void advance_time_ms(uint32_t ms) {
 }
 
 void writeInt32(uint8_t* buf, uint32_t d) {
-    buf[0] = (d >> 24) &0xff;
-    buf[1] = (d >> 16) &0xff;
-    buf[2] = (d >>  8) &0xff;
-    buf[3] = (d      ) &0xff;
+    buf[0] = (d >> 24) & 0xff;
+    buf[1] = (d >> 16) & 0xff;
+    buf[2] = (d >>  8) & 0xff;
+    buf[3] = (d      ) & 0xff;
+}
+
+uint32_t readInt32(uint8_t* buf) {
+    uint32_t r = 0;
+    r |= buf[0];
+    r <<= 8;
+    r |= buf[1];
+    r <<= 8;
+    r |= buf[2];
+    r <<= 8;
+    r |= buf[3];
 }
 
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,

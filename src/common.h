@@ -70,6 +70,8 @@ bool isRTPAudioPacket(const uint8_t* d, uint32_t len);
 
 void writeInt32(uint8_t* buf, uint32_t d);
 
+uint32_t readInt32(uint8_t* buf);
+
 uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
 
