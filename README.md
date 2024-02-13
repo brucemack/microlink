@@ -121,6 +121,25 @@ in the Internet itself. Experimential work is ongoing to make this adaptive
 so that the delay is minimized.  Of course if the buffer emplies out (i.e. several
 slow packets in a row), all bets are off.
 
+## Regarding the Pi Pico ADC
+
+Two important things that make a difference for audio noise performance. Note
+that these comments are relevant when using the Pi Pico board as-is. The 
+rules will be different if using the RP2040 chip directly.
+
+Per Pico datasheet:
+
+> For much improved ADC performance, an external 3.0V shunt reference, such as LM4040, 
+can be connected from the ADC_VREF pin to ground. Note that if doing this the ADC range 
+is limited to 0-3.0V signals (rather than 0-3.3V), and the shunt reference will draw 
+continuous current through the 200Ω filter resistor (3.3V-3.0V)/200 = ~1.5mA.
+
+Per Pico datasheet:
+
+> AGND is the ground reference for GPIO26-29, there is a separate analog ground plane 
+running under these signals and terminating at this pin. If the ADC is not used or 
+ADC performance is not critical, this pin can be connected to digital ground.
+
 ## Building Tests on Windows (CYGWIN)
 
 (These notes are not comprehensive yet.)
@@ -159,12 +178,15 @@ slow packets in a row), all bets are off.
 References
 ==========
 
-* Official EchoLink: https://www.echolink.org/
+* Official EchoLink Site: https://www.echolink.org/
 * Pi PICO Stuff
+  - [Pi Pico Board Datasheet](https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf?_gl=1*123mru4*_ga*MTk2NTcwODY1MS4xNzA3NDM3ODAy*_ga_22FD70LWDS*MTcwNzgyNzY3MS4xLjAuMTcwNzgyNzY3MS4wLjAuMA..)
   - [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
-  - Analysis of ADC: https://pico-adc.markomo.me/
+  - [Hardware Design with RP2040](https://datasheets.raspberrypi.com/rp2040/hardware-design-with-rp2040.pdf)
+  - [Analysis of Pico ADC](https://pico-adc.markomo.me/)
+  - Timers: https://vanhunteradams.com/Pico/TimerIRQ/SPI_DDS.html
 * ESP-32 
-  - AT Command Reference: https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html
+  - [AT Command Reference](https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html)
 * SIM7600 Cellular
   - SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
   - SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
@@ -175,9 +197,14 @@ References
 * Components
   - [MCP4725 DAC](https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf)
   - [Audio Amp](https://www.ti.com/lit/ds/symlink/lm4862.pdf?HQS=dis-dk-null-digikeymode-dsf-pf-null-wwe&ts=1707335785542&ref_url=https%253A%252F%252Fwww.ti.com%252Fgeneral%252Fdocs%252Fsuppproductinfo.tsp%253FdistId%253D10%2526gotoUrl%253Dhttps%253A%252F%252Fwww.ti.com%252Flit%252Fgpn%252Flm4862)
-  - Timers: https://vanhunteradams.com/Pico/TimerIRQ/SPI_DDS.html
+  - [TLV9161 opamp suggested by Dan](https://www.ti.com/lit/ds/symlink/tlv9161.pdf?ts=1707743140015&ref_url=https%253A%252F%252Fwww.google.de%252F)
 * Rig Integration
-  - Microphone Connector Reference: https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf
+  - [Microphone Connector Reference](https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf)
+  - [Baofeng Cable Reference](https://ics-ctrl.com/cable-pinout-baofeng-ht/)
+* Analog/Audio
+  - [Good article from Analog Devices about noise in mixed-signal systems](https://www.analog.com/media/en/analog-dialogue/volume-46/number-2/articles/staying_well_grounded.pdf)
 * Other
-  - https://tools.analog.com/en/filterwizard/
+  - [Analog Devices Filter Wizard](https://tools.analog.com/en/filterwizard/)
+  - https://www.purevpn.com/what-is-vpn/protocols/openvpn
+  - https://en.wikipedia.org/wiki/OpenVPN
 
