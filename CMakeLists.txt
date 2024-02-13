@@ -304,3 +304,15 @@ endif()
 target_include_directories(link-test-1p PRIVATE src)
 target_include_directories(link-test-1p PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(link-test-1p PRIVATE gsm-0610-codec/include)
+
+# ------ make-sdes-1 -------------------------------------------------------
+
+add_executable(make-sdes-1
+  tests/make-sdes-1.cpp
+  src/common.cpp
+  src/machines/QSOConnectMachine.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+)
+
+target_include_directories(make-sdes-1 PRIVATE src)
+target_include_directories(make-sdes-1 PRIVATE kc1fsz-tools-cpp/include)
