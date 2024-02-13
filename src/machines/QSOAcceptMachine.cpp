@@ -134,7 +134,11 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                 }
 
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
-                    _state = SUCCEEDED;
+
+                    // Pull out the callsign    
+
+
+                    //_state = SUCCEEDED;
                 } 
             } 
             else if (evt->getChannel() == _rtpChannel) {

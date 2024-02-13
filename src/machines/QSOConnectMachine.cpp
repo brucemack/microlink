@@ -273,9 +273,10 @@ uint32_t QSOConnectMachine::formatRTCPPacket_SDES(uint32_t ssrc,
     uint8_t* p, uint32_t packetSize) {
 
     // These are the only variable length fields
-    uint32_t callSignLen = callSign.len();
-    uint32_t fullNameLen = fullName.len();
-    uint32_t spacesLen = 9;
+    const uint32_t callSignLen = callSign.len();
+    const uint32_t fullNameLen = fullName.len();
+    const uint32_t spacesLen = 9;
+    const uint32_t versionLen = strlen(VERSION_ID);
 
     // Do the length calculation to make sure we have the 
     // space we need.
@@ -359,12 +360,11 @@ uint32_t QSOConnectMachine::formatRTCPPacket_SDES(uint32_t ssrc,
 
     // Token 6
     *(p++) = 0x06;
-    *(p++) = 0x08;
-    //memcpy(p, "E2.3.122", 8);
-    memcpy(p, VERSION_ID, strlen(VERSION_ID));
-    p += strlen(VERSION_ID);
+    *(p++) = versionLen;
+    memcpy(p, VERSION_ID, versionLen);
+    p += versionLen;
 
-    // Token 8a
+    // Token 8a - PORT
     *(p++) = 0x08;
     *(p++) = 0x06;
 
@@ -375,7 +375,7 @@ uint32_t QSOConnectMachine::formatRTCPPacket_SDES(uint32_t ssrc,
     *(p++) = 0x39;
     *(p++) = 0x38;
 
-    // Token 8b
+    // Token 8b - DTMF Support
     *(p++) = 0x08;
     *(p++) = 0x03;
 
