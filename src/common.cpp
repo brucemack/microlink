@@ -279,4 +279,45 @@ void panic(const char* msg) {
 }
 #endif
 
+uint32_t parseSDES(uint8_t* packet, uint32_t packetLen,
+    uint32_t* ssrc,
+    SDESItem* items, uint32_t itemsSize) {
+    
+    // Reduce the packet length by the padding
+    uint8_t padCount = packet[packetLen - 1];
+    uint32_t len = packetLen - (uint32_t)padCount;
+
+    // Pull out the SDES
+    *ssrc = readInt32(packet + 4);
+
+    // Skip past all headers
+    uint8_t* p = packet + 16;
+    uint32_t itemCount = 0;
+    uint8_t itemPtr;
+    int state = 0;
+
+    while (p < packet + len && itemCount < itemsSize) {
+        if (state == 0) {
+            items[itemCount].type = *p;
+            state = 1;
+        } else if (state == 1) {
+            items[itemCount].len = *p;
+            itemPtr = 0;
+            if (*p == 0) {
+                state = 0;
+            } else {
+                state = 2;
+            }
+        } else if (state == 2) {
+            items[itemCount].content[itemPtr++] = *p;
+            if (itemPtr == items[itemCount].len) {
+                state = 0;
+                itemCount++;
+            }
+        }
+        p++;
+    }
+    return itemCount;
+}
+
 }

@@ -81,6 +81,26 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
 
 uint32_t addRTCPPad(uint32_t unpaddedLength, uint8_t* p, uint32_t packetSize);
 
+struct SDESItem {
+
+    uint8_t type;
+    uint8_t len;
+    uint8_t content[256];
+
+    void toString(char* str, uint32_t strSize) {
+        uint32_t c = 0;
+        uint32_t i = 0;
+        // NOTE: We are leaving space for the trailing null
+        for (i = 0; i < len && i < strSize - 1; i++)
+            *(str++) = content[i];
+        *str = 0;
+    }
+};
+
+uint32_t parseSDES(uint8_t* packet, uint32_t packetLen,
+    uint32_t* ssrc,
+    SDESItem* items, uint32_t itemsSize);
+
 void panic(const char* msg);
 
 }

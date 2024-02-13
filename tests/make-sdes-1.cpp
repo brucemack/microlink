@@ -32,67 +32,12 @@
 
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/CallSign.h"
+
 #include "machines/QSOConnectMachine.h"
+#include "common.h"
 
 using namespace std;
 using namespace kc1fsz;
-
-struct SDESItem {
-
-    uint8_t type;
-    uint8_t len;
-    uint8_t content[256];
-
-    void toString(char* str, uint32_t strSize) {
-        uint32_t c = 0;
-        uint32_t i = 0;
-        // NOTE: We are leaving space for the trailing null
-        for (i = 0; i < len && i < strSize - 1; i++)
-            *(str++) = content[i];
-        *str = 0;
-    }
-};
-
-uint32_t parseSDES(uint8_t* packet, uint32_t packetLen,
-    uint32_t* ssrc,
-    SDESItem* items, uint32_t itemsSize) {
-    
-    // Reduce the packet length by the padding
-    uint8_t padCount = packet[packetLen - 1];
-    uint32_t len = packetLen - (uint32_t)padCount;
-
-    // Pull out the SDES
-    *ssrc = readInt32(packet + 4);
-
-    // Skip past all headers
-    uint8_t* p = packet + 16;
-    uint32_t itemCount = 0;
-    uint8_t itemPtr;
-    int state = 0;
-
-    while (p < packet + len && itemCount < itemsSize) {
-        if (state == 0) {
-            items[itemCount].type = *p;
-            state = 1;
-        } else if (state == 1) {
-            items[itemCount].len = *p;
-            itemPtr = 0;
-            if (*p == 0) {
-                state = 0;
-            } else {
-                state = 2;
-            }
-        } else if (state == 2) {
-            items[itemCount].content[itemPtr++] = *p;
-            if (itemPtr == items[itemCount].len) {
-                state = 0;
-                itemCount++;
-            }
-        }
-        p++;
-    }
-    return itemCount;
-}
 
 int main(int, const char**) {
 
@@ -104,7 +49,7 @@ int main(int, const char**) {
     {
         CallSign callSign("KC1FSZ");
         FixedString fullName("Bruce R. MacKinnon");
-        uint32_t ssrc = 77;
+        uint32_t ssrc = 1;
         packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, 
             callSign, fullName, ssrc, packet, packetSize); 
 
@@ -117,6 +62,7 @@ int main(int, const char**) {
         SDESItem items[8];
         uint32_t ssrc = 0;
         uint32_t itemCount = parseSDES(packet, packetLen, &ssrc, items, 8);
+        assert(ssrc == 0);
         assert(itemCount == 7);
         assert(items[1].type == 2);
         char callSignAndName[64];
@@ -129,6 +75,11 @@ int main(int, const char**) {
             callSign[i] = callSignAndName[i];
         callSign[i] = 0;
         assert(strcmp(callSign, "KC1FSZ") == 0);
+
+        assert(items[3].type == 4);
+        char ssrcBuf[32];
+        items[3].toString(ssrcBuf, 32);
+        assert(1 == atoi(ssrcBuf));
     }
 }
 
