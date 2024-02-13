@@ -38,6 +38,7 @@ LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo,
 :   _state(IDLE),
     _ctx(ctx),
     _userInfo(userInfo),
+    _logonMachine(ctx, userInfo),
     _acceptMachine(ctx, userInfo),
     _qsoMachine(ctx, userInfo, audioOutput) {
 }
@@ -68,11 +69,30 @@ void LinkRootMachine::processEvent(const Event* ev) {
     // In this state we are doing nothing waiting to be started
     if (_state == State::IDLE) {
     }
+    // In this state we are waiting for the full reset
     else if (_state == State::IN_RESET) {
         if (ev->getType() == StatusEvent::TYPE) {
-            _state = ACCEPTING;
+            // TODO: ADD SOMETHING TO OPEN THE UDP CHANNELS
+            _state = LOGON;
             // Start the login process
-            _acceptMachine.start();
+            _logonMachine.start();
+        }
+    }
+    // TODO: ADD SOMETHING TO OPEN THE UDP CHANNELS
+
+    // In this state we are waiting for the EL Server to process our 
+    // logon request.
+    else if (_state == LOGON) {
+        if (isDoneAfterEvent(_logonMachine, ev)) {
+            if (_logonMachine.isGood()) {
+                // No data transfer is needed.  If we succeeded in the 
+                // login then keep going.
+                _acceptMachine.start();
+                _state = State::ACCEPTING;
+            } else {
+                _userInfo->setStatus("Login failed");
+                _state = State::FAILED;
+            }
         }
     }
     else if (_state == ACCEPTING) {
@@ -113,23 +133,23 @@ bool LinkRootMachine::isGood() const {
 }
 
 void LinkRootMachine::setServerName(HostName h) {
-    //_logonMachine.setServerName(h);
+    _logonMachine.setServerName(h);
     //_validationMachine.setServerName(h);
 }
 
 void LinkRootMachine::setServerPort(uint32_t p) {
-    //_logonMachine.setServerPort(p);
+    _logonMachine.setServerPort(p);
     //_validationMachine.setServerPort(p);
 }
 
 void LinkRootMachine::setCallSign(CallSign cs) {
-    //_logonMachine.setCallSign(cs);
+    _logonMachine.setCallSign(cs);
     //_connectMachine.setCallSign(cs);
     _qsoMachine.setCallSign(cs);
 }
 
 void LinkRootMachine::setPassword(FixedString s) {
-    //_logonMachine.setPassword(s);
+    _logonMachine.setPassword(s);
 }
 
 void LinkRootMachine::setFullName(FixedString n) {
@@ -138,7 +158,7 @@ void LinkRootMachine::setFullName(FixedString n) {
 }
 
 void LinkRootMachine::setLocation(FixedString loc) { 
-    //_logonMachine.setLocation(loc); 
+    _logonMachine.setLocation(loc); 
     //_connectMachine.setLocation(loc);
     _qsoMachine.setLocation(loc);
 }

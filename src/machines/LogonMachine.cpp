@@ -24,6 +24,7 @@
 
 #include "kc1fsz-tools/CommContext.h"
 #include "kc1fsz-tools/FixedString.h"
+#include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/TCPConnectEvent.h"
 #include "kc1fsz-tools/events/TCPDisconnectEvent.h"
@@ -67,7 +68,9 @@ void LogonMachine::cleanup() {
 void LogonMachine::processEvent(const Event* ev) {
 
     if (traceLevel > 0) {
-        cout << "LogonMachine: state=" << _state << " event=" << ev->getType() << endl;
+        if (ev->getType() != TickEvent::TYPE) {
+            cout << "LogonMachine: state=" << _state << " event=" << ev->getType() << endl;
+        }
     }
 
     // In this state we are waiting for the DNS resolution to complete

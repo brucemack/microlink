@@ -140,7 +140,7 @@ void writeInt32(uint8_t* buf, uint32_t d) {
     buf[3] = (d      ) & 0xff;
 }
 
-uint32_t readInt32(uint8_t* buf) {
+uint32_t readInt32(const uint8_t* buf) {
     uint32_t r = 0;
     r |= buf[0];
     r <<= 8;
@@ -149,6 +149,7 @@ uint32_t readInt32(uint8_t* buf) {
     r |= buf[2];
     r <<= 8;
     r |= buf[3];
+    return r;
 }
 
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
@@ -279,7 +280,7 @@ void panic(const char* msg) {
 }
 #endif
 
-uint32_t parseSDES(uint8_t* packet, uint32_t packetLen,
+uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     uint32_t* ssrc,
     SDESItem* items, uint32_t itemsSize) {
     
@@ -291,7 +292,7 @@ uint32_t parseSDES(uint8_t* packet, uint32_t packetLen,
     *ssrc = readInt32(packet + 4);
 
     // Skip past all headers
-    uint8_t* p = packet + 16;
+    const uint8_t* p = packet + 16;
     uint32_t itemCount = 0;
     uint8_t itemPtr;
     int state = 0;

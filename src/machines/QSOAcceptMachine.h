@@ -53,7 +53,9 @@ public:
     Channel getRTCPChannel() const { return _rtcpChannel; }
     Channel getRTPChannel() const  { return _rtpChannel; }
 
-    uint32_t getSSRC() const { return _ssrc; }
+    uint32_t getSSRC() const { return _localSsrc; }
+    CallSign getCallSign() const { return _callSign; }
+    IPAddress getAddress() const { return _addr; }
 
     void requestCleanStop() { }
 
@@ -87,7 +89,12 @@ private:
 
     Channel _rtpChannel;
     Channel _rtcpChannel;
-    uint32_t _ssrc;
+    // This is generated
+    uint32_t _localSsrc;
+    uint32_t _remoteSsrc;
+    CallSign _callSign;
+    IPAddress _addr;
+
 };
 
 }

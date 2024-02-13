@@ -162,10 +162,11 @@ int main(int, const char**) {
     cout << "===== MicroLink Link Test 1p ============" << endl;
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
 
-    PicoUartChannel::traceLevel = 0;
+    PicoUartChannel::traceLevel = 1;
     ESP32CommContext::traceLevel = 1;
 
     LinkRootMachine::traceLevel = 1;
+    LogonMachine::traceLevel = 1;
     QSOAcceptMachine::traceLevel = 1;
     QSOFlowMachine::traceLevel = 0;
 
@@ -205,8 +206,8 @@ int main(int, const char**) {
     rm.setServerPort(5200);
     rm.setCallSign(CallSign("W1TKZ-L"));
     rm.setPassword(FixedString("xxx"));
-    //rm.setFullName(FixedString("Bruce R. MacKinnon"));
-    //rm.setLocation(FixedString("Wellesley, MA USA"));
+    rm.setFullName(FixedString("Bruce R. MacKinnon"));
+    rm.setLocation(FixedString("Wellesley, MA USA"));
 
     const uint32_t taskCount = 2;
     Runnable* tasks[taskCount] = {

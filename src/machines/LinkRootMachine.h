@@ -27,6 +27,7 @@
 
 #include "../StateMachine.h"
 
+#include "LogonMachine.h"
 #include "QSOAcceptMachine.h"
 #include "QSOFlowMachine.h"
 #include "WaitMachine.h"
@@ -86,6 +87,8 @@ private:
         IDLE, 
         // STATE 1:
         IN_RESET,
+        // STATE 2: Logon
+        LOGON,
         ACCEPTING,
         IN_VALIDATION,
         QSO, 
@@ -98,6 +101,8 @@ private:
 
     CommContext* _ctx;
     UserInfo* _userInfo;
+
+    LogonMachine _logonMachine;
     WaitMachine _connectRetryWaitMachine;
     QSOAcceptMachine _acceptMachine;
     QSOFlowMachine _qsoMachine;

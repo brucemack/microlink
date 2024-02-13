@@ -70,7 +70,7 @@ bool isRTPAudioPacket(const uint8_t* d, uint32_t len);
 
 void writeInt32(uint8_t* buf, uint32_t d);
 
-uint32_t readInt32(uint8_t* buf);
+uint32_t readInt32(const uint8_t* buf);
 
 uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
@@ -88,16 +88,14 @@ struct SDESItem {
     uint8_t content[256];
 
     void toString(char* str, uint32_t strSize) {
-        uint32_t c = 0;
-        uint32_t i = 0;
         // NOTE: We are leaving space for the trailing null
-        for (i = 0; i < len && i < strSize - 1; i++)
+        for (uint32_t i = 0; i < len && i < strSize - 1; i++)
             *(str++) = content[i];
         *str = 0;
     }
 };
 
-uint32_t parseSDES(uint8_t* packet, uint32_t packetLen,
+uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     uint32_t* ssrc,
     SDESItem* items, uint32_t itemsSize);
 

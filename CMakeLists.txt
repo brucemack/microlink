@@ -277,6 +277,7 @@ add_executable(link-test-1p
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
   src/machines/LinkRootMachine.cpp
+  src/machines/LogonMachine.cpp
   src/machines/QSOAcceptMachine.cpp
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp

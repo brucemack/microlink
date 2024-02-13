@@ -379,32 +379,58 @@ void ATResponseProcessor::_processByte(uint8_t b) {
     }
     // Here we have +IPD,ccc, and are getting the length
     else if (_state == State::IN_IPD_1) {    
-        if (b == ':') {
+        if (b == ',') {
             // Length finished, now collect the content. We 
             // reset the accumulator because we don't care about
             // the intro
             _accUsed = 0;
-            _state = IN_IPD_2;
+            _state = IN_IPD_1a;
         } else if (isdigit(b)) {
             // Left shift one decial digit
             _ipdTotal *= 10;
             _ipdTotal += ((int)b - 0x30);
         }
-    } else if (_state == State::IN_IPD_2) {    
+    }
+    // Here we have +IPD,ccc,llll, and are ready to ignore the opening 
+    // quote for the addres  
+    else if (_state == State::IN_IPD_1a) {  
+        _accUsed = 0;
+        _state = State::IN_IPD_1b;  
+    }
+    // Here we have +IPD,ccc,llll," and are accumulating the source
+    // address until the closing quote.
+    else if (_state == State::IN_IPD_1b) {
+        if (b == '"') {
+            // We don't include the closting quote
+            if (_accUsed > 0)
+                _acc[_accUsed - 1] = 0;
+            strcpyLimited(_ipdAddr, (const char*)_acc, _ipdAddrSize);
+            _state = State::IN_IPD_1c;  
+        }
+    }
+    // Here we have +IPD,ccc,llll,"x.x.x.x" and are ignoring the port
+    // number.
+    else if (_state == State::IN_IPD_1c) {
+        if (b == ':') {
+            _state = State::IN_IPD_2;  
+            _accUsed = 0;
+        }
+    }
+    else if (_state == State::IN_IPD_2) {    
         // Keep track of how much data we have received
         _ipdRecd++;
         // Received everything we expected?  If so, report out the 
         // final chunk and go into the state used to ignore the 
         // trailing 0x0d 0x0a (which are not part of the length)
         if (_ipdRecd == _ipdTotal) {
-            _sink->ipd(_ipdChannel, _ipdChunks, _acc, _accUsed);
+            _sink->ipd(_ipdChannel, _ipdChunks, _acc, _accUsed, _ipdAddr);
             _accUsed = 0;
             _state = IN_IPD_3;
         }
         // Accumluator full?  If so, hand off the latest chunk and 
         // keep going in the same state
         else if (_accUsed == _accSize) {
-            _sink->ipd(_ipdChannel, _ipdChunks, _acc, _accUsed);
+            _sink->ipd(_ipdChannel, _ipdChunks, _acc, _accUsed, _ipdAddr);
             _accUsed = 0;
             _ipdChunks++;
         }

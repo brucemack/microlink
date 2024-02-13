@@ -287,6 +287,12 @@ void ESP32CommContext::ok() {
             _initCount = 3;
         }
         else if (_initCount == 3) {
+            const char* cmd = "AT+CIPDINFO=1\r\n";
+            uint32_t cmdLen = strlen(cmd);
+            _esp32->write((uint8_t*)cmd, cmdLen);
+            _initCount = 4;
+        }
+        else if (_initCount == 4) {
             _state = State::NONE;
             StatusEvent ev;
             _eventProc->processEvent(&ev);
@@ -376,7 +382,7 @@ void ESP32CommContext::closed(uint32_t channel) {
 }
 
 void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
-    const uint8_t* data, uint32_t len) {   
+    const uint8_t* data, uint32_t len, const char* addr) {   
     if (len > 256) {
         panic("Length error!");
         return;
@@ -388,7 +394,8 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
                 _eventProc->processEvent(&ev);
             }    
             else if (_tracker[channel].type == ChannelTracker::Type::TYPE_UDP) {
-                UDPReceiveEvent ev(Channel(channel), data, len);
+                UDPReceiveEvent ev(Channel(channel), data, len, 
+                    IPAddress(parseIP4Address(addr)));
                 _eventProc->processEvent(&ev);
             }    
         }

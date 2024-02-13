@@ -20,11 +20,12 @@
  */
 #include "kc1fsz-tools/CommContext.h"
 
+#include "kc1fsz-tools/Common.h"
+#include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/events/SendEvent.h"
 #include "kc1fsz-tools/events/ChannelSetupEvent.h"
-#include "kc1fsz-tools/Common.h"
 
 #include "../common.h"
 
@@ -119,7 +120,8 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
             _state = State::FAILED;
         }
     } 
-    // In this state we are waiting for the reciprocal RTCP message
+    // In this state we are waiting for the initial RTCP message so we 
+    // know who is connecting.
     else if (_state == WAITING) {        
         if (ev->getType() == UDPReceiveEvent::TYPE) {
 
@@ -136,33 +138,36 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                 if (isRTCPPacket(evt->getData(), evt->getDataLen())) {
 
                     // Pull out the callsign
-                    DESItem items[8];
+                    SDESItem items[8];
                     uint32_t ssrc = 0;
                     uint32_t itemCount = parseSDES(evt->getData(), evt->getDataLen(), 
                         &ssrc, items, 8);
-                    CallSign callSign;
                     bool found = false;
-                    for (uint32_t item = 0; item < itemCount; i++) {
+                    for (uint32_t item = 0; item < itemCount; item++) {
                         if (items[item].type == 2) {
                             char callSignAndName[64];
                             items[item].toString(callSignAndName, 64);
-                            // Strip off the call
+                            // Strip off the call (up to the first space)
                             char callSignStr[32];
                             uint32_t i = 0;
+                            // Leave space for null
                             for (i = 0; i < 31 && callSignAndName[i] != ' '; i++)
                                 callSignStr[i] = callSignAndName[i];
                             callSignStr[i] = 0;
-                            callSign = CallSign(callSignStr);
+                            _callSign = CallSign(callSignStr);
+                            _addr = evt->getAddress();
                             found = true;
                             break;
                         }
                     }
 
                     if (found) {
-                        cout << "Connection from " << callSign.c_str() << endl;
+                        cout << "Connection from " << _callSign.c_str() << endl;
+                        char addr[32];
+                        formatIP4Address(_addr.getAddr(), addr, 32);
+                        cout << "Address " << addr << endl;                
+                        _state = SUCCEEDED;
                     }
-                    
-                    //_state = SUCCEEDED;
                 } 
             } 
             else if (evt->getChannel() == _rtpChannel) {
@@ -171,7 +176,7 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                     cout << "QSOAcceptMachine: GOT RTP DATA" << endl;
                     prettyHexDump(evt->getData(), evt->getDataLen(), cout);
                 }
-
+                /*
                 if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
                     // Make sure the message is null-terminated one way or the other
                     char temp[64];
@@ -180,6 +185,7 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                     // Here we skip past the oNDATA part when we report the message
                     _userInfo->setOnData(temp + 6);
                 }
+                */
             }
         }
     }
