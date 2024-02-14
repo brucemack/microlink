@@ -587,31 +587,32 @@ decode frequency and not drive the audio decoding rate by the arrival of packets
 (This section only applies to -L/-R nodes that need to receive unsolicited connections
 from remote stations.)
 
-One of the challenges of running a peer-to-peer network is the limitations on the 
+One of the challenges of running a peer-to-peer network is the limitation on the 
 abilty to pass packets
 through firewalls. This is particularly relevant given the fact that the majority of EchoLink
 stations are likely sitting behind commodity cable/telco routers that block all  
 inbound traffic, for obvious reasons. As described above, EchoLink nodes need to pass
 bi-direction UDP traffic on ports 5198/5199. These ports are certainly not "open" by default.
 
-A closely related challenge relates to the NAT architecture that exists in commodity/retail
+A different challenge relates to the NAT architecture that exists in commodity/retail
 internet service. People typically have many devices on their "home" networks, but only a single 
-internet-facing IP address. Even if a inbound packet was allowed past a home firewall, how would 
+internet-facing IP address. Even if a inbound packet was allowed past a firewall, how would 
 that packet be routed to the right machine on the LAN?
 
 The EchoLink system has implemented a clever mechanism that greatly alleviates both of these issues.
+There may still be situations where this doesn't work, but those are less common.
 
 Understanding this mechanism requires an understanding of dynamic firewall capabilities known 
 as [Stateful Packet Inspection](https://en.wikipedia.org/wiki/Stateful_firewall) and/or [UDP Hole Punching](https://en.wikipedia.org/wiki/UDP_hole_punching). A full explanation is beyond the scope of this
 document, but the key thing to understand is: on most "normal" internet routers **sending a UDP
 packet to a remote address will automatically grant tempoary permission for the return trip.** 
-This temporary permission is sometimes called a "hole" bceause it allows a traffic pattern
+This temporary permission is sometimes called a "UDP hole" because it enables a traffic pattern
 that would not normally be possible. The hole being 
 described here includes (a) a firewall opening to allow return traffic **on the same port** and (b) the
 routing entries needed to get the return traffic back to the right place on your LAN.
 
-The UDP hole is transient and will only persist as long as the network path is actively being used.  
-Once a path becomes innactive the UDP hole is closed.
+The UDP hole is transient and will only persist as long as the network path is actively being 
+used. Once a path becomes innactive the UDP hole is closed.
 
 EchoLink leverages this feature to reduce the need for users to manually create firewall rules
 and/or port forwarding policies. 
@@ -623,28 +624,28 @@ connection to the "Remote Node" which is a link or repeater (i.e. -L or -R).
 special RTCP "PING" packet on the RTCP port.  The EchoLink Server has port 5199 
 open for all incoming traffic. Because the Remote Server is pinging on a regular basis, 
 a UDP hole is being held open that allows packets to flow from the EchoLink Server to the Remote 
-Node.
+node.
 2. The EchoLink Server responds to each PING on the same port, using the UDP hole created
 in step #1.
-3. When the Calling Node wants to connect to the Remote node, it first sends a message to the 
-EchoLink Server that contains the IP address of the Remote Node it wants to contact. Note that 
-a direct connection from the Calling Node to the Remote Node would normally be blocked at
-this point, which is exactly the problem we are trying to solve. Only the EchoLink Server 
-is reachable from the Calling Node.
+3. When the Calling node wants to connect to the Remote node, it first sends a message to the 
+EchoLink Server that contains the IP address of the Remote node it wants to contact. Note that 
+a direct connection from the Calling node to the Remote node would normally be blocked at
+this point, *which is exactly the problem we are trying to solve*. Only the EchoLink Server 
+is reachable from the Calling node.
 4. The EchoLink Server then sends a different RTCP message called an "OPEN packet" to the Remote 
-Server via the UDP hole. This packet contains the IP address of the Calling Node.
-5. The Remote Node sends a special RTCP message called an "OVER packet" to the Calling Node.
+node via the UDP hole. This packet contains the IP address of the Calling node.
+5. The Remote node sends a special RTCP message called an "OVER packet" to the Calling node.
 **This packet will be blocked by the Calling Node's firewall, as expected.** However, the 
-side-effect of sending this packet is the creation of UDP hole from the Calling Node to the 
-Remote Node on the RTCP port.
+side-effect of sending this packet is the creation of UDP hole from the Calling node to the 
+Remote node on the RTCP port.
 6. Similarly, the Remote node sends a special RTP message called a "McAd packet" to the
-Calling Node.  **This packet will be blocked by the Calling Node's firewall, as expected.** However, the 
-side-effect of sending this packet is the creation of UDP hole from the Calling Node to the 
-Remote Node on the RTP port.
-6. The Calling Node sends the normal RTCP SDES/RTP oNDATA messages to the Remote Node to 
-establish a QSO.  This has the side-effect of opening a UDP hole from the Remote Node 
-to the Calling Node.
-7. Now UDP traffic can flow freely between both Nodes, even though no special configurations
+Calling node.  **This packet will be blocked by the Calling Node's firewall, as expected.** However, the 
+side-effect of sending this packet is the creation of UDP hole from the Calling node to the 
+Remote node on the RTP port.
+6. The Calling node sends the normal RTCP SDES/RTP oNDATA messages to the Remote node to 
+establish a QSO.  This has the side-effect of opening a UDP hole from the Remote node 
+to the Calling node.
+7. Now UDP traffic can flow freely between both nodes, even though no special configurations
 were made to their NAT tables or firewall rules.
 8. Constant keep-alive traffic flows in both directions in order to keep the 
 transient UDP holes open.
