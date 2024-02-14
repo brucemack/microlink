@@ -480,19 +480,6 @@ Here is an example capture:
 * The "07" is the length of the text.
 * You can see that 4 bytes were added to the end of the packet.
 
-### RTCP OVER Packet Format
-
-(More detail needed here, but I'm guessing this allows stations to signal the engagement/disengagement of the PTT button.)
-
-A standard RTCP header is sent which matches the RTCP-RR format.  Following the RTCP header, these bytes are sent:
-
-* Two bytes: 0xe1 0xcc 
-* Two bytes: 0x00 0x02 which are length-related.  This follows the (total length - 12) / 4 convention.
-* Four bytes: the SSRC
-* Four bytes: the word "OVER"
-
-![](packet-7.png)
-
 ### RTP oNDATA Packet Format
 
 This looks like an out-of-band text messaging feature.  These packets are sent across the same UDP socket as the 
@@ -663,6 +650,17 @@ were made to their NAT tables or firewall rules.
 transient UDP holes open.
 
 (Packet details to follow - analysis in process)
+
+### RTCP OVER Packet Format
+
+A standard RTCP header is sent which matches the RTCP-RR format.  Following the RTCP header, these bytes are sent:
+
+* Two bytes: 0xe1 0xcc 
+* Two bytes: 0x00 0x02 which are length-related.  This follows the (total length - 12) / 4 convention.
+* Four bytes: the SSRC
+* Four bytes: the word "OVER"
+
+![](packet-7.png)
 
 ## EchoLink Proxy Protocol Notes
 
