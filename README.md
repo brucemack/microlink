@@ -31,7 +31,7 @@ of products.
 I've learned many things about EchoLink during this project. One thing is for sure: Jonathan (K1RFD) 
 who created the EchoLink system is an outstanding engineer and we should all be greatly 
 appreciative of the work
-that he and the rest of the EchoLink team do on behalf of the amateur readio community.
+that he and the rest of the EchoLink team do on behalf of the amateur radio community.
 
 I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions.
 
