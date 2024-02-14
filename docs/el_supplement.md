@@ -621,12 +621,11 @@ The general flow is as follows. In this description, the "Calling Node" is origi
 connection to the "Remote Node" which is a link or repeater (i.e. -L or -R). 
 
 1. Remote nodes poll the EchoLink Server (ex: naeast.echolink.org) every 30 seconds using a 
-special RTCP "PING" packet on the RTCP port.  The EchoLink Server has port 5199 
+special RTCP SDES "PING" packet on the RTCP port.  The EchoLink Server has port 5199 
 open for all incoming traffic. Because the Remote Server is pinging on a regular basis, 
 a UDP hole is being held open that allows packets to flow from the EchoLink Server to the Remote 
 node.
-2. The EchoLink Server responds to each PING on the same port, using the UDP hole created
-in step #1.
+2. The EchoLink Server responds to each PING on the same port using the same RTCP SDES message, using the UDP hole created in step #1.
 3. When the Calling node wants to connect to the Remote node, it first sends a message to the 
 EchoLink Server that contains the IP address of the Remote node it wants to contact. Note that 
 a direct connection from the Calling node to the Remote node would normally be blocked at
@@ -635,11 +634,11 @@ is reachable from the Calling node.
 4. The EchoLink Server then sends a different RTCP message called an "OPEN packet" to the Remote 
 node via the UDP hole. This packet contains the IP address of the Calling node.
 5. The Remote node sends a special RTCP message called an "OVER packet" to the Calling node.
-**This packet will be blocked by the Calling Node's firewall, as expected.** However, the 
+**This packet will be blocked by the Calling node's firewall, as expected.** However, the 
 side-effect of sending this packet is the creation of UDP hole from the Calling node to the 
 Remote node on the RTCP port.
 6. Similarly, the Remote node sends a special RTP message called a "McAd packet" to the
-Calling node.  **This packet will be blocked by the Calling Node's firewall, as expected.** However, the 
+Calling node.  **This packet will be blocked by the Calling node's firewall, as expected.** However, the 
 side-effect of sending this packet is the creation of UDP hole from the Calling node to the 
 Remote node on the RTP port.
 6. The Calling node sends the normal RTCP SDES/RTP oNDATA messages to the Remote node to 
