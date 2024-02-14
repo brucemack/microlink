@@ -274,9 +274,10 @@ int main(int, const char**) {
                 cout << "Audio In Max%     : " << (100 * audioInContext.getMax()) / 32767 << endl;
                 cout << "Audio In Clips    : " << audioInContext.getClips() << endl;
                 cout << "Audio Gain        : " << audioInContext.getGain() << endl;
-                cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
+                cout << "UART ISR COUNT    : " << channel.getIsrCountRead() << endl;
+                cout << "UART RX BYTES     : " << channel.getBytesReceived() << endl;
                 cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
-                cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
+                cout << "UART TX BYTES     : " << channel.getBytesSent() << endl;
                 cout << "Long Cycles       : " << longCycleCounter << endl;
 
                 for (uint32_t t = 0; t < taskCount; t++) {
@@ -311,11 +312,6 @@ int main(int, const char**) {
         else {
             gpio_put(KEY_LED_PIN, 0);
         }
-
-        // Temporary
-        //if (rm.isDone()) {
-        //    break;
-        //}
 
         // Run the tasks, keeping track of the time for each
         for (uint32_t t = 0; t < 4; t++) {
