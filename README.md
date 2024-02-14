@@ -81,10 +81,10 @@ MicroLink identifies itself using a version string of **0.02MLZ**.
 
 ## Microphone Pre-Amp
 
-I've had a lot of help from Dan Brown W1DAN on this part. Performance audio circuits
-are not my forte, but it's slowly improving.  
+Performance audio circuits are not my forte, but it's slowly improving.  
 
-This is what is built at the moment:  
+This is what I built originally, but a new version using parts with better noise 
+specs is in the works. 
 
 ![Audio Preamp Schematic](docs/preamp-1.png)
 
@@ -93,14 +93,14 @@ the speaker/amplifier in for monitoring purposes.
 
 ## Cellular Data Interface
 
-The main reasons I used the ESP32 for WIFI connectivity is the fact that the ESP AT
-command set is very similar to the one used by the SIM7600 4G cellular module.
+The main reasons I used the ESP-32 for WIFI connectivity is the fact that the ESP AT
+command set is very similar to the one supported by the SIM7600 4G cellular module.
 I am currently working on a version of the MicroLink system that uses 4G internet 
 connectivity. 
 
 ## Speeds and Feeds
 
-* The standard audio sample rate for EchoLink is 8 kHz at 12-bits of resolution.
+* The standard audio sample rate for GSM-FR/EchoLink is 8 kHz at 12-bits of resolution.
 * The audio CODEC creates/consumes one 640 byte packet every 80ms.  One of these packets is moved 12.5 times per second.
 * It takes the RP2040 about 7ms to decode a 4x160 byte GSM frame.
 * It takes the RP2040 about 30ms to encode a 4x160 byte GSM frame.
@@ -120,7 +120,16 @@ the code shown in the video demonstration.
 At the moment this uses a serial console to take commands and display 
 status.
 
+## link-test-1p
+
+The test build for the -L station.  
+
+At the moment this uses a serial console to take commands and display 
+status.
+
 ## client-test-2
+
+Runs on a Windows desktop, used for testing purposes only. No TX at this time.
 
 * Set environment variables EL_CALLSIGN, EL_PASSWORD, EL_FULLNAME, EL_LOCATION.
 
