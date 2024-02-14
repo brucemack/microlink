@@ -1,14 +1,16 @@
 # Overview
 
-Is it possible to build a full EchoLink&reg; station using a $4 microcontroller?  I'm not completely sure, but
+Is it possible to build a full EchoLink&reg; node using a $4 microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest, 
 cheapest way to put a radio onto the EchoLink network. If you are new 
 to the world of EchoLink please 
-[see the official website](https://www.echolink.org/) for complete information. 
+[see the official website](https://www.echolink.org/) for complete information. EchoLink is a 
+peer-to-peer VoIP (voice over IP) network used to link amateur radio stations across
+the Internet.
 
 There are much easier ways to get onto EchoLink. The MicroLink project is only
 interesting for someone who wants to get deep into the nuts-and-bolts of EchoLink/VoIP technology. In fact, you 
-should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I find the use of off-the-shelf software/components to be less exciting. 
+should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I try to avoid off-the-shelf software/components where possible.
 
 Here's the current demo video:
 
@@ -34,9 +36,8 @@ My goal was to build a complete station from scratch, with no strings attached t
 
 At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
 
-This project required an in-depth examination of how the EchoLink protocol works.
-
-MicroLink identifies itself using a version string of **0.02MLZ**.
+This project required an in-depth examination of how the EchoLink protocol works. [The notes
+I created during this analysis are located here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
 
 ## Current Parts List (HW)
 
@@ -62,6 +63,15 @@ but this was extremely interesting.
 Here's a picture of the parts on the bench so you can tell what you're looking at.
 
 ![MicroLink Station](docs/demo-1.png)
+
+MicroLink identifies itself using a version string of **0.02MLZ**.
+
+## Cellular Data Interface
+
+The main reasons I used the ESP32 for WIFI connectivity is the fact the the ESP AT
+command set is very similar to that used by the SIM7600 4G cellular module.
+I am currently working on a version of the MicroLink that uses 4G internet 
+connectivity.  
 
 ## Speeds and Feeds
 

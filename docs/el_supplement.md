@@ -584,8 +584,11 @@ decode frequency and not drive the audio decoding rate by the arrival of packets
 
 ## EchoLink OPEN/OVER Protocol
 
+(_Research in process, not complete._)
+
 (This section only applies to -L/-R nodes that need to receive unsolicited connections
-from remote stations.)
+from behind a firewall. I have used explicit port forwarding on my implementation and 
+things work find without using this protocol.)
 
 One of the challenges of running a peer-to-peer network is the limitation on the 
 abilty to pass packets
@@ -596,8 +599,8 @@ bi-direction UDP traffic on ports 5198/5199. These ports are certainly not "open
 
 A different challenge relates to the NAT architecture that exists in commodity/retail
 internet service. People typically have many devices on their "home" networks, but only a single 
-internet-facing IP address. Even if a inbound packet was allowed past a firewall, how would 
-that packet be routed to the right machine on the LAN?
+internet-facing IP address. Even if an inbound packet was allowed past a firewall, how would 
+that packet find its way to the right machine on the LAN?
 
 The EchoLink system has implemented a clever mechanism that greatly alleviates both of these issues.
 There may still be situations where this doesn't work, but those are less common.
@@ -630,7 +633,9 @@ node.
 EchoLink Server that contains the IP address of the Remote node it wants to contact. Note that 
 a direct connection from the Calling node to the Remote node would normally be blocked at
 this point, *which is exactly the problem we are trying to solve*. Only the EchoLink Server 
-is reachable from the Calling node.
+is reachable from the Calling node. (NOTE: I am not yet sure whether an explicit message
+is used in this step, or whether step #4 is triggered as a side-effect of the normal callsign 
+lookup that is used by the Calling node to resolve the IP address of the Remote node.)
 4. The EchoLink Server then sends a different RTCP message called an "OPEN packet" to the Remote 
 node via the UDP hole. This packet contains the IP address of the Calling node.
 5. The Remote node sends a special RTCP message called an "OVER packet" to the Calling node.
