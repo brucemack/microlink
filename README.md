@@ -24,7 +24,9 @@ PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is 
 EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink family 
 of products.
 
-MicroLink identifies itself using a version string of **0.02MLZ**.
+I've learned many things during this project. One thing is for sure: Jonathan (K1RFD) who created
+this system is an outstanding engineer and we should all be greatly appreciative of the work
+that he and the rest of the EchoLink team does on behalf of the amateur community.
 
 # Architecture/Parts
 
@@ -33,6 +35,8 @@ My goal was to build a complete station from scratch, with no strings attached t
 At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
 
 This project required an in-depth examination of how the EchoLink protocol works.
+
+MicroLink identifies itself using a version string of **0.02MLZ**.
 
 ## Current Parts List (HW)
 
