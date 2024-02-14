@@ -26,7 +26,7 @@ of products.
 
 I've learned many things during this project. One thing is for sure: Jonathan (K1RFD) who created
 this system is an outstanding engineer and we should all be greatly appreciative of the work
-that he and the rest of the EchoLink team does on behalf of the amateur community.
+that he and the rest of the EchoLink team do on behalf of the amateur community.
 
 # Architecture/Parts
 
