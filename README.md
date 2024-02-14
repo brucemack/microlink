@@ -33,14 +33,14 @@ who created the EchoLink system is an outstanding engineer and we should all be 
 appreciative of the work
 that he and the rest of the EchoLink team do on behalf of the amateur radio community.
 
-I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions.
+I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions or suggestions.
 
 # Architecture Overview/Parts
 
 My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  
 
 Once things are working smoothly I will integrate this onto a single PCB for 
-ease of use with radios (link mode) and/or repeaters.
+ease of use with radios (link mode) and/or direct integration with repeaters.
 
 At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
 
