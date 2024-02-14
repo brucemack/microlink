@@ -13,6 +13,10 @@ be interesting to someone who wants to get deep into the nuts-and-bolts of EchoL
 should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I try to avoid off-the-shelf software/components where 
 possible. This has been a huge learning opportunity.
 
+The system currently runs on a Pi Pico (RP2040) development board. I'm pretty sure it 
+could also run on an ESP-32, or possibly an Arduino of the correct caliber. More experimentation
+is needed here.
+
 Here's the current demo video:
 
 [![MicroLink Transmit and Receive Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
@@ -21,6 +25,7 @@ The microphone/analog section still needs a lot of work.
 
 Once things are working smoothly I will integrate this onto a single PCB for 
 ease of use with radios (link mode) and/or repeaters.
+
 
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
@@ -62,6 +67,9 @@ filter.  The microphone part needs work.
 in C++. Getting that to work required studying
 the European Telecommunications Standards Institute specification for GSM and a lot of testing,
 but this was extremely interesting.
+* I'm not using the Arduino development environment for this project. The toolchain is 
+CMake/GCC/GDB using the Pico 
+SDK. I like this environment a lot. The firmware is flashed via SWD using [openocd](https://openocd.org/).
 
 Here's a picture of the parts on the bench so you can tell what you're looking at.
 
