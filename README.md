@@ -81,9 +81,8 @@ MicroLink identifies itself using a version string of **0.02MLZ**.
 
 ## Microphone Pre-Amp
 
-Performance audio circuits are not my forte, but it's slowly improving.  
-
-This is what I built originally, but a new version using parts with better noise 
+Performance audio circuits are not my forte.  The quality is improving with each 
+iteration.  This is what I built originally, but a new version using parts with better noise 
 specs is in the works. 
 
 ![Audio Preamp Schematic](docs/preamp-1.png)
