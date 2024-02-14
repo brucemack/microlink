@@ -8,15 +8,16 @@ to the world of EchoLink please
 peer-to-peer VoIP (voice over IP) network used to link amateur radio stations across
 the Internet.
 
-There are much easier ways to get onto EchoLink. The MicroLink project is only
-interesting for someone who wants to get deep into the nuts-and-bolts of EchoLink/VoIP technology. In fact, you 
-should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I try to avoid off-the-shelf software/components where possible.
+There are much easier ways to get onto EchoLink. The MicroLink project will only
+be interesting to someone who wants to get deep into the nuts-and-bolts of EchoLink/VoIP technology. In fact, you 
+should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I try to avoid off-the-shelf software/components where 
+possible. This has been a huge learning opportunity.
 
 Here's the current demo video:
 
 [![MicroLink Transmit and Receive Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
 
-The microphone/analog section still needs work.  
+The microphone/analog section still needs a lot of work. 
 
 Once things are working smoothly I will integrate this onto a single PCB for 
 ease of use with radios (link mode) and/or repeaters.
@@ -30,7 +31,7 @@ I've learned many things during this project. One thing is for sure: Jonathan (K
 this system is an outstanding engineer and we should all be greatly appreciative of the work
 that he and the rest of the EchoLink team do on behalf of the amateur community.
 
-# Architecture/Parts
+# Architecture Overview/Parts
 
 My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  
 
@@ -42,9 +43,11 @@ I created during this analysis are located here](https://github.com/brucemack/mi
 ## Current Parts List (HW)
 
 * The main processor is a Pi Pico (RP2040) development board.  $4.00 on DigiKey.
-* Internet connectivity currently comes from an ESP-32-WROOM development board. $5.00 on Amazon. Work
-is underway to provide a 3G cellular data option using a SIM7600 module.
-* Microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
+* Internet connectivity currently comes over WIFI using an ESP-32-WROOM development 
+board. $5.00 on Amazon. Work
+is underway to provide a 4G cellular data option using a SIM7600 module. More on 
+this to follow.
+* The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
 filter.  The microphone part needs work.
 * Audio input sampling uses the integrated ADC in the RP2040.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
@@ -66,21 +69,34 @@ Here's a picture of the parts on the bench so you can tell what you're looking a
 
 MicroLink identifies itself using a version string of **0.02MLZ**.
 
+## Microphone Pre-Amp
+
+I've had a lot of help from Dan Brown W1DAN on this part. Performance audio circuits
+are not my forte, but it's slowly improving.  
+
+This is what is built at the moment:  
+
+![Audio Preamp Schematic](docs/preamp-1.png)
+
+The microphone part will go away once the radio is integrated. I will probably leave
+the speaker/amplifier in for monitoring purposes.
+
 ## Cellular Data Interface
 
-The main reasons I used the ESP32 for WIFI connectivity is the fact the the ESP AT
-command set is very similar to that used by the SIM7600 4G cellular module.
-I am currently working on a version of the MicroLink that uses 4G internet 
-connectivity.  
+The main reasons I used the ESP32 for WIFI connectivity is the fact that the ESP AT
+command set is very similar to the one used by the SIM7600 4G cellular module.
+I am currently working on a version of the MicroLink system that uses 4G internet 
+connectivity. 
 
 ## Speeds and Feeds
 
-* The standard audio sample rate for EchoLink is 8 kHz at 12-bits.
+* The standard audio sample rate for EchoLink is 8 kHz at 12-bits of resolution.
 * The audio CODEC creates/consumes one 640 byte packet every 80ms.  One of these packets is moved 12.5 times per second.
-* It takes the RP2040 about 75uS to decode a 160 byte GSM frame.
+* It takes the RP2040 about 7ms to decode a 4x160 byte GSM frame.
+* It takes the RP2040 about 30ms to encode a 4x160 byte GSM frame.
 * The UDP data rate needed to sustain audio quality is 
 approximately 14,000 baud.
-* The RP2040 runs at 125 MHz.  Only one of the two processors is used at this time.
+* The RP2040 runs at 125 MHz. Only one of the two processors is used at this time.
 * The DAC runs on an I2C bus running at 400 kHz.
 * The ESP-32 is on a serial port that runs at 115,200 baud.
 
