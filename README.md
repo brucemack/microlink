@@ -28,8 +28,9 @@ PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is 
 EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink family 
 of products.
 
-I've learned many things during this project. One thing is for sure: Jonathan (K1RFD) who created
-this system is an outstanding engineer and we should all be greatly appreciative of the work
+I've learned many things about EchoLink during this project. One thing is for sure: Jonathan (K1RFD) 
+who created the EchoLink system is an outstanding engineer and we should all be greatly 
+appreciative of the work
 that he and the rest of the EchoLink team do on behalf of the amateur readio community.
 
 I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions.
