@@ -95,6 +95,9 @@ public:
 
     virtual void sendUDPChannel(Channel c, const uint8_t* b, uint16_t len);
 
+    virtual void sendUDPChannel(Channel c, IPAddress remoteIpAddr, uint32_t remotePort,
+        const uint8_t* b, uint16_t len);
+
     // ----- ATResponseProcessor::EventSink -----------------------------------
 
     virtual void ok();

@@ -48,7 +48,7 @@ static TickEvent tickEv;
 
 int QSOAcceptMachine::traceLevel = 0;
 
-uint32_t QSOAcceptMachine::_ssrcCounter = 0xd0000010;
+uint32_t QSOAcceptMachine::_ssrcCounter = 0xa0000010;
 
 QSOAcceptMachine::QSOAcceptMachine(CommContext* ctx, UserInfo* userInfo)
 :   _ctx(ctx),
@@ -142,6 +142,10 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                     uint32_t ssrc = 0;
                     uint32_t itemCount = parseSDES(evt->getData(), evt->getDataLen(), 
                         &ssrc, items, 8);
+
+                    _addr = evt->getAddress();
+                    _remoteSsrc = ssrc;                    
+
                     bool found = false;
                     for (uint32_t item = 0; item < itemCount; item++) {
                         if (items[item].type == 2) {
@@ -155,7 +159,6 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                                 callSignStr[i] = callSignAndName[i];
                             callSignStr[i] = 0;
                             _callSign = CallSign(callSignStr);
-                            _addr = evt->getAddress();
                             found = true;
                             break;
                         }
@@ -165,7 +168,9 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                         cout << "Connection from " << _callSign.c_str() << endl;
                         char addr[32];
                         formatIP4Address(_addr.getAddr(), addr, 32);
-                        cout << "Address " << addr << endl;                
+                        cout << "Address " << addr << endl;         
+
+                        _localSsrc = _ssrcCounter++;       
                         _state = SUCCEEDED;
                     }
                 } 

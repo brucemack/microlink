@@ -54,8 +54,8 @@ public:
     Channel getRTPChannel() const  { return _rtpChannel; }
 
     uint32_t getSSRC() const { return _localSsrc; }
-    CallSign getCallSign() const { return _callSign; }
-    IPAddress getAddress() const { return _addr; }
+    CallSign getRemoteCallSign() const { return _callSign; }
+    IPAddress getRemoteAddress() const { return _addr; }
 
     void requestCleanStop() { }
 

@@ -47,6 +47,7 @@ static const char* FAILED_MSG = "Station connection failed";
 static const char* WAITING_FOR_RESPONSE_MSG = "Waiting for remote station";
 
 int QSOConnectMachine::traceLevel = 0;
+
 uint32_t QSOConnectMachine::_ssrcCounter = 0xd0000010;
 
 QSOConnectMachine::QSOConnectMachine(CommContext* ctx, UserInfo* userInfo)

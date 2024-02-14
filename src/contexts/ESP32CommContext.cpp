@@ -251,6 +251,20 @@ void ESP32CommContext::sendUDPChannel(Channel c,
         return;
     }
 
+    // Send using the address/port established originally
+    sendUDPChannel(c, 
+        _tracker[c.getId()].addr, _tracker[c.getId()].port, 
+        b, len);
+}
+
+void ESP32CommContext::sendUDPChannel(Channel c, 
+    IPAddress remoteIpAddr, uint32_t remotePort,
+    const uint8_t* b, uint16_t len) {
+
+    if (!c.isGood()) {
+        return;
+    }
+
     // Grab a copy of the the data
     if (len > _sendHoldSize) {
         panic(OVERFLOW_MSG);
@@ -260,12 +274,12 @@ void ESP32CommContext::sendUDPChannel(Channel c,
     _sendHoldLen = len;
 
     char addr[32];
-    formatIP4Address(_tracker[c.getId()].addr.getAddr(), addr, 32);
+    formatIP4Address(remoteIpAddr.getAddr(), addr, 32);
 
     // Make the send request, which includes address/port for UDP
     char buf[64];
     sprintf(buf, "AT+CIPSEND=%d,%d,\"%s\",%lu\r\n", c.getId(), len,
-        addr, _tracker[c.getId()].port);
+        addr, remotePort);
     _esp32->write((uint8_t*)buf, strlen(buf));
 
     // Now we wait for the prompt to tell us it's OK to send the data

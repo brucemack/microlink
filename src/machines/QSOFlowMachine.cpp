@@ -45,6 +45,9 @@ static const uint8_t SPEC_FRAME[33] = {
  0x49, 0x24, 0x50, 0x00, 0x49, 0x24, 0x92, 0x49, 
  0x24 };
 
+static const uint32_t RTP_PORT = 5198;
+static const uint32_t RTCP_PORT = 5199;
+
 // How often we send activity on the UDP connections to keep the 
 // connection alive.
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10000;
@@ -57,10 +60,11 @@ static const uint32_t SQUELCH_INTERVAL_MS = 1000;
 int QSOFlowMachine::traceLevel = 0;
 
 QSOFlowMachine::QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
-    AudioOutputContext* audioOutput) 
+    AudioOutputContext* audioOutput, bool useLocalSsrc) 
 :   _ctx(ctx),
     _userInfo(userInfo),
-    _audioOutput(audioOutput) {
+    _audioOutput(audioOutput),
+    _useLocalSsrc(useLocalSsrc) {
 }
 
 void QSOFlowMachine::start() {
@@ -214,7 +218,7 @@ void QSOFlowMachine::_sendONDATA() {
     strcatLimited(buffer, _location.c_str(), bufferSize);
     strcatLimited(buffer, "\r", bufferSize);
     uint32_t packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-    _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
+    _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
 }
 
 void QSOFlowMachine::_sendBYE() {
@@ -222,7 +226,7 @@ void QSOFlowMachine::_sendBYE() {
     const uint16_t packetSize = 128;
     uint8_t packet[packetSize];
     uint32_t packetLen = formatRTCPPacket_BYE(0, packet, packetSize);
-    _ctx->sendUDPChannel(_rtcpChannel, packet, packetLen);
+    _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
 }
 
 void QSOFlowMachine::processEvent(const Event* ev) {
@@ -295,8 +299,10 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
         uint8_t packet[packetSize];
 
         // Make the SDES message and send
-        uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
-        _ctx->sendUDPChannel(_rtcpChannel, packet, packetLen);
+        uint32_t ssrc = _useLocalSsrc ? _ssrc : 0;
+        uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(ssrc, 
+            _callSign, _fullName, _ssrc, packet, packetSize); 
+        _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
 
         _state = State::OPEN_RX_RTCP_PING_1;
         _lastRTCPKeepAliveSentMs = time_ms();
@@ -346,7 +352,7 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
             uint32_t packetLen = formatRTPPacket(_txAudioSentCount, 
                 0, gsmFrames, packet, 144);
             
-            _ctx->sendUDPChannel(_rtpChannel, packet, packetLen);
+            _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
             _state = State::OPEN_TX_AUDIO_1;
             
             _txAudioSentCount++;
@@ -378,7 +384,7 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
 
         // Make the SDES message and send
         uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
-        _ctx->sendUDPChannel(_rtcpChannel, packet, packetLen);
+        _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
 
         _state = State::OPEN_TX_RTCP_PING_1;
         _lastRTCPKeepAliveSentMs = time_ms();

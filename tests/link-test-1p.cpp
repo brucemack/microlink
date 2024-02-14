@@ -206,16 +206,16 @@ int main(int, const char**) {
     rm.setServerPort(5200);
     rm.setCallSign(CallSign("W1TKZ-L"));
     rm.setPassword(FixedString("xxx"));
-    rm.setFullName(FixedString("Bruce R. MacKinnon"));
+    rm.setFullName(FixedString("Wellesley Amateur Radio Society"));
     rm.setLocation(FixedString("Wellesley, MA USA"));
 
-    const uint32_t taskCount = 2;
+    const uint32_t taskCount = 4;
     Runnable* tasks[taskCount] = {
-        //&audioOutContext, &audioInContext, 
+        &audioOutContext, &audioInContext, 
         &ctx, &rm
     };
     uint32_t maxTaskTime[taskCount] = { 
-        //0, 0, 
+        0, 0, 
         0, 0 };
 
     PicoPerfTimer cycleTimer;

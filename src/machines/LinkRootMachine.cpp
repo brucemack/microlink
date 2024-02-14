@@ -108,6 +108,19 @@ void LinkRootMachine::processEvent(const Event* ev) {
             }
         }
     }
+    else if (_state == State::IN_VALIDATION) {
+
+        // TODO: FILL IN!
+
+        // The connect process establishes UDP communication paths, 
+        // so transfer them over to the QSO machine.
+        _qsoMachine.setRTCPChannel(_acceptMachine.getRTCPChannel());
+        _qsoMachine.setRTPChannel(_acceptMachine.getRTPChannel());
+        _qsoMachine.setSSRC(_acceptMachine.getSSRC());
+        _qsoMachine.setTargetAddress(_acceptMachine.getRemoteAddress());
+        _qsoMachine.start();
+        _state = QSO;
+    }
     // In this state a QSO is ongoing
     else if (_state == QSO) {
         if (isDoneAfterEvent(_qsoMachine, ev)) {

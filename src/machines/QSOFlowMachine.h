@@ -48,15 +48,17 @@ public:
     static int traceLevel;
 
     QSOFlowMachine(CommContext* ctx, UserInfo* userInfo, 
-        AudioOutputContext* audioOutput);
+        AudioOutputContext* audioOutput,
+        bool useLocalSsrc = false);
 
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setFullName(FixedString fn) { _fullName = fn; }
     void setLocation(FixedString l) { _location = l; }
-    void setTargetAddress(IPAddress addr) { _targetAddr = addr; }
+
     void setRTCPChannel(Channel c) { _rtcpChannel = c; }
     void setRTPChannel(Channel c)  { _rtpChannel = c; }
     void setSSRC(uint32_t s) { _ssrc = s; }
+    void setTargetAddress(IPAddress addr) { _targetAddr = addr; }
 
     bool requestCleanStop();
 
@@ -120,6 +122,7 @@ private:
     CommContext* _ctx;
     UserInfo* _userInfo;
     AudioOutputContext* _audioOutput;
+    bool _useLocalSsrc;
 
     CallSign _callSign;
     FixedString _fullName;
