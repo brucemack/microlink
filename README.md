@@ -12,7 +12,7 @@ should start to question the sanity of anyone who spends this much time building
 
 Here's the current demo video:
 
-[![MicroLink RX Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
+[![MicroLink Transmit and Receive Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
 
 The microphone/analog section still needs work.  
 
