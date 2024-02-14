@@ -23,10 +23,6 @@ Here's the current demo video:
 
 The microphone/analog section still needs a lot of work. 
 
-Once things are working smoothly I will integrate this onto a single PCB for 
-ease of use with radios (link mode) and/or repeaters.
-
-
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
 EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink family 
@@ -34,11 +30,16 @@ of products.
 
 I've learned many things during this project. One thing is for sure: Jonathan (K1RFD) who created
 this system is an outstanding engineer and we should all be greatly appreciative of the work
-that he and the rest of the EchoLink team do on behalf of the amateur community.
+that he and the rest of the EchoLink team do on behalf of the amateur readio community.
+
+I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions.
 
 # Architecture Overview/Parts
 
 My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  
+
+Once things are working smoothly I will integrate this onto a single PCB for 
+ease of use with radios (link mode) and/or repeaters.
 
 At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
 
