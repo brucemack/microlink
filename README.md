@@ -23,6 +23,10 @@ Here's the current demo video:
 
 The microphone/analog section still needs a lot of work. 
 
+Here's what it sounds like over the air:
+
+[![MicroLink OTA Demo](https://img.youtube.com/vi/BMkJOykSL_8/0.jpg)](https://www.youtube.com/watch?v=BMkJOykSL_8)
+
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
 EchoLink. [Download it here](https://www.echolink.org/download.htm). There are also versions that run on mobile phones. MicroLink is not a supported part of the EchoLink family 
@@ -42,8 +46,6 @@ My goal was to build a complete station from scratch, with no strings attached t
 Once things are working smoothly I will integrate this onto a single PCB for 
 ease of use with radios (link mode) and/or direct integration with repeaters.
 
-At the moment there is no radio integration, but the final MicroLink product will provide an inexpensive interface between the internet and a radio to make linking very simple. 
-
 This project required an in-depth examination of how the EchoLink protocol works. [The notes
 I created during this analysis are located here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
 
@@ -60,6 +62,7 @@ filter.  The microphone part needs work.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
 * The T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
+* The radio link is a Baofeng BF-F8HP.
 
 ## Current Parts List (SW)
 
@@ -89,6 +92,10 @@ specs is in the works.
 
 The microphone part will go away once the radio is integrated. I will probably leave
 the speaker/amplifier in for monitoring purposes.
+
+## Carrier Detect
+
+(To follow)
 
 ## Cellular Data Interface
 
