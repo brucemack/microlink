@@ -223,6 +223,19 @@ ADC performance is not critical, this pin can be connected to digital ground.
     # Used to send UDP packets.  The printf command supports non-printable.
     printf 'Hello\rWorld' | nc -u -w1 192.168.8.210 5198
 
+# Rig Integration Notes
+
+## Baofeng BF-F8HP HT
+
+* 3.5mm Jack
+  - Tip - NC
+  - Ring - Rig mic in, MicroLink audio out
+  - Sleeve - PTT when pulled to ground
+* 2.5mm Jack
+  - Tip - Rig speaker+ out, MicroLink audio in
+  - Ring - Rig ground
+  - Sleeve - Rig ground
+
 References
 ==========
 
@@ -246,11 +259,13 @@ References
   - [MCP4725 DAC](https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf)
   - [Audio Amp](https://www.ti.com/lit/ds/symlink/lm4862.pdf?HQS=dis-dk-null-digikeymode-dsf-pf-null-wwe&ts=1707335785542&ref_url=https%253A%252F%252Fwww.ti.com%252Fgeneral%252Fdocs%252Fsuppproductinfo.tsp%253FdistId%253D10%2526gotoUrl%253Dhttps%253A%252F%252Fwww.ti.com%252Flit%252Fgpn%252Flm4862)
   - [TLV9161 opamp suggested by Dan](https://www.ti.com/lit/ds/symlink/tlv9161.pdf?ts=1707743140015&ref_url=https%253A%252F%252Fwww.google.de%252F)
+  - [NTE3086 Optoisolator](https://www.nteinc.com/specs/3000to3099/pdf/nte3086.pdf)
 * Rig Integration
   - [Microphone Connector Reference](https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf)
   - [Baofeng Cable Reference](https://ics-ctrl.com/cable-pinout-baofeng-ht/)
 * Analog/Audio
   - [Good article from Analog Devices about noise in mixed-signal systems](https://www.analog.com/media/en/analog-dialogue/volume-46/number-2/articles/staying_well_grounded.pdf)
+  - [Detailed article about audio/rig integration](https://www.zs2ez.co.za/Soundcard/Soundcard.htm)
 * Other
   - [Analog Devices Filter Wizard](https://tools.analog.com/en/filterwizard/)
   - https://www.purevpn.com/what-is-vpn/protocols/openvpn

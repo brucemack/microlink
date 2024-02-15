@@ -72,6 +72,13 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 // Physical pin 11
 #define ESP_EN_PIN (8)
 
+// Physical pin 12.  This is an output (active high) used to key 
+// the rig's transmitter.
+#define RIG_KEY_PIN (9)
+// Physical pin 14. This is an input (active low) used to detect
+// receive carrier from the rig.
+#define RIG_COS_PIN (10)
+
 #define UART_ID uart0
 #define UART_TX_PIN 0
 #define UART_RX_PIN 1
@@ -82,6 +89,9 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 
 #define I2C0_SDA (4) // Phy Pin 6: I2C channel 0 - data
 #define I2C0_SCL (5) // Phy Pin 7: I2C channel 0 - clock
+
+#define PTT_DEBOUNCE_INTERVAL_MS (250)
+#define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
 
 using namespace std;
 using namespace kc1fsz;
@@ -102,23 +112,30 @@ int main(int, const char**) {
     stdio_init_all();
 
     // On-board LED
-    gpio_init(LED_PIN);
+    gpio_init(LED_PIN); 
     gpio_set_dir(LED_PIN, GPIO_OUT);
 
-    // PTT switch
+    // Physical PTT switch
     gpio_init(PTT_PIN);
     gpio_set_dir(PTT_PIN, GPIO_IN);
     gpio_pull_up(PTT_PIN);
+
+    gpio_init(RIG_COS_PIN);
+    gpio_set_dir(RIG_COS_PIN, GPIO_IN);
+    gpio_pull_up(RIG_COS_PIN);
 
     // Key LED
     gpio_init(KEY_LED_PIN);
     gpio_set_dir(KEY_LED_PIN, GPIO_OUT);
     gpio_put(KEY_LED_PIN, 0);
 
-    // ESP EN
     gpio_init(ESP_EN_PIN);
     gpio_set_dir(ESP_EN_PIN, GPIO_OUT);
     gpio_put(ESP_EN_PIN, 1);
+
+    gpio_init(RIG_KEY_PIN);
+    gpio_set_dir(RIG_KEY_PIN, GPIO_OUT);
+    gpio_put(RIG_KEY_PIN, 0);
        
     // UART0 setup
     uart_init(UART_ID, U_BAUD_RATE);
@@ -190,7 +207,7 @@ int main(int, const char**) {
     TestUserInfo info;
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
-        audioBufDepthLog2, audioBuf);
+        audioBufDepthLog2, audioBuf, &info);
     PicoAudioInputContext audioInContext;
 
     RootMachine rm(&ctx, &info, &audioOutContext);
@@ -221,23 +238,67 @@ int main(int, const char**) {
     uint32_t longCycleCounter = 0;
     PicoPerfTimer taskTimer;
 
-    // Here is the main event loop
     bool pttState = false;
     uint32_t lastPttTransition = 0;
 
+    bool lastRigCos = false;
+    bool rigCosState = false;
+    uint32_t lastRigCosTransition = 0;
+
+    // Here is the main event loop
     while (true) {
 
         cycleTimer.reset();
 
-        // Physical controls
+        // Look at physical controls and adjust the state 
+
         bool ptt = !gpio_get(PTT_PIN);
         // Simple de-bounce
-        if (ptt != pttState && time_ms() > (lastPttTransition + 250)) {
+        if (ptt != pttState && time_ms() > (lastPttTransition + PTT_DEBOUNCE_INTERVAL_MS)) {
             lastPttTransition = time_ms();
             pttState = ptt;
             audioInContext.setPtt(pttState);
         }
 
+        bool rigCos = gpio_get(RIG_COS_PIN);
+
+        // Look for activity on the line (not debounced)
+        if (rigCos != lastRigCos) {
+            lastRigCosTransition = time_ms();
+        }
+        lastRigCos = rigCos;
+
+        // If the carrier is currently not detected
+        if (rigCosState == false) {
+            // The LO->HI transition is taken immediately
+            if (rigCos) {
+                if (info.getSquelch() || 
+                    info.getMsSinceLastSquelchClose() < 500) {
+                } 
+                else {
+                    rigCosState = true;
+                    cout << "Rig COS detected" << endl;
+                    if (!rm.isInQSO()) {
+                        cout << endl << "Starting" << endl;
+                        rm.start();
+                    }
+                    else {
+                        audioInContext.setPtt(rigCosState);
+                    }
+                }
+            }
+        } 
+        // If the carrier is currently active
+        else {
+            // The HI->LO transition is fully debounced
+            if (!rigCos && 
+                (time_ms() - lastRigCosTransition) > RIG_COS_DEBOUNCE_INTERVAL_MS) {
+                rigCosState = false;
+                audioInContext.setPtt(rigCosState);
+                cout << "Rig COS off" << endl;
+            }
+        }
+        
         // Keyboard input
         int c = getchar_timeout_us(0);
         if (c > 0) {
@@ -263,6 +324,12 @@ int main(int, const char**) {
             }
             else if (c == 'z') {
                 audioOutContext.tone(800, 500);
+            }
+            else if (c == 'k') {
+                cout << "Rig Key Test" << endl;
+                gpio_put(RIG_KEY_PIN, 1);
+                sleep_ms(1000);
+                gpio_put(RIG_KEY_PIN, 0);
             }
             else if (c == 'i') {
                 cout << endl;
@@ -311,6 +378,13 @@ int main(int, const char**) {
         } 
         else {
             gpio_put(KEY_LED_PIN, 0);
+        }
+
+        // Rig key when audio is coming in
+        if (info.getSquelch()) {
+            gpio_put(RIG_KEY_PIN, 1);
+        } else {
+            gpio_put(RIG_KEY_PIN, 0);
         }
 
         // Run the tasks, keeping track of the time for each

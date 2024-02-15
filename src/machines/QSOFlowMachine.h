@@ -157,7 +157,7 @@ private:
     uint16_t _lastRxAudioSeq;
 
     // Indicates whether the system is actively receiving. 
-    bool _squelchOpen;
+    //bool _squelchOpen;
 
     // Buffer for outbound audio
     static const uint32_t _txAudioBufDepth = 2;

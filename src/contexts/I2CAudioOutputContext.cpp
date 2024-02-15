@@ -18,25 +18,36 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
- #include <cmath>
+#include <cmath>
+
 #include "hardware/i2c.h"
 
+#include "common.h"
+#include "UserInfo.h"
 #include "I2CAudioOutputContext.h"
 
 namespace kc1fsz {
 
+// How long we wait in silence before deciding that the audio
+// output has stopped.
+static const uint32_t SQUELCH_INTERVAL_MS = 1000;
+
 I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate,
-    uint32_t bufferDepthLog2, int16_t* audioBuf) 
+    uint32_t bufferDepthLog2, int16_t* audioBuf,
+    UserInfo* userInfo) 
 :   AudioOutputContext(frameSize, sampleRate),
     _bufferDepthLog2(bufferDepthLog2),
     _audioBuf(audioBuf),
+    _userInfo(userInfo),
     _frameWriteCount(0),
     _framePlayCount(0),
     _playPtr(0),
     _intervalUs(125),
     _idleCount(0),
     _overflowCount(0),
-    _playing(false)
+    _playing(false),
+    _squelchOpen(false),
+    _lastAudioTime(0)
 {
     _timer.setIntervalUs(_intervalUs);
     _dacAddr = 0x60;
@@ -66,8 +77,10 @@ void I2CAudioOutputContext::reset() {
     _inTone = false;
     _toneCount = 0;
     _toneStep = 0;
+    _squelchOpen = false;
+    _lastAudioTime = 0;
     _timer.reset();
-    // Park at middle of range
+    // Park DAC at middle of range
     _play(0);
 }
 
@@ -109,6 +122,7 @@ bool I2CAudioOutputContext::run() {
 
     if (activity) {
         if (_inTone) {
+            
             // TODO: HAVE A GAIN SETTING
             _play((_toneBuf[_tonePtr >> 2]) >> 2);
             // Move across tone, looking for wrap
@@ -120,7 +134,7 @@ bool I2CAudioOutputContext::run() {
             _toneCount--;
             if (_toneCount == 0) {
                 _inTone = false;
-                // Park at middle of range
+                // Park DAC at middle of range
                 _play(0);
             }
         }
@@ -152,11 +166,19 @@ bool I2CAudioOutputContext::run() {
             } else {
                 _playing = false;
                 _idleCount++;
-                // Park at middle of range
+                // Park DAC at middle of range
                 _play(0);
             }
         }
     }
+
+    // Manage squelch off
+    if (_squelchOpen && 
+        (time_ms() - _lastAudioTime) > SQUELCH_INTERVAL_MS ) {
+        _squelchOpen = false;
+        _userInfo->setSquelchOpen(_squelchOpen);
+    }
+
     return activity;
 }
 
@@ -192,12 +214,27 @@ static void makeFrame1(uint8_t* buf, uint16_t data) {
     buf[1] = data & 0xff;
 }
 
+void I2CAudioOutputContext::_openSquelchIfNecessary() {
+    if (!_squelchOpen) {
+        _squelchOpen = true;
+        _userInfo->setSquelchOpen(_squelchOpen);
+    }
+}
+
 void I2CAudioOutputContext::_play(int16_t sample) {
+
+    if (sample != 0) {
+        _openSquelchIfNecessary();
+    }
+
     uint16_t centeredSample = (sample + 32767);
     uint8_t buf[3];
     makeFrame0(buf, centeredSample);
     // TODO: MAKE THIS NON-BLOCKING
     i2c_write_blocking(i2c_default, _dacAddr, buf, 3, true);
+
+    // Keep track of time for squelch purposes
+    _lastAudioTime = time_ms();
 }
 
 }

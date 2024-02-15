@@ -98,7 +98,7 @@ private:
     int16_t _dcBias = -95;
     // This includes x16 for 12 to 16 bit PCM conversion and a gain
     // of 0.5.
-    int16_t _gain = 15;
+    int16_t _gain = 16;
 
     bool _keyed = false;
 

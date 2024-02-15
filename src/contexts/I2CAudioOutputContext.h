@@ -28,6 +28,8 @@
 
 namespace kc1fsz {
 
+class UserInfo;
+
 /**
  * An implementation of the AudioOutputContext that assumes a
  * MCP4725 DAC on an I2C interface using the Pi Pico SDK.
@@ -43,7 +45,8 @@ public:
      * @param audioBuf Must be bufferDepth x frameSize in length.
     */
     I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate, 
-        uint32_t bufferDepthLog2, int16_t* audioBuf);
+        uint32_t bufferDepthLog2, int16_t* audioBuf,
+        UserInfo* userInfo);
     virtual ~I2CAudioOutputContext();
 
     virtual void reset();
@@ -60,11 +63,13 @@ public:
 private:
 
     void _play(int16_t pcm);
+    void _openSquelchIfNecessary();
 
     uint32_t _bufferDepthLog2;
     // How deep we should get before triggering the audio play
     uint32_t _triggerDepth;
     int16_t *_audioBuf;
+    UserInfo* _userInfo;
     uint32_t _frameWriteCount;
     uint32_t _framePlayCount;
     uint32_t _playPtr;
@@ -79,6 +84,11 @@ private:
     // This indicates whether we are actually playing sound
     // vs. sitting in silence.
     bool _playing;
+    // Used to control squelch reporting
+    bool _squelchOpen;
+    // The last time we saw audio which can be used to 
+    // manage squelch.
+    uint32_t _lastAudioTime;
 
     // Tone features
     static const uint32_t _toneBufSize = 20;

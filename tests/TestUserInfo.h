@@ -5,6 +5,7 @@
 
 #include "kc1fsz-tools/AudioOutputContext.h"
 
+#include "../src/common.h"
 #include "../src/UserInfo.h"
 
 namespace kc1fsz {
@@ -20,24 +21,34 @@ public:
     virtual void setSquelchOpen(bool sq) { 
 
         bool unkey = _squelch == true && sq == false;
+
         _squelch = sq;
 
         std:: cout << "UserInfo: Squelch: " << _squelch << std::endl;
 
         // Short beep on unkey
+        //if (unkey) {
+        //    if (_audioOutCtx != 0) {
+        //        _audioOutCtx->tone(400, 75);
+        //    }
+        //}
+
         if (unkey) {
-            if (_audioOutCtx != 0) {
-                _audioOutCtx->tone(400, 75);
-            }
+            _lastSquelchCloseTime = time_ms();
         }
     }
 
     bool getSquelch() const { return _squelch; }
+    
+    uint32_t getMsSinceLastSquelchClose() const { 
+        return time_ms() - _lastSquelchCloseTime; 
+    }
 
 private:
 
     bool _squelch = false;
     AudioOutputContext* _audioOutCtx = 0;
+    uint32_t _lastSquelchCloseTime = 0;
 };
 
 }

@@ -53,9 +53,6 @@ static const uint32_t RTCP_PORT = 5199;
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10000;
 // How long we wait in silence before unkeying on TX
 static const uint32_t TX_TAIL_INTERVAL_MS = 1000;
-// How long we wait in silence before deciding that the remote
-// station has unkeyed.
-static const uint32_t SQUELCH_INTERVAL_MS = 1000;
 
 int QSOFlowMachine::traceLevel = 0;
 
@@ -77,7 +74,7 @@ void QSOFlowMachine::start() {
     _lastRxAudioTime = 0;
     _lastRxAudioSeq = 0;
     _audioSeqErrors = 0;
-    _squelchOpen = false;
+    //_squelchOpen = false;
     _stopRequested = false;
     _state = State::OPEN_RX;
     _gsmEncoder.reset();
@@ -105,10 +102,10 @@ void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
             
             _lastRxAudioTime = time_ms();
 
-            if (!_squelchOpen) {
-                _squelchOpen = true;
-                _userInfo->setSquelchOpen(_squelchOpen);
-            }
+            //if (!_squelchOpen) {
+            //    _squelchOpen = true;
+            //    _userInfo->setSquelchOpen(_squelchOpen);
+            //}
 
             // Unload the GSM frames from the RTP packet
             uint16_t remoteSeq = 0;
@@ -260,10 +257,10 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
     }
     else if (ev->getType() == TickEvent::TYPE) {
         // Timeout on squelch?
-        if (_squelchOpen && time_ms() - _lastRxAudioTime > SQUELCH_INTERVAL_MS) {
-            _squelchOpen = false;
-            _userInfo->setSquelchOpen(_squelchOpen);
-        }
+        //if (_squelchOpen && time_ms() - _lastRxAudioTime > SQUELCH_INTERVAL_MS) {
+        //    _squelchOpen = false;
+        //    _userInfo->setSquelchOpen(_squelchOpen);
+        //}
     }
 
     // Now deal with state-specific activity
