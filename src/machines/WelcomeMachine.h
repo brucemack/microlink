@@ -18,36 +18,46 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _AtomicInteger_h
-#define _AtomicInteger_h
+#ifndef _WelcomeMachine_h
+#define _WelcomeMachine_h
+
+#include "kc1fsz-tools/Channel.h"
+#include "kc1fsz-tools/Event.h"
+#include "kc1fsz-tools/IPAddress.h"
+#include "kc1fsz-tools/HostName.h"
+#include "kc1fsz-tools/CallSign.h"
+
+#include "../StateMachine.h"
 
 namespace kc1fsz {
 
-// NOT SURE THIS IS RIGHT - STILL RESEARCHING
-class AtomicInteger {
+class CommContext;
+class UserInfo;
+
+class WelcomeMachine : public StateMachine {
 public:
 
-    AtomicInteger() { _value = 0; }
+    static int traceLevel;
 
-    uint32_t get() const {
-        __dsb();
-        return _value;
-    }
+    WelcomeMachine(CommContext* ctx, UserInfo* userInfo);
 
-    void set(uint32_t v) {
-        _value = v;
-        __dsb();
-    }
+    virtual void processEvent(const Event* ev);
+    virtual void start();
+    virtual void cleanup();
+    virtual bool isDone() const;
+    virtual bool isGood() const;
 
-    // NOT SAFE FROM THE MULTI-WRITER CASE!
-    void inc() {
-        __dsb();
-        _value++;
-    }
+    void setCallSign(CallSign cs) { _callSign = cs; }
 
 private:
 
-    uint32_t _value;
+    enum State { IDLE, DNS_WAIT, CONNECTING, WAITING_FOR_DISCONNECT, 
+        FAILED, SUCCEEDED } _state;
+
+    CommContext* _ctx;
+    UserInfo* _userInfo;
+
+    CallSign _callSign;
 };
 
 }

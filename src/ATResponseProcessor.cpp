@@ -238,7 +238,7 @@ bool ATResponseProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
         type == MatchType::READY ||
         type == MatchType::SEND_PROMPT ||
         type == MatchType::RECV_SIZE ||
-        type == MatchType::DOMAIN ||
+        type == MatchType::DOMAIN_ADDR ||
         type == MatchType::IPD) {
         // Still going?
         if ((char)(target[matchPtr]) == b) {

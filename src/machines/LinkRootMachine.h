@@ -29,6 +29,8 @@
 
 #include "LogonMachine.h"
 #include "QSOAcceptMachine.h"
+#include "ValidationMachine.h"
+#include "WelcomeMachine.h"
 #include "QSOFlowMachine.h"
 #include "WaitMachine.h"
 
@@ -89,9 +91,14 @@ private:
         IN_RESET,
         // STATE 2: Logon
         LOGON,
+        // STATE 3: Accepting new connections
         ACCEPTING,
+        // State 4: Validate the first connection request
         IN_VALIDATION,
-        QSO, 
+        // State 5: Playing the welcome message
+        IN_WELCOME,
+        // State 6: In two-way QSO
+        QSO,
         BYE, 
         FAILED, 
         SUCCEEDED 
@@ -105,6 +112,8 @@ private:
     LogonMachine _logonMachine;
     WaitMachine _connectRetryWaitMachine;
     QSOAcceptMachine _acceptMachine;
+    ValidationMachine _validationMachine;
+    WelcomeMachine _welcomeMachine;
     QSOFlowMachine _qsoMachine;
 };
 

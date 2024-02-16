@@ -128,7 +128,7 @@ void ESP32CommContext::startDNSLookup(HostName hostName) {
 
     // Build the AT command
     char buf[64];
-    sprintf(buf, "AT+CIPDOMAIN=\"%s\"\r\n", hostName.c_str());    
+    snprintf(buf, 63, "AT+CIPDOMAIN=\"%s\"\r\n", hostName.c_str());    
     _esp32->write((uint8_t*)buf, strlen(buf));
 }
 
@@ -162,7 +162,7 @@ void ESP32CommContext::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t p
     _state = State::IN_TCP_CONNECT;
 
     char buf[64];
-    sprintf(buf, "AT+CIPSTART=%d,\"TCP\",\"%s\",%lu\r\n",
+    snprintf(buf, 63, "AT+CIPSTART=%d,\"TCP\",\"%s\",%lu\r\n",
         c.getId(), addr, port);
     _esp32->write((uint8_t*)buf, strlen(buf));
 }
@@ -184,7 +184,7 @@ void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len)
 
     // Make the send request
     char buf[64];
-    sprintf(buf, "AT+CIPSEND=%d,%d\r\n", c.getId(), len);
+    snprintf(buf, 63, "AT+CIPSEND=%d,%d\r\n", c.getId(), len);
     _esp32->write((uint8_t*)buf, strlen(buf));
 
     // Now we wait for the prompt to tell us it's OK to send the data
@@ -239,7 +239,7 @@ void ESP32CommContext::setupUDPChannel(Channel c, uint32_t localPort,
 
     // MODE 2 means that we are inflexible about the source address
     char buf[64];
-    sprintf(buf, "AT+CIPSTART=%d,\"UDP\",\"%s\",%lu,%lu,2\r\n",
+    snprintf(buf, 63, "AT+CIPSTART=%d,\"UDP\",\"%s\",%lu,%lu,2\r\n",
         c.getId(), addr, remotePort, localPort);
     _esp32->write((uint8_t*)buf, strlen(buf));
 }
@@ -278,7 +278,7 @@ void ESP32CommContext::sendUDPChannel(Channel c,
 
     // Make the send request, which includes address/port for UDP
     char buf[64];
-    sprintf(buf, "AT+CIPSEND=%d,%d,\"%s\",%lu\r\n", c.getId(), len,
+    snprintf(buf, 63, "AT+CIPSEND=%d,%d,\"%s\",%lu\r\n", c.getId(), len,
         addr, remotePort);
     _esp32->write((uint8_t*)buf, strlen(buf));
 
@@ -434,6 +434,4 @@ void ESP32CommContext::notification(const char* msg) {
     }
 }
 
-
 }
-

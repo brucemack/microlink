@@ -270,7 +270,6 @@ target_include_directories(client-test-2p PRIVATE gsm-0610-codec/include)
 
 add_executable(link-test-1p
   tests/link-test-1p.cpp
-  tests/TestAudioInputContext.cpp
   src/ATResponseProcessor.cpp
   src/common.cpp
   src/contexts/ESP32CommContext.cpp
@@ -279,6 +278,8 @@ add_executable(link-test-1p
   src/machines/LinkRootMachine.cpp
   src/machines/LogonMachine.cpp
   src/machines/QSOAcceptMachine.cpp
+  src/machines/ValidationMachine.cpp
+  src/machines/WelcomeMachine.cpp
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
@@ -305,6 +306,9 @@ endif()
 target_include_directories(link-test-1p PRIVATE src)
 target_include_directories(link-test-1p PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(link-test-1p PRIVATE gsm-0610-codec/include)
+
+# TEMPORARY!
+target_include_directories(link-test-1p PRIVATE ../mock-pico-sdk)
 
 # ------ make-sdes-1 -------------------------------------------------------
 

@@ -40,6 +40,8 @@ LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo,
     _userInfo(userInfo),
     _logonMachine(ctx, userInfo),
     _acceptMachine(ctx, userInfo),
+    _validationMachine(ctx, userInfo),
+    _welcomeMachine(ctx, userInfo),
     _qsoMachine(ctx, userInfo, audioOutput) {
 }
 
@@ -81,7 +83,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
     // TODO: ADD SOMETHING TO OPEN THE UDP CHANNELS
 
     // In this state we are waiting for the EL Server to process our 
-    // logon request.
+    // own logon request.
     else if (_state == LOGON) {
         if (isDoneAfterEvent(_logonMachine, ev)) {
             if (_logonMachine.isGood()) {
@@ -98,33 +100,54 @@ void LinkRootMachine::processEvent(const Event* ev) {
     else if (_state == ACCEPTING) {
         if (isDoneAfterEvent(_acceptMachine, ev)) {
             if (_acceptMachine.isGood()) {
-                // No data transfer is needed.  If we succeeded in the 
-                // login then keep going.
-                //_valiationMachine.start();
+                _validationMachine.setRequestCallSign(_acceptMachine.getRemoteCallSign());
+                _validationMachine.setRequestAddr(_acceptMachine.getRemoteAddress());
+                _validationMachine.start();
                 _state = State::IN_VALIDATION;
             } else {
                 _userInfo->setStatus("Accept failed");
-                _state = State::FAILED;
+                // Back to square 1
+                _state = State::IN_RESET;
             }
         }
     }
     else if (_state == State::IN_VALIDATION) {
-
-        // TODO: FILL IN!
-
-        // The connect process establishes UDP communication paths, 
-        // so transfer them over to the QSO machine.
-        _qsoMachine.setRTCPChannel(_acceptMachine.getRTCPChannel());
-        _qsoMachine.setRTPChannel(_acceptMachine.getRTPChannel());
-        _qsoMachine.setSSRC(_acceptMachine.getSSRC());
-        _qsoMachine.setTargetAddress(_acceptMachine.getRemoteAddress());
-        _qsoMachine.start();
-        _state = QSO;
+        if (isDoneAfterEvent(_validationMachine, ev)) {
+            if (_validationMachine.isGood()) {
+                _welcomeMachine.setCallSign(_acceptMachine.getRemoteCallSign());
+                _welcomeMachine.start();
+                _state = State::IN_WELCOME;
+            } 
+            else {
+                // Back to square 1
+                _state = State::IN_RESET;
+            }
+        }
+    }
+    else if (_state == State::IN_WELCOME) {
+        if (isDoneAfterEvent(_welcomeMachine, ev)) {
+            if (_welcomeMachine.isGood()) {
+                // The connect process establishes UDP communication paths, 
+                // so transfer them over to the QSO machine.
+                _qsoMachine.setRTCPChannel(_acceptMachine.getRTCPChannel());
+                _qsoMachine.setRTPChannel(_acceptMachine.getRTPChannel());
+                _qsoMachine.setSSRC(_acceptMachine.getSSRC());
+                _qsoMachine.setTargetAddress(_acceptMachine.getRemoteAddress());
+                _qsoMachine.start();
+                _state = QSO;
+            } 
+            else {
+                // Back to square 1
+                _state = State::IN_RESET;
+            }
+        }
     }
     // In this state a QSO is ongoing
     else if (_state == QSO) {
         if (isDoneAfterEvent(_qsoMachine, ev)) {
-            _state = SUCCEEDED;
+            // Once the converstaion ends (one way or the other)
+            // we go reset and go back to square one.
+            _state = State::IN_RESET;
         }
     }
 }
@@ -147,12 +170,12 @@ bool LinkRootMachine::isGood() const {
 
 void LinkRootMachine::setServerName(HostName h) {
     _logonMachine.setServerName(h);
-    //_validationMachine.setServerName(h);
+    _validationMachine.setServerName(h);
 }
 
 void LinkRootMachine::setServerPort(uint32_t p) {
     _logonMachine.setServerPort(p);
-    //_validationMachine.setServerPort(p);
+    _validationMachine.setServerPort(p);
 }
 
 void LinkRootMachine::setCallSign(CallSign cs) {

@@ -191,7 +191,7 @@ int main(int, const char**) {
     TestUserInfo info;
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
-        audioBufDepthLog2, audioBuf);
+        audioBufDepthLog2, audioBuf, &info);
     PicoAudioInputContext audioInContext;
 
     LinkRootMachine rm(&ctx, &info, &audioOutContext);

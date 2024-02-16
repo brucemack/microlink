@@ -18,39 +18,32 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _AtomicInteger_h
-#define _AtomicInteger_h
+#include "machines/ValidationMachine.h"
 
 namespace kc1fsz {
 
-// NOT SURE THIS IS RIGHT - STILL RESEARCHING
-class AtomicInteger {
-public:
+int ValidationMachine::traceLevel = 0;
 
-    AtomicInteger() { _value = 0; }
-
-    uint32_t get() const {
-        __dsb();
-        return _value;
-    }
-
-    void set(uint32_t v) {
-        _value = v;
-        __dsb();
-    }
-
-    // NOT SAFE FROM THE MULTI-WRITER CASE!
-    void inc() {
-        __dsb();
-        _value++;
-    }
-
-private:
-
-    uint32_t _value;
-};
-
+ValidationMachine::ValidationMachine(CommContext* ctx, UserInfo* userInfo)
+:   _ctx(ctx),
+    _userInfo(userInfo) {
 }
 
-#endif
+void ValidationMachine::processEvent(const Event* ev) {
+}
 
+void ValidationMachine::start() {
+}
+
+void ValidationMachine::cleanup() {
+}
+
+bool ValidationMachine::isDone() const {
+    return true;
+}
+
+bool ValidationMachine::isGood() const {
+    return true;
+}
+
+}

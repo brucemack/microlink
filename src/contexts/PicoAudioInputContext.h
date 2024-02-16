@@ -21,11 +21,9 @@
 #ifndef _PicoAudioInputContext_h
 #define _PicoAudioInputContext_h
 
-#include "hardware/adc.h"
-
 #include <cstdint>
 
-#include "pico/util/queue.h"
+#include "hardware/adc.h"
 
 #include "kc1fsz-tools/Runnable.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"

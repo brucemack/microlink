@@ -116,7 +116,7 @@ private:
         SEND_PROMPT,
         RECV_SIZE,
         IPD,
-        DOMAIN,
+        DOMAIN_ADDR,
         CONNECT,
         CLOSED,
         NOTIFICATION
