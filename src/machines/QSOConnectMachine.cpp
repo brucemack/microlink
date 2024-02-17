@@ -60,7 +60,7 @@ void QSOConnectMachine::start() {
     char addr[32];
     formatIP4Address(_targetAddr.getAddr(), addr, 32);
     char message[64];
-    sprintf(message, "Connecting to %s", addr);
+    snprintf(message, 63, "Connecting to %s", addr);
     _userInfo->setStatus(message);
 
     // Get UDP connections created
@@ -353,7 +353,7 @@ uint32_t QSOConnectMachine::formatRTCPPacket_SDES(uint32_t ssrc,
 
     // Token 4
     char buf[9];
-    sprintf(buf,"%08X", (unsigned int)ssrc2);
+    snprintf(buf, 9, "%08X", (unsigned int)ssrc2);
     *(p++) = 0x04;
     *(p++) = 0x08;
     memcpy(p, buf, 8);

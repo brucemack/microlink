@@ -188,6 +188,16 @@ bool isRTCPPacket(const uint8_t* d, uint32_t len) {
     return (len > 2 && d[0] == 0xc0 && d[1] == 0xc9);
 }
 
+bool isRTCPByePacket(const uint8_t* d, uint32_t len) {
+    if (!isRTCPPacket(d, len)) {
+        return false;
+    }
+    if (len < 16) {
+        return false;
+    }
+    return d[8] == 0xe1 && d[9] == 0xcb;
+}
+
 /**
  * The EL RTP implementation uses 144-byte packets.
  */

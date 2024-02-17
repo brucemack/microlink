@@ -145,6 +145,10 @@ private:
     // This triggers a clean exit.
     bool _stopRequested;
 
+    // Indicates that the remote station has asked for a clean
+    // shutdown.
+    bool _byeReceived;
+
     // The last time we had transmit audio queued, which can be 
     // used as the basis for transmit timeouts.
     uint32_t _lastTxAudioTime;

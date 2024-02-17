@@ -72,8 +72,18 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 #define PTT_PIN (6)
 // Physical pin 10
 #define KEY_LED_PIN (7)
-// Physical pin 11
+// Physical pin 11. Ouptut to hard reset on ESP32.
 #define ESP_EN_PIN (8)
+// Physical pin 12.  This is an output (active high) used to key 
+// the rig's transmitter. Typically drives an optocoupler to
+// get the pull-to-ground needed by the rig.
+#define RIG_KEY_PIN (9)
+// Physical pin 14. This is an input (active high) used to detect
+// receive carrier from the rig. 
+#define RIG_COS_PIN (10)
+// Physical pin 15. This is an output to drive an LED indicating
+// that we are in a QSO. 
+#define QSO_LED_PIN (11)
 
 #define UART_ID uart0
 #define UART_TX_PIN 0
@@ -85,6 +95,9 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 
 #define I2C0_SDA (4) // Phy Pin 6: I2C channel 0 - data
 #define I2C0_SCL (5) // Phy Pin 7: I2C channel 0 - clock
+
+#define PTT_DEBOUNCE_INTERVAL_MS (250)
+#define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
 
 using namespace std;
 using namespace kc1fsz;
@@ -113,15 +126,29 @@ int main(int, const char**) {
     gpio_set_dir(PTT_PIN, GPIO_IN);
     gpio_pull_up(PTT_PIN);
 
-    // Key LED
+    gpio_init(RIG_COS_PIN);
+    gpio_set_dir(RIG_COS_PIN, GPIO_IN);
+    gpio_pull_up(RIG_COS_PIN);
+
+    // Key/indicator LED
     gpio_init(KEY_LED_PIN);
     gpio_set_dir(KEY_LED_PIN, GPIO_OUT);
     gpio_put(KEY_LED_PIN, 0);
+
+    // QSO indicator LED
+    gpio_init(QSO_LED_PIN);
+    gpio_set_dir(QSO_LED_PIN, GPIO_OUT);
+    gpio_put(QSO_LED_PIN, 0);
 
     // ESP EN
     gpio_init(ESP_EN_PIN);
     gpio_set_dir(ESP_EN_PIN, GPIO_OUT);
     gpio_put(ESP_EN_PIN, 1);
+
+    // Rig key
+    gpio_init(RIG_KEY_PIN);
+    gpio_set_dir(RIG_KEY_PIN, GPIO_OUT);
+    gpio_put(RIG_KEY_PIN, 0);
        
     // UART0 setup
     uart_init(UART_ID, U_BAUD_RATE);
@@ -223,33 +250,80 @@ int main(int, const char**) {
     uint32_t longCycleCounter = 0;
     PicoPerfTimer taskTimer;
 
-    // Here is the main event loop
     bool pttState = false;
     uint32_t lastPttTransition = 0;
+    bool lastRigCos = false;
+    bool rigCosState = false;
+    uint32_t lastRigCosTransition = 0;
 
+    // Start the state machine
+    rm.start();
+
+    // Here is the main event loop
     while (true) {
 
         cycleTimer.reset();
 
-        // Physical controls
+        // ----- External Controls ------------------------------------------
+
         bool ptt = !gpio_get(PTT_PIN);
         // Simple de-bounce
-        if (ptt != pttState && time_ms() > (lastPttTransition + 250)) {
+        if (ptt != pttState && 
+            time_ms() > (lastPttTransition + PTT_DEBOUNCE_INTERVAL_MS)) {
             lastPttTransition = time_ms();
             pttState = ptt;
             audioInContext.setPtt(pttState);
         }
 
-        // Keyboard input
+        bool rigCos = gpio_get(RIG_COS_PIN);
+        // Look for activity on the line (not debounced)
+        if (rigCos != lastRigCos) {
+            lastRigCosTransition = time_ms();
+        }
+        lastRigCos = rigCos;
+
+        // If the carrier is currently not detected
+        if (rigCosState == false) {
+            // The LO->HI transition is taken immediately
+            if (rigCos) {
+                if (info.getSquelch() || 
+                    info.getMsSinceLastSquelchClose() < 500) {
+                } 
+                else {
+                    rigCosState = true;
+                    if (rm.isInQSO()) {
+                        audioInContext.setPtt(rigCosState);
+                    }
+                }
+            }
+        } 
+        // If the carrier is currently active
+        else {
+            // The HI->LO transition is fully debounced
+            if (!rigCos && 
+                (time_ms() - lastRigCosTransition) > RIG_COS_DEBOUNCE_INTERVAL_MS) {
+                rigCosState = false;
+                audioInContext.setPtt(rigCosState);
+            }
+        }
+
+        // ----- Indicator Lights --------------------------------------------
+
+        if (audioInContext.getPtt() || 
+            (info.getSquelch() && (time_ms() % 1024) > 512)) {
+            gpio_put(KEY_LED_PIN, 1);
+        } 
+        else {
+            gpio_put(KEY_LED_PIN, 0);
+        }
+
+        gpio_put(QSO_LED_PIN, rm.isInQSO() ? 1 : 0);
+
+        // ----- Serial Commands ---------------------------------------------
+        
         int c = getchar_timeout_us(0);
         if (c > 0) {
-            if (c == 's') {
-                //if (!rm.isInQSO()) {
-                    cout << endl << "Starting" << endl;
-                    rm.start();
-                //}
-            }
-            else if (c == 'x') {
+            if (c == 'x') {
                 cout << endl << "Stoppng" << endl;
                 rm.requestCleanStop();
             }
@@ -258,7 +332,6 @@ int main(int, const char**) {
             } 
             else if (c == ' ') {
                 audioInContext.setPtt(!audioInContext.getPtt());
-                cout << endl << "Keyed: " << audioInContext.getPtt() << endl;
             }
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
@@ -303,15 +376,6 @@ int main(int, const char**) {
                 cout << (char)c;
                 cout.flush();
             }
-        }
-
-        // Indicator lights
-        if (audioInContext.getPtt() || 
-            (info.getSquelch() && (time_ms() % 1024) > 512)) {
-            gpio_put(KEY_LED_PIN, 1);
-        } 
-        else {
-            gpio_put(KEY_LED_PIN, 0);
         }
 
         // Run the tasks, keeping track of the time for each

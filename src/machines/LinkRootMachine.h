@@ -103,9 +103,7 @@ private:
         FAILED, 
         SUCCEEDED 
     } _state;
-
-    uint16_t _stateCount;
-
+    
     CommContext* _ctx;
     UserInfo* _userInfo;
 

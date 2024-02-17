@@ -65,18 +65,18 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program client
 #include "TestAudioInputContext.h"
 
 #define LED_PIN (25)
-// Physical pin 9
+// Physical pin 9.  Manual PTT button.
 #define PTT_PIN (6)
-// Physical pin 10
+// Physical pin 10. Indicator lamp.
 #define KEY_LED_PIN (7)
-// Physical pin 11
+// Physical pin 11. Ouptut to hard reset on ESP32.
 #define ESP_EN_PIN (8)
-
 // Physical pin 12.  This is an output (active high) used to key 
-// the rig's transmitter.
+// the rig's transmitter. Typically drives an optocoupler to
+// get the pull-to-ground needed by the rig.
 #define RIG_KEY_PIN (9)
-// Physical pin 14. This is an input (active low) used to detect
-// receive carrier from the rig.
+// Physical pin 14. This is an input (active high) used to detect
+// receive carrier from the rig. 
 #define RIG_COS_PIN (10)
 
 #define UART_ID uart0
@@ -226,7 +226,6 @@ int main(int, const char**) {
     rm.setLocation(FixedString("Wellesley, MA USA"));
     rm.setTargetCallSign(CallSign("*ECHOTEST*"));
 
-
     const uint32_t taskCount = 4;
     Runnable* tasks[taskCount] = {
         &audioOutContext, &audioInContext, &ctx, &rm
@@ -240,7 +239,6 @@ int main(int, const char**) {
 
     bool pttState = false;
     uint32_t lastPttTransition = 0;
-
     bool lastRigCos = false;
     bool rigCosState = false;
     uint32_t lastRigCosTransition = 0;

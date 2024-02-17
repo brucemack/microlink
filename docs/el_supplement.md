@@ -455,7 +455,7 @@ suggests that the "packet type" (PT) field be set to 0xCB to indicate a BYE pack
 work like that.  No worries - just follow the EchoLink standard.  The EchoLink BYE packet has the usual 0xC9 value and the BYE is encoded in the body of the 
 RTCP packet (immediately after the RTCP header).
 
-Following the RTCP header, these 4 bytes are sent:
+Following the RTCP header, these 8 bytes are sent:
 
 * Two bytes: 0xe1 0xcb (to indicate the bye)
 * Two bytes: 0x00 0x04 which are likely length-related.  This likely follows the (total length - 12) / 4 convention.

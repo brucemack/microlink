@@ -53,6 +53,8 @@ static const uint32_t RTCP_PORT = 5199;
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10000;
 // How long we wait in silence before unkeying on TX
 static const uint32_t TX_TAIL_INTERVAL_MS = 1000;
+// How long we want for the SEND OK message 
+static const uint32_t SEND_OK_TIMEOUT_MS = 500;
 
 int QSOFlowMachine::traceLevel = 0;
 
@@ -74,8 +76,8 @@ void QSOFlowMachine::start() {
     _lastRxAudioTime = 0;
     _lastRxAudioSeq = 0;
     _audioSeqErrors = 0;
-    //_squelchOpen = false;
     _stopRequested = false;
+    _byeReceived = false;
     _state = State::OPEN_RX;
     _gsmEncoder.reset();
     _gsmDecoder.reset();
@@ -87,9 +89,15 @@ void QSOFlowMachine::cleanup() {
 void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
 
     if (evt->getChannel() == _rtcpChannel) {
+
         if (traceLevel > 0) {
             cout << "QSOConnectMachine: (RX) GOT RTCP DATA" << endl;
             prettyHexDump(evt->getData(), evt->getDataLen(), cout);
+        }
+
+        // Check for BYE
+        if (isRTCPByePacket(evt->getData(), evt->getDataLen())) {
+            _byeReceived = true;
         }
     }
     else if (evt->getChannel() == _rtpChannel) {
@@ -101,11 +109,6 @@ void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
             }
             
             _lastRxAudioTime = time_ms();
-
-            //if (!_squelchOpen) {
-            //    _squelchOpen = true;
-            //    _userInfo->setSquelchOpen(_squelchOpen);
-            //}
 
             // Unload the GSM frames from the RTP packet
             uint16_t remoteSeq = 0;
@@ -170,7 +173,12 @@ void QSOFlowMachine::_processTXReceive(const UDPReceiveEvent* evt) {
         if (traceLevel > 0) {
             cout << "QSOConnectMachine: GOT RTCP DATA" << endl;
             prettyHexDump(evt->getData(), evt->getDataLen(), cout);
-        }        
+        }    
+
+        // Check for BYE
+        if (isRTCPByePacket(evt->getData(), evt->getDataLen())) {
+            _byeReceived = true;
+        }
     }
     else if (evt->getChannel() == _rtpChannel) {
 
@@ -255,21 +263,14 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
             _processTXReceive(static_cast<const UDPReceiveEvent*>(ev));
         }
     }
-    else if (ev->getType() == TickEvent::TYPE) {
-        // Timeout on squelch?
-        //if (_squelchOpen && time_ms() - _lastRxAudioTime > SQUELCH_INTERVAL_MS) {
-        //    _squelchOpen = false;
-        //    _userInfo->setSquelchOpen(_squelchOpen);
-        //}
-    }
 
     // Now deal with state-specific activity
     if (_state == State::OPEN_RX) {
         // Look for a shutdown request
-        if (_stopRequested) {
+        if (_stopRequested || _byeReceived) {
             _sendBYE();
             _state = State::OPEN_RX_STOP_0;
-            // TODO: SETUP TIMEOUT
+            _setTimeoutMs(time_ms() + SEND_OK_TIMEOUT_MS);
         }
         // Look to see if we should key up and change to TX mode
         else if (_txAudioWriteCount > _txAudioSentCount) {
@@ -322,6 +323,10 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
         if (ev->getType() == SendEvent::TYPE) {
             _userInfo->setStatus("QSO ended");
             _state = State::SUCCEEDED;
+        }
+        else if (_isTimedOut()) {
+            _userInfo->setStatus("Timeout during QSO stop");
+            _state = State::FAILED;
         }
     }
     else if (_state == State::OPEN_TX) {

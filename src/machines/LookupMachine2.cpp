@@ -25,6 +25,8 @@
 #include "kc1fsz-tools/CommContext.h"
 
 #include "kc1fsz-tools/FixedString.h"
+
+#include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/TCPConnectEvent.h"
 #include "kc1fsz-tools/events/TCPDisconnectEvent.h"
@@ -71,7 +73,9 @@ void LookupMachine2::cleanup() {
 void LookupMachine2::processEvent(const Event* ev) {
 
     if (traceLevel > 0) {
-        cout << "LookupMachine2: state=" << _state << " event=" << ev->getType() << endl;
+        if (ev->getType() != TickEvent::TYPE) {
+            cout << "LookupMachine2: state=" << _state << " event=" << ev->getType() << endl;
+        }
     }
 
     // In this state we are waiting for the DNS resolution to complete
@@ -125,8 +129,10 @@ void LookupMachine2::processEvent(const Event* ev) {
         // If we get a disconnect then look at the response and attempt to 
         // extract the IP address
         else if (ev->getType() == TCPDisconnectEvent::TYPE) {
-            auto evt = static_cast<const TCPConnectEvent*>(ev);
-            // Make sure it's the right channel
+
+            auto evt = static_cast<const TCPDisconnectEvent*>(ev);
+
+            // Make sure it's the right channel, otherwise ignore
             if (evt->getChannel() == _channel) {
 
                 // Hunt for the delimiters in the _saveArea
@@ -162,10 +168,6 @@ void LookupMachine2::processEvent(const Event* ev) {
                     _userInfo->setStatus(UNSUCCESSFUL_MSG);
                     _state = FAILED;
                 }
-            }
-            else {
-                _userInfo->setStatus(UNSUCCESSFUL_MSG);
-                _state = FAILED;
             }
         }
         else if (_isTimedOut()) {

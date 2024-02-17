@@ -66,6 +66,8 @@ bool isOnDataPacket(const uint8_t* d, uint32_t len);
 
 bool isRTCPPacket(const uint8_t* d, uint32_t len);
 
+bool isRTCPByePacket(const uint8_t* d, uint32_t len);
+
 bool isRTPAudioPacket(const uint8_t* d, uint32_t len);
 
 void writeInt32(uint8_t* buf, uint32_t d);
