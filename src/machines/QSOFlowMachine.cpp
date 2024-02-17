@@ -223,7 +223,7 @@ void QSOFlowMachine::_sendONDATA() {
     strcatLimited(buffer, _location.c_str(), bufferSize);
     strcatLimited(buffer, "\r", bufferSize);
     uint32_t packetLen = QSOConnectMachine::formatOnDataPacket(buffer, _ssrc, packet, packetSize);
-    _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
+    _ctx->sendUDPChannel(_rtpChannel, _peerAddr, RTP_PORT, packet, packetLen);
 }
 
 void QSOFlowMachine::_sendBYE() {
@@ -231,14 +231,10 @@ void QSOFlowMachine::_sendBYE() {
     const uint16_t packetSize = 128;
     uint8_t packet[packetSize];
     uint32_t packetLen = formatRTCPPacket_BYE(0, packet, packetSize);
-    _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+    _ctx->sendUDPChannel(_rtcpChannel, _peerAddr, RTCP_PORT, packet, packetLen);
 }
 
 void QSOFlowMachine::processEvent(const Event* ev) {
-    _processEvent(ev);
-}
-
-void QSOFlowMachine::_processEvent(const Event* ev) {
 
     if (traceLevel > 0) {
         // Suppress tick - too noisy
@@ -250,17 +246,25 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
 
     // Deal with event types that can arrive at any time
     if (ev->getType() == UDPReceiveEvent::TYPE) {
+
+        auto evt = static_cast<const UDPReceiveEvent*>(ev);
+
+        // Ingore other peers
+        if (evt->getAddress().getAddr() != _peerAddr.getAddr()) {
+            return;
+        }
+
         if (_state == State::OPEN_RX ||
             _state == State::OPEN_RX_RTCP_PING_0 ||
             _state == State::OPEN_RX_RTCP_PING_1 ||
             _state == State::OPEN_RX_RTP_PING_0 ||
             _state == State::OPEN_RX_RTP_PING_1 ||
             _state == State::OPEN_RX_STOP_0) {
-            _processRXReceive(static_cast<const UDPReceiveEvent*>(ev));
+            _processRXReceive(evt);
         } else if (_state == State::OPEN_TX ||
             _state == State::OPEN_TX_RTCP_PING_0 ||
             _state == State::OPEN_TX_RTCP_PING_1) {
-            _processTXReceive(static_cast<const UDPReceiveEvent*>(ev));
+            _processTXReceive(evt);
         }
     }
 
@@ -300,7 +304,7 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
         uint32_t ssrc = _useLocalSsrc ? _ssrc : 0;
         uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(ssrc, 
             _callSign, _fullName, _ssrc, packet, packetSize); 
-        _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+        _ctx->sendUDPChannel(_rtcpChannel, _peerAddr, RTCP_PORT, packet, packetLen);
 
         _state = State::OPEN_RX_RTCP_PING_1;
         _lastRTCPKeepAliveSentMs = time_ms();
@@ -354,7 +358,7 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
             uint32_t packetLen = formatRTPPacket(_txAudioSentCount, 
                 0, gsmFrames, packet, 144);
             
-            _ctx->sendUDPChannel(_rtpChannel, _targetAddr, RTP_PORT, packet, packetLen);
+            _ctx->sendUDPChannel(_rtpChannel, _peerAddr, RTP_PORT, packet, packetLen);
             _state = State::OPEN_TX_AUDIO_1;
             
             _txAudioSentCount++;
@@ -386,7 +390,7 @@ void QSOFlowMachine::_processEvent(const Event* ev) {
 
         // Make the SDES message and send
         uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
-        _ctx->sendUDPChannel(_rtcpChannel, _targetAddr, RTCP_PORT, packet, packetLen);
+        _ctx->sendUDPChannel(_rtcpChannel, _peerAddr, RTCP_PORT, packet, packetLen);
 
         _state = State::OPEN_TX_RTCP_PING_1;
         _lastRTCPKeepAliveSentMs = time_ms();

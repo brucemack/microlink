@@ -98,7 +98,7 @@ void RootMachine::processEvent(const Event* ev) {
                 // Transfer the target address that we got from the EL Server
                 // into the connect machine and the QSO machine.
                 _connectMachine.setTargetAddress(_lookupMachine.getTargetAddress());
-                _qsoMachine.setTargetAddress(_lookupMachine.getTargetAddress());
+                _qsoMachine.setPeerAddress(_lookupMachine.getTargetAddress());
                 _connectMachine.start();
                 _state = CONNECT; 
                 // Number of connect tries

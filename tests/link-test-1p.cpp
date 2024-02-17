@@ -99,6 +99,9 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 #define PTT_DEBOUNCE_INTERVAL_MS (250)
 #define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
 
+#define TX_TIMEOUT_MS (90 * 1000)
+#define TX_LOCKOUT_MS (30 * 1000)
+
 using namespace std;
 using namespace kc1fsz;
 
@@ -255,6 +258,10 @@ int main(int, const char**) {
     bool lastRigCos = false;
     bool rigCosState = false;
     uint32_t lastRigCosTransition = 0;
+    bool rigKeyState = false;
+    uint32_t lastRigKeyTransitionTime = 0;
+    uint32_t rigKeyLockoutTime = 0;
+    uint32_t rigKeyLockoutCount = 0;
 
     // Start the state machine
     rm.start();
@@ -319,6 +326,37 @@ int main(int, const char**) {
 
         gpio_put(QSO_LED_PIN, rm.isInQSO() ? 1 : 0);
 
+        // ----- Rig Key Management -----------------------------------------
+        // Rig key when audio is coming in, but enforce limits to prevent
+        // the key from being stuck open for long periods.
+
+        if (!rigKeyState) {
+            if (info.getSquelch() && 
+                time_ms() > rigKeyLockoutTime + TX_LOCKOUT_MS) {
+                info.setStatus("Keying rig");
+                rigKeyState = true;
+                lastRigKeyTransitionTime = time_ms();
+            }
+        }
+        else {
+            // Check for normal unkey
+            if (!info.getSquelch()) {
+                info.setStatus("Unkeying rig");
+                rigKeyState = false;
+                lastRigKeyTransitionTime = time_ms();
+            }
+            // Look for timeout case
+            else if (time_ms() > lastRigKeyTransitionTime + TX_TIMEOUT_MS) {
+                info.setStatus("TX lockout triggered");
+                rigKeyState = false;
+                lastRigKeyTransitionTime = time_ms();
+                rigKeyLockoutTime = time_ms();
+                rigKeyLockoutCount++;
+            }
+        }
+
+        gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
+
         // ----- Serial Commands ---------------------------------------------
         
         int c = getchar_timeout_us(0);
@@ -353,6 +391,7 @@ int main(int, const char**) {
                 cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
                 cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
                 cout << "Long Cycles       : " << longCycleCounter << endl;
+                cout << "TX lockout count  : " << rigKeyLockoutCount << endl;
 
                 for (uint32_t t = 0; t < taskCount; t++) {
                     cout << "Task " << t << " max " << maxTaskTime[t] << endl;

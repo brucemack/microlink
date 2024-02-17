@@ -58,7 +58,7 @@ public:
     void setRTCPChannel(Channel c) { _rtcpChannel = c; }
     void setRTPChannel(Channel c)  { _rtpChannel = c; }
     void setSSRC(uint32_t s) { _ssrc = s; }
-    void setTargetAddress(IPAddress addr) { _targetAddr = addr; }
+    void setPeerAddress(IPAddress addr) { _peerAddr = addr; }
 
     bool requestCleanStop();
 
@@ -81,8 +81,6 @@ public:
     virtual bool isGood() const;
 
 private:
-
-    void _processEvent(const Event* ev);
 
     void _processRXReceive(const UDPReceiveEvent* evt);
     void _processTXReceive(const UDPReceiveEvent* evt);
@@ -127,7 +125,7 @@ private:
     CallSign _callSign;
     FixedString _fullName;
     FixedString _location;
-    IPAddress _targetAddr;
+    IPAddress _peerAddr;
 
     Channel _rtpChannel;
     Channel _rtcpChannel;

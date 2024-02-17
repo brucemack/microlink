@@ -132,7 +132,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
                 _qsoMachine.setRTCPChannel(_acceptMachine.getRTCPChannel());
                 _qsoMachine.setRTPChannel(_acceptMachine.getRTPChannel());
                 _qsoMachine.setSSRC(_acceptMachine.getSSRC());
-                _qsoMachine.setTargetAddress(_acceptMachine.getRemoteAddress());
+                _qsoMachine.setPeerAddress(_acceptMachine.getRemoteAddress());
                 _qsoMachine.start();
                 _state = QSO;
             } 
