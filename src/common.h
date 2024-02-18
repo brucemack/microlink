@@ -101,8 +101,6 @@ uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     uint32_t* ssrc,
     SDESItem* items, uint32_t itemsSize);
 
-void panic(const char* msg);
-
 }
 
 #endif

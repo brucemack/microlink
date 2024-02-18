@@ -38,8 +38,10 @@ using namespace std;
 namespace kc1fsz {
 
 static const uint32_t CONNECT_TIMEOUT_MS = 2000;
-static const uint32_t DNS_TIMEOUT_MS = 5000;
+static const uint32_t DNS_TIMEOUT_MS = 10000;
 static const uint32_t VERIFY_TIMEOUT_MS = 5000;
+
+static const char* OVERFLOW_MSG = "Overflow";
 static const char* SUCCESSFUL_MSG = "Lookup successful";
 static const char* UNSUCCESSFUL_MSG = "Callsign not valid or not online";
 
@@ -80,20 +82,21 @@ void ValidationMachine::processEvent(const Event* ev) {
             // Start the process of opening the TCP connection
             _channel = _ctx->createTCPChannel();
             if (!_channel.isGood()) {
-                _state = FAILED;
+                _state = State::FAILED;
             } else {
                 _ctx->connectTCPChannel(_channel, evt->getAddr(), _serverPort);
+                _state = State::CONNECTING;
                 // We give the connect some time to complete
                 _setTimeoutMs(time_ms() + CONNECT_TIMEOUT_MS);
-                _state = CONNECTING;
             }
         }
         else if (_isTimedOut()) {
-            _state = FAILED;
+            _userInfo->setStatus("Timed out on DNS lookup");
+            _state = State::FAILED;
         }
     }
     // In this state we are waiting to connect to the EL Server
-    else if (_state == CONNECTING) {
+    else if (_state == State::CONNECTING) {
         if (ev->getType() == TCPConnectEvent::TYPE) {
             auto evt = static_cast<const TCPConnectEvent*>(ev);
             // Grab the channel that is connected
@@ -102,15 +105,25 @@ void ValidationMachine::processEvent(const Event* ev) {
             char addr[32];
             formatIP4Address(_requestAddr.getAddr(), addr, 32);
 
+            char msg[64];
+            int c = snprintf(msg, 64, "Validating station %s %s", _requestCallSign.c_str(), addr);
+            if (c > 64) {
+                panic(OVERFLOW_MSG);
+            }
+            _userInfo->setStatus(msg);
+
             // Send the directory verify message
             char buf[64];
-            snprintf(buf, 64, "v%s\n%s\n", _requestCallSign.c_str(), addr);
-
+            c = snprintf(buf, 64, "v%s\n%s\n", _requestCallSign.c_str(), addr);
+            if (c > 64) {
+                panic(OVERFLOW_MSG);
+            }
             _ctx->sendTCPChannel(_channel, (const uint8_t*)buf, strlen(buf));
             _setTimeoutMs(time_ms() + VERIFY_TIMEOUT_MS);
             _state = WAITING_FOR_DISCONNECT;            
         } 
         else if (_isTimedOut()) {
+            _userInfo->setStatus("Timed out on EL Server");
             _state = FAILED;
         }
     }
@@ -123,7 +136,11 @@ void ValidationMachine::processEvent(const Event* ev) {
             if (evt->getDataLen() > 0) {
                 // A "1" means valid
                 if (evt->getData()[0] == 0x31) {
+                    _userInfo->setStatus("Validation succeeded");
                     _isValid = true;
+                } else {
+                    _userInfo->setStatus("Validation failed");
+                    _isValid = false;
                 }
             }
         }
@@ -149,11 +166,11 @@ void ValidationMachine::processEvent(const Event* ev) {
 }
 
 bool ValidationMachine::isDone() const {
-    return _state == FAILED || _state == SUCCEEDED;
+    return _state == State::FAILED || _state == State::SUCCEEDED;
 }
 
 bool ValidationMachine::isGood() const {
-    return _state == SUCCEEDED;
+    return _state == State::SUCCEEDED;
 }
 
 }

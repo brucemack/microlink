@@ -51,6 +51,9 @@ protected:
         return done;
     }
 
+    void _setState(int state, uint32_t timeoutMs) {        
+    }
+
     void _setTimeoutMs(uint32_t t) {
         _timeoutTargetMs = t;
     }

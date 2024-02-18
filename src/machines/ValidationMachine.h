@@ -63,8 +63,15 @@ public:
 
 private:
 
-    enum State { IDLE, DNS_WAIT, CONNECTING, WAITING_FOR_DISCONNECT, 
-        FAILED, SUCCEEDED } _state;
+    enum State { 
+        IDLE, 
+        // State 1: Waiting for result of DNS lookup
+        DNS_WAIT, 
+        CONNECTING, 
+        WAITING_FOR_DISCONNECT, 
+        FAILED, 
+        SUCCEEDED 
+    } _state;
 
     CommContext* _ctx;
     UserInfo* _userInfo;

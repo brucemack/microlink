@@ -189,12 +189,14 @@ int main(int, const char**) {
     // ADC/audio in setup
     PicoAudioInputContext::setup();
 
+    /*
     // Reset ESP
     gpio_put(ESP_EN_PIN, 1);
     sleep_ms(500);
     gpio_put(ESP_EN_PIN, 0);
     sleep_ms(500);
     gpio_put(ESP_EN_PIN, 1);
+    */
 
     // Hello indicator
     for (int i = 0; i < 4; i++) {
@@ -207,12 +209,13 @@ int main(int, const char**) {
     cout << "===== MicroLink Link Test 1p ============" << endl;
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
 
-    PicoUartChannel::traceLevel = 1;
+    PicoUartChannel::traceLevel = 0;
     ESP32CommContext::traceLevel = 1;
 
     LinkRootMachine::traceLevel = 1;
     LogonMachine::traceLevel = 1;
     QSOAcceptMachine::traceLevel = 1;
+    ValidationMachine::traceLevel = 1;
     QSOFlowMachine::traceLevel = 0;
 
     // Sertup UART and timer
@@ -227,7 +230,7 @@ int main(int, const char**) {
     PicoPollTimer timer;
     timer.setIntervalUs(1000 * 5000);
 
-    ESP32CommContext ctx(&channel);
+    ESP32CommContext ctx(&channel, ESP_EN_PIN);
 
     // Do a flush of any garbage on the serial line before we start 
     // protocol processing.

@@ -278,18 +278,6 @@ uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     return unpaddedLength + padSize;
 }
 
-#ifndef PICO_BUILD
-void panic(const char* msg) {
-    cerr << "PANIC: " << msg << endl;
-    assert(false);
-}
-#else 
-void panic(const char* msg) {
-    cerr << "PANIC: " << msg << endl;
-    assert(false);
-}
-#endif
-
 uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     uint32_t* ssrc,
     SDESItem* items, uint32_t itemsSize) {

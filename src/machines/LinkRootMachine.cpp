@@ -33,6 +33,12 @@ static TickEvent tickEv;
 
 int LinkRootMachine::traceLevel = 0;
 
+// This is how long we wait to accept a new connection before going
+// back through the login cycle.  This must be < the 7 minute period
+// that EchoLink keeps the "ONLINE" status posted.
+
+static const uint32_t ACCEPT_TIMEOUT_MS = 5 * 60 * 1000;
+
 LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
 :   _state(IDLE),
@@ -55,9 +61,7 @@ bool LinkRootMachine::run() {
 }
 
 void LinkRootMachine::start() {
-    // Reset
-    _ctx->reset();
-    _state = State::IN_RESET;
+    _state = State::IDLE;
 }
 
 void LinkRootMachine::processEvent(const Event* ev) {
@@ -70,6 +74,9 @@ void LinkRootMachine::processEvent(const Event* ev) {
 
     // In this state we are doing nothing waiting to be started
     if (_state == State::IDLE) {
+        // Reset the communications channel
+        _ctx->reset();
+        _state = State::IN_RESET;
     }
     // In this state we are waiting for the full reset
     else if (_state == State::IN_RESET) {
@@ -91,13 +98,14 @@ void LinkRootMachine::processEvent(const Event* ev) {
                 // login then keep going.
                 _acceptMachine.start();
                 _state = State::ACCEPTING;
+                _setTimeoutMs(time_ms() + ACCEPT_TIMEOUT_MS);
             } else {
                 _userInfo->setStatus("Login failed");
                 _state = State::FAILED;
             }
         }
     }
-    else if (_state == ACCEPTING) {
+    else if (_state == State::ACCEPTING) {
         if (isDoneAfterEvent(_acceptMachine, ev)) {
             if (_acceptMachine.isGood()) {
                 _validationMachine.setRequestCallSign(_acceptMachine.getRemoteCallSign());
@@ -107,8 +115,11 @@ void LinkRootMachine::processEvent(const Event* ev) {
             } else {
                 _userInfo->setStatus("Accept failed");
                 // Back to square 1
-                _state = State::IN_RESET;
+                _state = State::IDLE;
             }
+        }
+        else if (_isTimedOut()) {
+            _state = State::FAILED;
         }
     }
     else if (_state == State::IN_VALIDATION) {
@@ -120,7 +131,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
             } 
             else {
                 // Back to square 1
-                _state = State::IN_RESET;
+                _state = State::IDLE;
             }
         }
     }
@@ -138,7 +149,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
             } 
             else {
                 // Back to square 1
-                _state = State::IN_RESET;
+                _state = State::IDLE;
             }
         }
     }
@@ -147,7 +158,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
         if (isDoneAfterEvent(_qsoMachine, ev)) {
             // Once the converstaion ends (one way or the other)
             // we go reset and go back to square one.
-            _state = State::IN_RESET;
+            _state = State::IDLE;
         }
     }
 }
@@ -180,7 +191,6 @@ void LinkRootMachine::setServerPort(uint32_t p) {
 
 void LinkRootMachine::setCallSign(CallSign cs) {
     _logonMachine.setCallSign(cs);
-    //_connectMachine.setCallSign(cs);
     _qsoMachine.setCallSign(cs);
 }
 
@@ -195,7 +205,6 @@ void LinkRootMachine::setFullName(FixedString n) {
 
 void LinkRootMachine::setLocation(FixedString loc) { 
     _logonMachine.setLocation(loc); 
-    //_connectMachine.setLocation(loc);
     _qsoMachine.setLocation(loc);
 }
 

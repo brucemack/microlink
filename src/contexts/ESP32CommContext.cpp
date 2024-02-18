@@ -22,6 +22,9 @@
 #include <iostream>
 #include <algorithm>
 
+#include "pico/time.h"
+#include "hardware/gpio.h"
+
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/TCPConnectEvent.h"
 #include "kc1fsz-tools/events/ChannelSetupEvent.h"
@@ -46,10 +49,11 @@ static const char* OVERFLOW_MSG = "Overflow";
 
 int ESP32CommContext::traceLevel = 0;
 
-ESP32CommContext::ESP32CommContext(AsyncChannel* esp32) 
+ESP32CommContext::ESP32CommContext(AsyncChannel* esp32, int esp32EnablePin) 
 :   _esp32(esp32),
     _respProc(this),
-    _state(State::NONE) {
+    _state(State::NONE),
+    _esp32EnablePin(esp32EnablePin) {
 }
 
 void ESP32CommContext::setEventProcessor(EventProcessor* ep) {
@@ -115,6 +119,15 @@ void ESP32CommContext::reset() {
     _state = State::IN_INIT;
     _cleanupTracker();
 
+    // Hard reset ESP
+    gpio_put(_esp32EnablePin, 0);
+    sleep_ms(5);
+    gpio_put(_esp32EnablePin, 1);
+
+    // Ignore anything that comes in at the start
+    flush(1000);
+
+    // Soft reset
     const char* cmd = "AT+RST\r\n";
     uint32_t cmdLen = strlen(cmd);
     _esp32->write((uint8_t*)cmd, cmdLen);

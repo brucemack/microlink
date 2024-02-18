@@ -21,6 +21,8 @@
 #ifndef _AtomicInteger_h
 #define _AtomicInteger_h
 
+#include "hardware/sync.h"
+
 namespace kc1fsz {
 
 // NOT SURE THIS IS RIGHT - STILL RESEARCHING
