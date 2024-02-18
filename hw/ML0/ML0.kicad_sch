@@ -1,0 +1,73 @@
+(kicad_sch (version 20230121) (generator eeschema)
+
+  (uuid 5f8f636b-fd0e-498e-8696-0a023acb4c09)
+
+  (paper "USLetter")
+
+  (title_block
+    (title "MicroLink - Top Level")
+    (date "2024-02-17")
+    (rev "0")
+    (company "Bruce MacKinnon KC1FSZ")
+    (comment 1 "Copyright (C) 2024 - Not For Commercial Use")
+  )
+
+  (lib_symbols
+  )
+
+
+  (sheet (at 93.98 29.21) (size 45.72 35.56) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 5945a24a-f13f-441c-8c0c-8b25494f737c)
+    (property "Sheetname" "Audio Output" (at 93.98 28.4984 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "AudioOut.kicad_sch" (at 93.98 65.3546 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "ML0"
+        (path "/5f8f636b-fd0e-498e-8696-0a023acb4c09" (page "2"))
+      )
+    )
+  )
+
+  (sheet (at 29.21 29.21) (size 48.26 35.56) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid 605cddf5-737f-47be-b5fd-7ed3decef4e0)
+    (property "Sheetname" "Audio Input" (at 29.21 28.4984 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "AudioIn.kicad_sch" (at 29.21 65.3546 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "ML0"
+        (path "/5f8f636b-fd0e-498e-8696-0a023acb4c09" (page "3"))
+      )
+    )
+  )
+
+  (sheet (at 29.21 78.74) (size 48.26 35.56) (fields_autoplaced)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0.0000))
+    (uuid b1678fb4-46a9-4663-81fd-d1aa3cb2b4fa)
+    (property "Sheetname" "Power" (at 29.21 78.0284 0)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "Power.kicad_sch" (at 29.21 114.8846 0)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "ML0"
+        (path "/5f8f636b-fd0e-498e-8696-0a023acb4c09" (page "4"))
+      )
+    )
+  )
+
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)

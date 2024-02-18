@@ -67,13 +67,32 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 #include "TestUserInfo.h"
 #include "TestAudioInputContext.h"
 
-#define LED_PIN (25)
-// Physical pin 9
-#define PTT_PIN (6)
-// Physical pin 10
-#define KEY_LED_PIN (7)
+// ===============
+// LEFT SIDE PINS 
+// ===============
+
+// Serial connection to ESP32
+#define UART_TX_PIN 0
+#define UART_RX_PIN 1
 // Physical pin 11. Ouptut to hard reset on ESP32.
+// (Can be on left)
 #define ESP_EN_PIN (8)
+
+// Physical pin 10. Output to drive an LED indicating keyed status
+#define KEY_LED_PIN (7)
+// Physical pin 15. This is an output to drive an LED indicating
+// that we are in a QSO. 
+#define QSO_LED_PIN (11)
+// Physical pin 9.  Input from physical PTT button.
+#define PTT_PIN (6)
+
+// ===============
+// RIGHT SIDE PINS 
+// ===============
+
+#define LED_PIN (25)
+// Input from analog section
+#define ADC0_PIN (26)
 // Physical pin 12.  This is an output (active high) used to key 
 // the rig's transmitter. Typically drives an optocoupler to
 // get the pull-to-ground needed by the rig.
@@ -81,20 +100,16 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 // Physical pin 14. This is an input (active high) used to detect
 // receive carrier from the rig. 
 #define RIG_COS_PIN (10)
-// Physical pin 15. This is an output to drive an LED indicating
-// that we are in a QSO. 
-#define QSO_LED_PIN (11)
+// NOTE: Switch this to 16/17!
+#define I2C0_SDA (4) // Phy Pin 6: I2C channel 0 - data
+#define I2C0_SCL (5) // Phy Pin 7: I2C channel 0 - clock
+
 
 #define UART_ID uart0
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
 #define U_BAUD_RATE 115200
 #define U_DATA_BITS 8
 #define U_STOP_BITS 1
 #define U_PARITY UART_PARITY_NONE
-
-#define I2C0_SDA (4) // Phy Pin 6: I2C channel 0 - data
-#define I2C0_SCL (5) // Phy Pin 7: I2C channel 0 - clock
 
 #define PTT_DEBOUNCE_INTERVAL_MS (250)
 #define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
