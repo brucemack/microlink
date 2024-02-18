@@ -210,12 +210,12 @@ int main(int, const char**) {
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
 
     PicoUartChannel::traceLevel = 0;
-    ESP32CommContext::traceLevel = 1;
+    ESP32CommContext::traceLevel = 0;
 
-    LinkRootMachine::traceLevel = 1;
-    LogonMachine::traceLevel = 1;
-    QSOAcceptMachine::traceLevel = 1;
-    ValidationMachine::traceLevel = 1;
+    LinkRootMachine::traceLevel = 0;
+    LogonMachine::traceLevel = 0;
+    QSOAcceptMachine::traceLevel = 0;
+    ValidationMachine::traceLevel = 0;
     QSOFlowMachine::traceLevel = 0;
 
     // Sertup UART and timer

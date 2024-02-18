@@ -119,7 +119,8 @@ void LinkRootMachine::processEvent(const Event* ev) {
             }
         }
         else if (_isTimedOut()) {
-            _state = State::FAILED;
+            // Back to square 1
+            _state = State::IDLE;
         }
     }
     else if (_state == State::IN_VALIDATION) {
