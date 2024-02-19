@@ -262,6 +262,7 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             _state == State::OPEN_RX_STOP_0) {
             _processRXReceive(evt);
         } else if (_state == State::OPEN_TX ||
+            _state == State::OPEN_TX_AUDIO_1 ||
             _state == State::OPEN_TX_RTCP_PING_0 ||
             _state == State::OPEN_TX_RTCP_PING_1) {
             _processTXReceive(evt);

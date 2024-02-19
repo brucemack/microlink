@@ -15,8 +15,16 @@ public:
 
     void setAudioOut(AudioOutputContext* o) { _audioOutCtx = o; }
 
-    virtual void setStatus(const char* msg) { std::cout << "UserInfo(Status): " << msg << std::endl; }
-    virtual void setOnData(const char* msg) { std::cout << "UserInfo(oNDATA): [" << msg << "]" << std::endl; }
+    virtual void setStatus(const char* msg) { 
+        char stamp[16];
+        snprintf(stamp, 16, "%06lu", time_ms() % 1000000);
+        std::cout << "UserInfo(Status): " << stamp << " " << msg << std::endl; 
+    }
+    virtual void setOnData(const char* msg) { 
+        char stamp[16];
+        snprintf(stamp, 16, "%06lu", time_ms() % 1000000);
+        std::cout << "UserInfo(oNDATA): " << stamp << "[" << msg << "]" << std::endl; 
+    }
 
     virtual void setSquelchOpen(bool sq) { 
 
