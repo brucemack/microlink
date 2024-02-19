@@ -351,7 +351,7 @@ int main(int, const char**) {
 
         if (!rigKeyState) {
             if (info.getSquelch() && 
-                time_ms() > rigKeyLockoutTime + TX_LOCKOUT_MS) {
+                time_ms() > (rigKeyLockoutTime + TX_LOCKOUT_MS)) {
                 info.setStatus("Keying rig");
                 rigKeyState = true;
                 lastRigKeyTransitionTime = time_ms();

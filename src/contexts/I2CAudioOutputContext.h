@@ -96,12 +96,19 @@ private:
     // Tone features
     static const uint32_t _toneBufSize = 20;
     int16_t _toneBuf[_toneBufSize];
-    bool _inTone;
-    uint32_t _toneCount;
-    uint32_t _toneStep;
-    uint32_t _tonePtr;
+    volatile bool _inTone;
+    volatile uint32_t _toneCount;
+    volatile uint32_t _toneStep;
+    volatile uint32_t _tonePtr;
 
     PicoPollTimer _timer;
+
+    static I2CAudioOutputContext* _INSTANCE;
+    /*
+    absolute_time_t _nextTick;
+    static void _alarm(uint);
+    void _tick();
+    */
 };
 
 }

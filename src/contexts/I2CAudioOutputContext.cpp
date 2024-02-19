@@ -32,6 +32,8 @@ namespace kc1fsz {
 // output has stopped.
 static const uint32_t SQUELCH_INTERVAL_MS = 1000;
 
+I2CAudioOutputContext* I2CAudioOutputContext::_INSTANCE = 0;
+
 I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate,
     uint32_t bufferDepthLog2, int16_t* audioBuf,
     UserInfo* userInfo) 
@@ -64,10 +66,22 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
         phi += omega;
     }
 
+    _INSTANCE = this;
+    /*
+    // ---
+    // Attempt to get a hardware clock
+    hardware_alarm_claim(1);
+    hardware_alarm_set_callback(1, _alarm);
+    _nextTick = delayed_by_us(get_absolute_time(), 12500);
+    hardware_alarm_set_target(1, _nextTick);
+    // ---
+    */
+
     reset();
 }
 
 I2CAudioOutputContext::~I2CAudioOutputContext() {    
+    //hardware_alarm_unclaim(1);
 }
 
 void I2CAudioOutputContext::reset() {
@@ -100,6 +114,11 @@ void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
     } else {
         _toneStep = 1;
     }
+
+    _openSquelchIfNecessary();
+
+    // Keep track of time for squelch purposes
+    _lastAudioTime = time_ms() + durationMs;
 }
 
 bool I2CAudioOutputContext::play(const int16_t* frame) {
@@ -115,11 +134,21 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
     int16_t* start = _audioBuf + (_frameSize * slot);
 
     // Copy the data into the slot
+    bool nonZeroSample = false;
     for (uint32_t i = 0; i < _frameSize; i++) {
         start[i] = frame[i];
+        if (frame[i] != 0) {
+            nonZeroSample = true;
+        }
     }
 
     _frameWriteCount++;
+
+    if (nonZeroSample) {
+        _openSquelchIfNecessary();
+        // Keep track of time for squelch purposes
+        _lastAudioTime = time_ms();
+    }
 
     // Look for the wrap-around case (rare)
     if (_frameWriteCount == 0) {
@@ -133,8 +162,10 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
 
 bool I2CAudioOutputContext::run() {    
 
+    bool activity = false;
+
     // Pacing at the audio sample clock (ex: 8kHz)
-    bool activity = _timer.poll();
+    activity = _timer.poll();
 
     if (activity) {
         if (_inTone) {
@@ -195,6 +226,7 @@ bool I2CAudioOutputContext::run() {
         (time_ms() - _lastAudioTime) > SQUELCH_INTERVAL_MS ) {
         _squelchOpen = false;
         _userInfo->setSquelchOpen(_squelchOpen);
+        activity = true;
     }
 
     return activity;
@@ -240,19 +272,78 @@ void I2CAudioOutputContext::_openSquelchIfNecessary() {
 }
 
 void I2CAudioOutputContext::_play(int16_t sample) {
-
-    if (sample != 0) {
-        _openSquelchIfNecessary();
-    }
-
     uint16_t centeredSample = (sample + 32767);
     uint8_t buf[3];
     makeFrame0(buf, centeredSample);
     // TODO: MAKE THIS NON-BLOCKING
     i2c_write_blocking(i2c_default, _dacAddr, buf, 3, true);
-
-    // Keep track of time for squelch purposes
-    _lastAudioTime = time_ms();
 }
 
+/*
+void I2CAudioOutputContext::_alarm(uint timer) {
+    if (_INSTANCE) {
+        _INSTANCE->_tick();
+    }
+}
+
+void I2CAudioOutputContext::_tick() {
+
+    // Re-schedule the alarm
+    _nextTick = delayed_by_us(_nextTick, 125);
+    while (hardware_alarm_set_target(1, _nextTick)) {
+        _nextTick = delayed_by_us(_nextTick, 125);
+    } 
+
+    if (_inTone) {
+        // TODO: HAVE A GAIN SETTING
+        _play((_toneBuf[_tonePtr >> 2]) >> 2);
+        // Move across tone, looking for wrap
+        _tonePtr += _toneStep;
+        if (_tonePtr == (_toneBufSize << 2)) {
+            _tonePtr = 0;
+        }   
+        // Manage duration
+        _toneCount--;
+        if (_toneCount == 0) {
+            _inTone = false;
+            // Park DAC at middle of range
+            _play(0);
+        }
+    }
+    else if (!_playing) {
+        // Decide whether to start playing
+        if ((_frameWriteCount > _framePlayCount) &&
+            (_frameWriteCount - _framePlayCount) > _triggerDepth) {
+            _playing = true;
+        }
+    } 
+    else {
+        if (_frameWriteCount > _framePlayCount) {
+
+            uint32_t slot = _framePlayCount & _bufferMask;
+            const int16_t* start = _audioBuf + (_frameSize * slot);
+
+            _play(start[_samplePtr++]);
+
+            // Have we played the entire frame?
+            if (_samplePtr == _frameSize) {
+                _samplePtr = 0;
+                _framePlayCount++;
+
+                // Look for the wrap-around case (rare)
+                if (_framePlayCount == 0) {
+                    // Move way from the discontinuity
+                    _frameWriteCount += (_frameSize * 2);
+                    _framePlayCount += (_frameSize * 2);
+                }
+            }
+        } else {
+            _playing = false;
+            _idleCount++;
+            // Park DAC at middle of range
+            _play(0);
+        }
+    }
+}
+*/
 }
