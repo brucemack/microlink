@@ -19,6 +19,7 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include "kc1fsz-tools/CommContext.h"
+#include "kc1fsz-tools/AudioOutputContext.h"
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/events/StatusEvent.h"
 
@@ -47,7 +48,7 @@ LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo,
     _logonMachine(ctx, userInfo),
     _acceptMachine(ctx, userInfo),
     _validationMachine(ctx, userInfo),
-    _welcomeMachine(ctx, userInfo),
+    _welcomeMachine(ctx, userInfo, audioOutput),
     _qsoMachine(ctx, userInfo, audioOutput) {
 }
 
@@ -101,7 +102,8 @@ void LinkRootMachine::processEvent(const Event* ev) {
                 _setTimeoutMs(time_ms() + ACCEPT_TIMEOUT_MS);
             } else {
                 _userInfo->setStatus("Login failed");
-                _state = State::FAILED;
+                // Back to square 1
+                _state = State::IDLE;
             }
         }
     }

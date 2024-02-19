@@ -34,13 +34,14 @@ namespace kc1fsz {
 
 class CommContext;
 class UserInfo;
+class AudioProcessor;
 
 class WelcomeMachine : public StateMachine {
 public:
 
     static int traceLevel;
 
-    WelcomeMachine(CommContext* ctx, UserInfo* userInfo, AudioSink* audioOut);
+    WelcomeMachine(CommContext* ctx, UserInfo* userInfo, AudioProcessor* audioOut);
 
     virtual void processEvent(const Event* ev);
     virtual void start();

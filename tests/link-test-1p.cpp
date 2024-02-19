@@ -63,6 +63,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 #include "machines/LinkRootMachine.h"
 #include "machines/QSOFlowMachine.h"
 #include "machines/QSOAcceptMachine.h"
+#include "machines/WelcomeMachine.h"
 
 #include "TestUserInfo.h"
 #include "TestAudioInputContext.h"
@@ -190,15 +191,6 @@ int main(int, const char**) {
     // ADC/audio in setup
     PicoAudioInputContext::setup();
 
-    /*
-    // Reset ESP
-    gpio_put(ESP_EN_PIN, 1);
-    sleep_ms(500);
-    gpio_put(ESP_EN_PIN, 0);
-    sleep_ms(500);
-    gpio_put(ESP_EN_PIN, 1);
-    */
-
     // Hello indicator
     for (int i = 0; i < 4; i++) {
         gpio_put(LED_PIN, 1);
@@ -217,6 +209,7 @@ int main(int, const char**) {
     LogonMachine::traceLevel = 0;
     QSOAcceptMachine::traceLevel = 0;
     ValidationMachine::traceLevel = 0;
+    WelcomeMachine::traceLevel = 1;
     QSOFlowMachine::traceLevel = 0;
 
     // Sertup UART and timer
@@ -380,7 +373,9 @@ int main(int, const char**) {
         
         int c = getchar_timeout_us(0);
         if (c > 0) {
-            if (c == 'x') {
+            if (c == 's') {
+            } 
+            else if (c == 'x') {
                 cout << endl << "Stoppng" << endl;
                 rm.requestCleanStop();
             }

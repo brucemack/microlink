@@ -18,8 +18,11 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include <cstring>
+
 #include "kc1fsz-tools/Common.h"
-#include "kc1fsz-tools/AudioSink.h"
+#include "kc1fsz-tools/AudioProcessor.h"
+#include "gsm-0610-codec/Parameters.h"
 
 #include "common.h"
 
@@ -41,22 +44,30 @@ void Synth::generate(const char* str) {
     _framePtr = 0;
     _running = true;
     _workingFrameReady = false;
+    _decoder.reset();
 }
 
 bool Synth::run() {
 
     if (!_running) {
-        return;
+        return false;
     }
+
+    bool activity = false;
 
     int s = Sound::findSound(_str[_strPtr]);
 
     // Setup the next frame to be played, if necessary
     if (!_workingFrameReady) {
         // We load 4 frames at a time, padding with zeros as needed
-        for (int f = 0; f < 4; f++) {
+        for (unsigned int f = 0; f < 4; f++) {
             if (_framePtr < SoundMeta[s].getFrameCount()) {
-                SoundMeta[s].getFrame(_framePtr, _workingFrame + (f * 160));
+                Parameters params;
+                PackingState state;
+                uint8_t gsmFrame[33];
+                SoundMeta[s].getGSMFrame(_framePtr, gsmFrame);
+                params.unpack(gsmFrame, &state);
+                _decoder.decode(&params, _workingFrame + (f * 160));
             }
             else {
                 for (int i = 0; i < 160; i++) {
@@ -66,26 +77,31 @@ bool Synth::run() {
             _framePtr++;
         }
         _workingFrameReady = true;
+        activity = true;
     }
 
     // Attempt to play some sound
     if (_workingFrameReady) {
         // This will return false if the player is busy
         if (_sink->play(_workingFrame)) {
-            // All frames played?
+            // Signal that we need to make a new one
+            _workingFrameReady = false;
+            // All frames in the sound played?
             if (_framePtr >= SoundMeta[s].getFrameCount()) {
-                _framePtr = 0;
                 _strPtr++;
-                _workingFrameReady = false;
+                _framePtr = 0;
+                // No decoding continuity between sounds
+                _decoder.reset();
                 // Have we played the entire string?
                 if (_strPtr == _strLen) {
                     _running = false;
                 }
             }
+            activity = true;
         }
     }
+
+    return activity;
 }
 
 }
-
-#endif

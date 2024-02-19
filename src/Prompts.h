@@ -7,16 +7,15 @@ struct Sound {
 
     char code;
     int start;
-    int length;
+    uint32_t length;
 
-    int getFrameCount() const;
-
-    void getFrame(int f, uint8_t* data);
+    uint32_t getFrameCount() const { return length; }
+    
+    void getGSMFrame(int f, uint8_t* gsmData);
 
     static int findSound(char code);
 };
 
 extern Sound SoundMeta[];
-//extern uint8_t SoundData[];
 
 #endif

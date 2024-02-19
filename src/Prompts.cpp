@@ -1,26 +1,6 @@
 #include <cstdint>
 #include "Prompts.h"
 
-int Sound::findSound(char code) {
-    for (int i = 0; i < 40; i++) {
-        if (SoundMeta[i].code == code) {
-            return i;
-        }
-    }
-    // Not found is ' '
-    return 39;
-}
-
-int Sound::getFrameCount() const {
-    return length;
-}
-
-void Sound::getFrame(int f, uint8_t* data) {
-    for (unsigned int i = 0; i < 160; i++) {
-        data[i] = SoundData[((start + f) * 160) + i];
-    }
-}
-
 Sound SoundMeta[39 + 1] = {
 {'A', 0, 27},
 {'B', 27, 23},
@@ -1152,4 +1132,20 @@ static uint8_t SoundData[(1033 + 50) * 33] = {
 215, 166, 140, 33, 84, 80, 65, 88, 164, 117, 239, 36, 97, 34, 120, 228, 85, 183, 147, 128, 129, 71, 30, 121, 28, 222, 203, 97, 171, 115, 106, 71, 186, 
 
 };
+
+int Sound::findSound(char code) {
+    for (int i = 0; i < 40; i++) {
+        if (SoundMeta[i].code == code) {
+            return i;
+        }
+    }
+    // Not found is ' '
+    return 39;
+}
+
+void Sound::getGSMFrame(int f, uint8_t* gsmData) {
+    for (unsigned int i = 0; i < 33; i++) {
+        gsmData[i] = SoundData[((start + f) * 33) + i];
+    }
+}
 

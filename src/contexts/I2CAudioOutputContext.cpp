@@ -37,11 +37,14 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
     UserInfo* userInfo) 
 :   AudioOutputContext(frameSize, sampleRate),
     _bufferDepthLog2(bufferDepthLog2),
+    // For example: a depth of 16 means a depthLog2 of 4.  
+    // The mask is 1, 10, 100, 1000, 10000, minus 1 -> 1111
+    _bufferMask((1 << bufferDepthLog2) - 1),
     _audioBuf(audioBuf),
     _userInfo(userInfo),
     _frameWriteCount(0),
     _framePlayCount(0),
-    _playPtr(0),
+    _samplePtr(0),
     _intervalUs(125),
     _idleCount(0),
     _overflowCount(0),
@@ -70,7 +73,7 @@ I2CAudioOutputContext::~I2CAudioOutputContext() {
 void I2CAudioOutputContext::reset() {
     _frameWriteCount = 0;
     _framePlayCount = 0;
-    _playPtr = 0;
+    _samplePtr = 0;
     _idleCount = 0;
     _overflowCount = 0;
     _playing = false;
@@ -100,17 +103,30 @@ void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
 }
 
 bool I2CAudioOutputContext::play(const int16_t* frame) {
-    // For example: a depth of 16 means a depthLog2 of 4.  
-    // The mask is 1, 10, 100, 1000, 10000, minus 1 -> 1111
-    uint32_t mask = (1 << _bufferDepthLog2) - 1;
+
+    // Check for the full situation and push back if necessary
+    if (((_frameWriteCount + 1) & _bufferMask) ==
+        (_framePlayCount & _bufferMask)) {
+        return false;
+    }
+
     // Figure out which slot to use in the rotating buffer
-    uint32_t slot = _frameWriteCount & mask;
+    uint32_t slot = _frameWriteCount & _bufferMask;
     int16_t* start = _audioBuf + (_frameSize * slot);
+
     // Copy the data into the slot
     for (uint32_t i = 0; i < _frameSize; i++) {
         start[i] = frame[i];
     }
+
     _frameWriteCount++;
+
+    // Look for the wrap-around case (rare)
+    if (_frameWriteCount == 0) {
+        // Move way from the discontinuity
+        _frameWriteCount += (_frameSize * 2);
+        _framePlayCount += (_frameSize * 2);
+    }
 
     return true;
 }
@@ -148,21 +164,23 @@ bool I2CAudioOutputContext::run() {
         else {
             if (_frameWriteCount > _framePlayCount) {
 
-                uint32_t mask = (1 << _bufferDepthLog2) - 1;
-                uint32_t slot = _framePlayCount & mask;
+                uint32_t slot = _framePlayCount & _bufferMask;
                 const int16_t* start = _audioBuf + (_frameSize * slot);
 
-                _play(start[_playPtr++]);
+                _play(start[_samplePtr++]);
 
-                if (_playPtr == _frameSize) {
+                // Have we played the entire frame?
+                if (_samplePtr == _frameSize) {
+                    _samplePtr = 0;
                     _framePlayCount++;
-                    _playPtr = 0;
+
+                    // Look for the wrap-around case (rare)
+                    if (_framePlayCount == 0) {
+                        // Move way from the discontinuity
+                        _frameWriteCount += (_frameSize * 2);
+                        _framePlayCount += (_frameSize * 2);
+                    }
                 }
-
-                // TODO: Consider a way to speed up a bit if the 
-                // audio is still arriving but we are getting close
-                // to draining the buffer
-
             } else {
                 _playing = false;
                 _idleCount++;

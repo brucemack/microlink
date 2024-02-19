@@ -22,25 +22,30 @@
 #define _Synth_h
 
 #include <cstdint>
+
 #include "kc1fsz-tools/Runnable.h"
+#include "gsm-0610-codec/Decoder.h"
 
 namespace kc1fsz {
 
-class AudioSink;
+class AudioProcessor;
 
 class Synth : public Runnable {
 public:
 
     Synth();
 
-    void setSink(AudioSink* sink) { _sink = sink; }
+    void setSink(AudioProcessor* sink) { _sink = sink; }
     bool isFinished() const { return !_running; }
     void generate(const char* str);
 
+    bool run();
+
 private:
 
-    AudioSink* _sink;
+    AudioProcessor* _sink;
 
+    Decoder _decoder;
     bool _running;
 
     static const uint32_t _strSize = 32;
@@ -50,7 +55,7 @@ private:
     uint32_t _framePtr;
 
     bool _workingFrameReady;
-    uint8_t _workingFrame[160 * 4];
+    int16_t _workingFrame[160 * 4];
 };
 
 }

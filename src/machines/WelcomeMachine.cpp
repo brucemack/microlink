@@ -26,10 +26,27 @@ namespace kc1fsz {
 
 int WelcomeMachine::traceLevel = 0;
 
-WelcomeMachine::WelcomeMachine(CommContext* ctx, UserInfo* userInfo, AudioSink* audioOut)
+WelcomeMachine::WelcomeMachine(CommContext* ctx, UserInfo* userInfo, AudioProcessor* audioOut)
 :   _ctx(ctx),
     _userInfo(userInfo) {
     _synth.setSink(audioOut);
+}
+
+void WelcomeMachine::start() {
+
+    // Program the synth with the callsign welcome
+    char msg[32];
+    // Leading silence
+    strcpy(msg," ");
+    // Callsign
+    strcat(msg, _callSign.c_str());
+    // Silence
+    strcat(msg," ");
+    // Tack on "EchoLink Connect"
+    strcat(msg, "!@  ");
+
+    _synth.generate(msg);
+    _state = State::PLAYING;
 }
 
 void WelcomeMachine::processEvent(const Event* ev) {
@@ -46,25 +63,6 @@ void WelcomeMachine::processEvent(const Event* ev) {
             _state = State::SUCCEEDED;
         }
     }
-}
-
-void WelcomeMachine::start() {
-
-    // Program the synth with the callsign welcome
-    char msg[32];
-    // Leading silence
-    strcpy(msg,"  ");
-    // Callsign
-    strcat(msg, _callSign.c_str());
-    // Silence
-    strcat(msg," ");
-    // Tack on "EchoLink Connect"
-    strcat(msg, "!@  ");
-
-    cout << "Sending this to synth: [" << msg << "]" << endl;
-
-    _synth.generate(msg);
-    _state = State::PLAYING;
 }
 
 void WelcomeMachine::cleanup() {

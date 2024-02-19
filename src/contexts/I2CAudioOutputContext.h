@@ -65,14 +65,17 @@ private:
     void _play(int16_t pcm);
     void _openSquelchIfNecessary();
 
-    uint32_t _bufferDepthLog2;
+    const uint32_t _bufferDepthLog2;
+    const uint32_t _bufferMask;
+    
     // How deep we should get before triggering the audio play
     uint32_t _triggerDepth;
-    int16_t *_audioBuf;
+    int16_t* _audioBuf;
     UserInfo* _userInfo;
     uint32_t _frameWriteCount;
     uint32_t _framePlayCount;
-    uint32_t _playPtr;
+    // The pointer to the next sample to be played, w/in the current frame
+    uint32_t _samplePtr;
     // How much time to wait between sample output. This is a
     // variable to support adaptive approaches.
     uint32_t _intervalUs;
