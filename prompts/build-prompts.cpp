@@ -16,6 +16,12 @@ using namespace kc1fsz;
 const uint32_t samplesSize = 1024 * 1024;
 int16_t samples[samplesSize];
 
+struct Sound2 {
+    char code;
+    uint32_t start;
+    uint32_t length;
+};
+
 int main(int, const char**) {
 
     ifstream inf("../prompts/Prompts1.wav");
@@ -24,8 +30,7 @@ int main(int, const char**) {
 
     ifstream in_pos("../prompts/pos.txt");
     std::string line;
-    std::vector<int> starts;
-    std::vector<int> lengths;
+    std::vector<Sound2> sounds2;
 
     while (std::getline(in_pos, line)) {
         // Split by tab
@@ -34,52 +39,47 @@ int main(int, const char**) {
             continue;
         }
         string code = line.substr(0, d);
-        string pos = line.substr(d + 1);
-        cout << code << " -> " << pos << endl;
-        starts.push_back(std::atoi(pos.c_str()));
-    }
-
-    for (int i = 0; i < starts.size(); i++) {
-        int len = 0;
-        if (i < starts.size() - 1) {
-            len = starts.at(i + 1) - starts.at(i);
-        } else {
-            len = s - starts.at(i);
+        string rest = line.substr(d + 1);
+        d = rest.find("\t");
+        if (d == string::npos) {
+            continue;
         }
-        lengths.push_back(len);
+        string pos = rest.substr(0, d);
+        string len = rest.substr(d + 1);
+
+        cout << code << " -> " << pos << " " << len << endl;
+
+        Sound2 sound = { code.at(0), std::atoi(pos.c_str()), std::atoi(len.c_str()) };
+        sounds2.push_back(sound);
     }
 
     int totalFrames = 0;
     uint8_t gsmData[2000 * 33];
     int gsmFramePtr = 0;
-
-    Sound sounds[39];
-
     uint8_t *gsmPtr = gsmData;
     
-    for (int i = 0; i < starts.size(); i++) {
+    std::vector<Sound> sounds;
+
+    // For each symbol
+    for (Sound2 sound : sounds2) {
 
         // Extract each sound
         int16_t pcm[160 * 48];
         for (int k = 0; k < 160 * 48; k++) {
             pcm[k] = 0;
         }
-        for (int k = 0; k < lengths.at(i); k++) {
-           pcm[k] = samples[starts.at(i) + k];
+        for (int k = 0; k < sound.length; k++) {
+           pcm[k] = samples[sound.start + k];
         }
 
-        // Measure whole frames
-        int frames = lengths.at(i) / 160;
-        if (lengths.at(i) % 160 != 0) {
+        // Measure whole frames, rounding up
+        int frames = sound.length / 160;
+        if (sound.length % 160 != 0) {
             frames++;
         }
 
         Encoder encoder;
         int16_t* pcmPtr = pcm;
-
-        // Start
-        sounds[i].start = totalFrames;
-        sounds[i].length = frames;
 
         for (int f = 0; f < frames; f++) {
             Parameters params;
@@ -90,28 +90,28 @@ int main(int, const char**) {
             gsmPtr += 33;
         }
 
+        Sound s = { sound.code, totalFrames, frames };
+        sounds.push_back(s);
+
         totalFrames += frames;
     }
     
     // Output structures
-    /*
-    for (int i = 0; i < 39; i++) {
-        cout << "{" << sounds[i].start << ", " << sounds[i].length << "}, " << endl;
-    }
-    */
+    ofstream out1("../prompts/out1.txt");
+    for (Sound s : sounds) 
+        out1 << "{'" << s.code << "'," << s.start << ", " << s.length << "}, " << endl;
+    out1.close();
 
+
+    ofstream out2("../prompts/out2.txt");
     gsmPtr = gsmData;
-
-    ofstream outf("../prompts/out.txt");
-
     for (int i = 0; i < totalFrames; i++) {
         for (int k = 0; k < 33; k++) {
-            outf << (int)(*gsmPtr) << ", ";
+            out2 << (int)(*gsmPtr) << ", ";
             gsmPtr++;
         }
-        outf << endl;
+        out2 << endl;
     }
-    
-    outf.close();
+    out2.close();
 }
 
