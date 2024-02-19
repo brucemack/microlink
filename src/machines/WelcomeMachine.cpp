@@ -37,13 +37,11 @@ void WelcomeMachine::start() {
     // Program the synth with the callsign welcome
     char msg[32];
     // Leading silence
-    strcpy(msg," ");
+    strcpy(msg,"__");
     // Callsign
     strcat(msg, _callSign.c_str());
-    // Silence
-    strcat(msg," ");
     // Tack on "EchoLink Connect"
-    strcat(msg, "!@  ");
+    strcat(msg, "_!@_");
 
     _synth.generate(msg);
     _state = State::PLAYING;
