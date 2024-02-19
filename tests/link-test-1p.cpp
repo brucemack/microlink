@@ -102,10 +102,9 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 // Physical pin 14. This is an input (active high) used to detect
 // receive carrier from the rig. 
 #define RIG_COS_PIN (10)
-// NOTE: Switch this to 16/17!
-#define I2C0_SDA (4) // Phy Pin 6: I2C channel 0 - data
-#define I2C0_SCL (5) // Phy Pin 7: I2C channel 0 - clock
-
+// I2C -> DAC
+#define I2C0_SDA (16) // Phy Pin 21: I2C channel 0 - data
+#define I2C0_SCL (17) // Phy Pin 22: I2C channel 0 - clock
 
 #define UART_ID uart0
 #define U_BAUD_RATE 115200
@@ -181,10 +180,14 @@ int main(int, const char**) {
 
     // Setup I2C
     i2c_init(i2c_default, 100 * 1000);
-    gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+    //gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
+    //gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
+    //gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
+    //gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
+    gpio_set_function(I2C0_SDA, GPIO_FUNC_I2C);
+    gpio_set_function(I2C0_SCL, GPIO_FUNC_I2C);
+    gpio_pull_up(I2C0_SDA);
+    gpio_pull_up(I2C0_SCL);
     //i2c_set_baudrate(i2c_default, 400000 * 4);
     i2c_set_baudrate(i2c_default, 400000);
 
@@ -309,6 +312,7 @@ int main(int, const char**) {
                     info.getMsSinceLastSquelchClose() < 500) {
                 } 
                 else {
+                    cout << "COS on" << endl;
                     rigCosState = true;
                     if (rm.isInQSO()) {
                         audioInContext.setPtt(rigCosState);
@@ -321,6 +325,9 @@ int main(int, const char**) {
             // The HI->LO transition is fully debounced
             if (!rigCos && 
                 (time_ms() - lastRigCosTransition) > RIG_COS_DEBOUNCE_INTERVAL_MS) {
+                if (!rigCos) {
+                    cout << "COS off" << endl;
+                }
                 rigCosState = false;
                 audioInContext.setPtt(rigCosState);
             }

@@ -53,7 +53,7 @@ LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo,
 }
 
 bool LinkRootMachine::isInQSO() const {
-    return !(isDone() || _state == State::IDLE);
+    return _state == State::QSO;
 }
 
 bool LinkRootMachine::run() {
@@ -157,7 +157,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
         }
     }
     // In this state a QSO is ongoing
-    else if (_state == QSO) {
+    else if (_state == State::QSO) {
         if (isDoneAfterEvent(_qsoMachine, ev)) {
             // Once the converstaion ends (one way or the other)
             // we go reset and go back to square one.
