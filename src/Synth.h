@@ -18,54 +18,41 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _WelcomeMachine_h
-#define _WelcomeMachine_h
+#ifndef _Synth_h
+#define _Synth_h
 
-#include "kc1fsz-tools/Channel.h"
-#include "kc1fsz-tools/Event.h"
-#include "kc1fsz-tools/IPAddress.h"
-#include "kc1fsz-tools/HostName.h"
-#include "kc1fsz-tools/CallSign.h"
-
-#include "../StateMachine.h"
-#include "../Synth.h"
+#include <cstdint>
+#include "kc1fsz-tools/Runnable.h"
 
 namespace kc1fsz {
 
-class CommContext;
-class UserInfo;
+class AudioSink;
 
-class WelcomeMachine : public StateMachine {
+class Synth : public Runnable {
 public:
 
-    static int traceLevel;
+    Synth();
 
-    WelcomeMachine(CommContext* ctx, UserInfo* userInfo, AudioSink* audioOut);
-
-    virtual void processEvent(const Event* ev);
-    virtual void start();
-    virtual void cleanup();
-    virtual bool isDone() const;
-    virtual bool isGood() const;
-
-    void setCallSign(CallSign cs) { _callSign = cs; }
+    void setSink(AudioSink* sink) { _sink = sink; }
+    bool isFinished() const { return !_running; }
+    void generate(const char* str);
 
 private:
 
-    enum State { IDLE, 
-        PLAYING,  
-        FAILED, 
-        SUCCEEDED 
-    } _state;
+    AudioSink* _sink;
 
-    CommContext* _ctx;
-    UserInfo* _userInfo;
+    bool _running;
 
-    CallSign _callSign;
-    Synth _synth;
+    static const uint32_t _strSize = 32;
+    char _str[_strSize];
+    uint32_t _strLen;
+    uint32_t _strPtr;
+    uint32_t _framePtr;
+
+    bool _workingFrameReady;
+    uint8_t _workingFrame[160 * 4];
 };
 
 }
 
 #endif
-

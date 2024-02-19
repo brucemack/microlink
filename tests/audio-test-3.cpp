@@ -30,9 +30,17 @@
 #include <cassert>
 #include <cstring>
 #include <cmath>
+#include <fstream>
+#include <vector>
 
-#include "../src/common.h"
-#include "../src/contexts/W32AudioOutputContext.h"
+#include "gsm-0610-codec/Decoder.h"
+#include "gsm-0610-codec/wav_util.h"
+
+#include "kc1fsz-tools/Common.h"
+
+#include "common.h"
+#include "contexts/W32AudioOutputContext.h"
+#include "Prompts.h"
 
 using namespace std;
 using namespace kc1fsz;
@@ -53,41 +61,60 @@ int main(int, const char**) {
 
     W32AudioOutputContext context(frameSize, sampleRate, audioData, silenceData);
 
+    int16_t pcm[160 * 48];
+    for (int i = 0; i < 160 * 48; i++) {
+        pcm[i] = 0;
+    }
+
+    int soundIdx = 5;
+
+    cout <<  SoundMeta[soundIdx].start << endl;
+    cout <<  SoundMeta[soundIdx].length << endl;
+
+    // Decode the sound into the PCM buffer   
+    Decoder decoder;
+    for (int f = 0; f < SoundMeta[soundIdx].length; f++) {
+        Parameters params;
+        PackingState state;
+        params.unpack(SoundData + ((SoundMeta[soundIdx].start + f) * 33), &state);
+        decoder.decode(&params, pcm + (f * 160));
+    }
+                
+    int framePtr = 0;
     uint32_t lastFrameMs = 0;
+    unsigned int gapMs = 80;
 
     // The test runs for some fixed period.  This is basically the main
     // event loop of the program.
-    for (int i = 0; i < 400; i++) {
+    for (int i = 0; i < 400000; i++) {
 
         // Let the context do any background work it needs to
         context.run();
 
-        unsigned int gapMs = 80;
-
-        // Simulate a slowdown
-        //if (i > 300 && i < 350) {
-        //    cout << "Slow down" << endl;
-        //    gapMs = 100;
-        //}
-
-        // Simulate the generation of a new audio frame every 20ms
         uint32_t now = time_ms();
+
         if (now - lastFrameMs >= gapMs) {
 
             lastFrameMs = now;
 
-            int16_t frame[frameSize];
+            
 
-            // Fill buffers with a consistent tone.
-            float freqRad = 1000.0 * 2.0 * 3.1415926;
-            float omega = freqRad / (float)sampleRate;
-            float phi = 0;
-            for (int i = 0; i < frameSize; i++) {
-                frame[i] = 32767.0 * std::cos(phi);
-                phi += omega;
+
+
+
+
+
+
+
+            // Try to play
+            if (framePtr < SoundMeta[soundIdx].length) {
+                bool good = context.play(pcm + (framePtr * 160));
+                if (good) {
+                    framePtr += 4;
+                }
+            } else {
+                framePtr = 0;
             }
-
-            context.play(frame);
         }
 
         Sleep(5);

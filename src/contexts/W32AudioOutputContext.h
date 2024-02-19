@@ -42,7 +42,7 @@ public:
         int16_t* audioArea, int16_t* silenceArea);
     virtual ~W32AudioOutputContext();
 
-    virtual bool poll();
+    virtual bool run();
 
     /**
      * @param frame Assumed to be a 160x4 frame.

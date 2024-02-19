@@ -102,8 +102,9 @@ target_link_libraries(audio-test-1 winmm)
 add_executable(audio-test-2
   tests/audio-test-2.cpp
   src/common.cpp
-  kc1fsz-tools-cpp/src/win32/Win32PerfTimer.cpp
   src/contexts/W32AudioOutputContext.cpp
+  kc1fsz-tools-cpp/src/win32/Win32PerfTimer.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
 )
 
 target_include_directories(audio-test-2 PRIVATE src)
@@ -272,6 +273,8 @@ add_executable(link-test-1p
   tests/link-test-1p.cpp
   src/ATResponseProcessor.cpp
   src/common.cpp
+  src/Prompts.cpp
+  src/Synth.cpp
   src/contexts/ESP32CommContext.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
@@ -321,3 +324,41 @@ add_executable(make-sdes-1
 
 target_include_directories(make-sdes-1 PRIVATE src)
 target_include_directories(make-sdes-1 PRIVATE kc1fsz-tools-cpp/include)
+
+# ------ build-prompts -------------------------------------------------------
+
+add_executable(build-prompts
+  prompts/build-prompts.cpp
+  src/common.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
+)
+
+target_include_directories(build-prompts PRIVATE src)
+target_include_directories(build-prompts PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(build-prompts PRIVATE gsm-0610-codec/include)
+
+# ------ audio-test-3 --------------------------------------------------------
+
+add_executable(audio-test-3
+  tests/audio-test-3.cpp
+  src/common.cpp
+  src/Prompts.cpp
+  src/contexts/W32AudioOutputContext.cpp
+  kc1fsz-tools-cpp/src/win32/Win32PerfTimer.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
+)
+
+target_include_directories(audio-test-3 PRIVATE src)
+target_include_directories(audio-test-3 PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(audio-test-3 PRIVATE gsm-0610-codec/include)
+target_link_libraries(audio-test-3 winmm)

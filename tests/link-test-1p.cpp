@@ -66,6 +66,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-t
 
 #include "TestUserInfo.h"
 #include "TestAudioInputContext.h"
+#include "Synth.h"
 
 // ===============
 // LEFT SIDE PINS 

@@ -20,30 +20,62 @@
  */
 #include "machines/WelcomeMachine.h"
 
+using namespace std;
+
 namespace kc1fsz {
 
 int WelcomeMachine::traceLevel = 0;
 
-WelcomeMachine::WelcomeMachine(CommContext* ctx, UserInfo* userInfo)
+WelcomeMachine::WelcomeMachine(CommContext* ctx, UserInfo* userInfo, AudioSink* audioOut)
 :   _ctx(ctx),
     _userInfo(userInfo) {
+    _synth.setSink(audioOut);
 }
 
 void WelcomeMachine::processEvent(const Event* ev) {
+
+    if (_state == State::PLAYING) {
+
+        // Make sure things are running at all times
+        _synth.run();
+
+        if (_synth.isFinished()) {
+            if (traceLevel > 0) {
+                cout << "Finished playing" << endl;
+            }
+            _state = State::SUCCEEDED;
+        }
+    }
 }
 
 void WelcomeMachine::start() {
+
+    // Program the synth with the callsign welcome
+    char msg[32];
+    // Leading silence
+    strcpy(msg,"  ");
+    // Callsign
+    strcat(msg, _callSign.c_str());
+    // Silence
+    strcat(msg," ");
+    // Tack on "EchoLink Connect"
+    strcat(msg, "!@  ");
+
+    cout << "Sending this to synth: [" << msg << "]" << endl;
+
+    _synth.generate(msg);
+    _state = State::PLAYING;
 }
 
 void WelcomeMachine::cleanup() {
 }
 
 bool WelcomeMachine::isDone() const {
-    return true;
+    return _state == State::SUCCEEDED;
 }
 
 bool WelcomeMachine::isGood() const {
-    return true;
+    return _state == State::SUCCEEDED;
 }
 
 }

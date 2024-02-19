@@ -124,7 +124,7 @@ W32AudioOutputContext::~W32AudioOutputContext() {
     CloseHandle(_event);
 }
 
-bool W32AudioOutputContext::poll() {
+bool W32AudioOutputContext::run() {
 
     bool anythingHappened = false;
 
