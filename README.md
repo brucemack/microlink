@@ -265,6 +265,9 @@ ADC performance is not critical, this pin can be connected to digital ground.
     # Used to send UDP packets.  The printf command supports non-printable.
     printf 'Hello\rWorld' | nc -u -w1 192.168.8.210 5198
 
+    # Login test
+    printf "lKC1FSZ\254\254xxx\rONLINE0.02MLZ(08:11)\rWellesley, MA USA\r" | nc -w 10 naeast.echolink.org 5200
+   
 # Rig Integration Notes
 
 ## Baofeng BF-F8HP HT
