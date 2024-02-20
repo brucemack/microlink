@@ -61,7 +61,7 @@ filter.  The microphone part needs work.
 * Audio input sampling uses the integrated ADC in the RP2040.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
-* The T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
+* The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
 * The radio link is a Baofeng BF-F8HP.
 
 ## Current Parts List (SW)
@@ -93,9 +93,11 @@ specs is in the works.
 The microphone part will go away once the radio is integrated. I will probably leave
 the speaker/amplifier in for monitoring purposes.
 
-## Carrier Detect
+## Analog Schematic
 
-(To follow)
+Audio input:
+
+Audio output:
 
 ## Cellular Data Interface
 
@@ -234,6 +236,8 @@ ADC performance is not critical, this pin can be connected to digital ground.
 
 ## Baofeng BF-F8HP HT
 
+### Connectors
+
 * 3.5mm Jack
   - Tip - NC
   - Ring - Rig mic in, MicroLink audio out
@@ -242,6 +246,15 @@ ADC performance is not critical, this pin can be connected to digital ground.
   - Tip - Rig speaker+ out, MicroLink audio in
   - Ring - Rig ground
   - Sleeve - Rig ground
+
+### Carrier Detect
+
+This has been discussed at length in other venues.  The method of detecting the 
+receive carrier depends on the radio you are using.  Unless you are willing 
+to crack it open, there is no explicit carrier detect "signal" on the Baofent HT.  My 
+integration with this rig just listens for noise on the audio output line
+and triggers accordingly.  That seems to work just fine.  See the schematic for 
+details.
 
 References
 ==========
