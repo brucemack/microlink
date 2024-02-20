@@ -328,5 +328,6 @@ References
   - https://www.purevpn.com/what-is-vpn/protocols/openvpn
   - https://en.wikipedia.org/wiki/OpenVPN
   - https://www.analog.com/media/en/technical-documentation/application-notes/an-1368.pdf
-  
+  - [Information about Ferite Beads from Altium](https://resources.altium.com/sites/default/files/2022-05/Guide%20to%20Using%20Ferrite%20Beads%20in%20a%20PCB.pdf). 
+
 
