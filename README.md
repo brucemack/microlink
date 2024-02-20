@@ -146,13 +146,6 @@ the code shown in the video demonstration.
 At the moment this uses a serial console to take commands and display 
 status.
 
-## link-test-1p
-
-The test build for the -L station.  
-
-At the moment this uses a serial console to take commands and display 
-status.
-
 ## client-test-2
 
 Runs on a Windows desktop, used for testing purposes only. No TX at this time.
@@ -230,6 +223,22 @@ Per Pico datasheet:
 running under these signals and terminating at this pin. If the ADC is not used or 
 ADC performance is not critical, this pin can be connected to digital ground.
 
+## Building the Link Station
+
+This is the official binary that runs in production.
+
+(These notes are not comprehensive yet.)
+
+    git clone https://github.com/brucemack/microlink.git
+    cd microlink
+    git submodule update --remote
+    mkdir build
+    cd build
+    export PICO_BUILD=1
+    cmake ..
+    make link-main
+    openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main.elf verify reset exit"
+   
 ## Building Tests on Windows (CYGWIN)
 
 (These notes are not comprehensive yet.)

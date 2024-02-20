@@ -64,8 +64,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "machines/QSOAcceptMachine.h"
 #include "machines/WelcomeMachine.h"
 
-#include "TestUserInfo.h"
-#include "TestAudioInputContext.h"
+#include "../tests/TestUserInfo.h"
 #include "Synth.h"
 
 // ===============
@@ -179,10 +178,6 @@ int main(int, const char**) {
 
     // Setup I2C
     i2c_init(i2c_default, 100 * 1000);
-    //gpio_set_function(PICO_DEFAULT_I2C_SDA_PIN, GPIO_FUNC_I2C);
-    //gpio_set_function(PICO_DEFAULT_I2C_SCL_PIN, GPIO_FUNC_I2C);
-    //gpio_pull_up(PICO_DEFAULT_I2C_SDA_PIN);
-    //gpio_pull_up(PICO_DEFAULT_I2C_SCL_PIN);
     gpio_set_function(I2C0_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C0_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C0_SDA);
@@ -201,7 +196,7 @@ int main(int, const char**) {
         sleep_ms(250);
     }
 
-    cout << "===== MicroLink Link Test 1p ============" << endl;
+    cout << "===== MicroLink Link Station ============" << endl;
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
 
     PicoUartChannel::traceLevel = 0;

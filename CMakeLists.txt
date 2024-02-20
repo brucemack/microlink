@@ -42,7 +42,7 @@ endif()
 # Runs on the RP2040
 
 add_executable(link-main
-  link-main.cpp
+  src/link-main.cpp
   src/ATResponseProcessor.cpp
   src/common.cpp
   src/Prompts.cpp
@@ -62,7 +62,7 @@ add_executable(link-main
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
-  kc1fsz-tools-cpp/src/md5/md5.c
+  kc1fsz-tools-cpp/src/md5/md5c.c
   gsm-0610-codec/src/fixed_math.cpp
   gsm-0610-codec/src/wav_util.cpp
   gsm-0610-codec/src/Parameters.cpp
@@ -364,15 +364,3 @@ target_include_directories(audio-test-3 PRIVATE src)
 target_include_directories(audio-test-3 PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(audio-test-3 PRIVATE gsm-0610-codec/include)
 target_link_libraries(audio-test-3 winmm)
-
-# ------ login-test-1 -------------------------------------------------------
-
-add_executable(login-test-1
-  tests/login-test-1.cpp
-  src/common.cpp
-  kc1fsz-tools-cpp/src/Common.cpp
-  kc1fsz-tools-cpp/src/md5/md5c.c
-)
-
-target_include_directories(login-test-1 PRIVATE src)
-target_include_directories(login-test-1 PRIVATE kc1fsz-tools-cpp/include)
