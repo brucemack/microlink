@@ -8,6 +8,14 @@ notes are based on examinations of EL packet captures and a review of the variou
 am not affiliated with the EchoLink team and I have no inside information.  Please take these notes for what they are 
 worth - just one random ham's observations.  Do your own research.
 
+_NOTE from 20-Feb-2024: I later received some very helpful comments/input from the EchoLink creator Jonathan Taylor (K1RFD), 
+and he helped to fill in some places where I lacked visibility.  Please don't assume that 
+this document has been fully reviewed and/or endorsed by Jonathan, but I will credit him in some of the 
+new sections below._
+
+_NOTE: Thanks also to Scott Miller (N1VG) who filled in a few details.  Scott's firm (Argent Data Systems, Inc.)
+sells an interesting piece of EchoLink hardware called EchoBridge.  Check it out._
+
 Notes like these may make it possible for others to start tinkering around in EchoLink space. If you do so, **please proceed
 with caution.** We all love EchoLink but none of us pay when we use it, so I can only assume that there are many volunteer hours 
 going on behind the scenes. The last thing anyone needs is an accidental denial-of-service incident on the EL network. I
@@ -39,7 +47,7 @@ that I would recommend looking at:
 ## High-Level Protocol Flow Notes
 
 As has been documented in several places, there are two distinct protocol flows that make up the EL system:
-* A client/server interaction with one of the EchoLink servers (TCP port 5200).
+* A client/server interaction with one of the EchoLink Addressing Servers (TCP port 5200).
 * A peer-to-peer "QSO" interaction between EchoLink nodes:
   - UDP port 5198 is used to carry audio traffic (and a bit of out-of-band texting) using the RTP protocol.
   - UDP port 5199 is used to carry session control information using something very similar to the RTCP protocol.
@@ -52,9 +60,9 @@ and "servers" for most in this flow.  Instead I will use the terms "Station A" a
 Station A is the originator of the call. From tracing a QSO using the official EchoLink client I can see the 
 following flow pattern:
 
-1. Station A logs into the network by interacting with the EchoLink Server over TCP port 5200.  This 
+1. Station A logs into the network by interacting with the EchoLink Addressing Server over TCP port 5200.  This 
 step may not need to happen on every QSO since the logged-on status persists for some time.
-2. Station A requests the directory information from the EchoLink Server to determine the 
+2. Station A requests the directory information from the Addressing Server to determine the 
 status of the target node and its current IP address.
 3. Station A sends an RTCP SDES packet with the identification information to Station B on the RTCP port, **but using 
 the socket that is bound to the RTP port on the local side!**.  I suspect we need to originate data using both local-side 
@@ -63,7 +71,7 @@ UDP ports in order for routers/firewalls to forward return traffic from Station 
 5. Station A sends an oNDATA packet to the RTP port of Station B.
 6. Station A appears to wait at this point.  If nothing happens after 5 seconds then a retry happens by returning to step #3.
 7. Station B uses the call-sign provided in the RTCP SDES message sent in step 4 to contact
-the EchoLink Server and validate that the Station A user is authorized to use the network. (I'm told that Station B also 
+the EchoLink Addressing Server and validate that the Station A user is authorized to use the network. (I'm told that Station B also 
 maintains a cache of recently-validated stations to reduce the number of validation calls.  Presumably there is a reasonable
 time-to-live on this caching mechanism so that invalid callsigns will not be allowed to stay on the network for long.)
 8. Station B sends an RTCP SDES packet on the RTCP channel.
@@ -77,15 +85,15 @@ text in the oNDATA packets can be changed during the course of QSO as needed.  T
 the latest oNDATA message on the bottom of the screen.
 14. At the end of the QSO, Station A sends an RTCP BYE packet.
 
-## EchoLink Server Protocol
+## EchoLink Addressing Server Protocol
 
 > [!IMPORTANT] 
-> The EchoLink Server is a shared resource maintained by 
+> The EchoLink Addressing Server is a shared resource maintained by 
 > a team of volunteers. Use it carefully.
 
-Things start off with an exchange with the EchoLink Server. The EL Server topology is described in detail in the 
+Things start off with an exchange with the EchoLink Addressing Server. The Addressing Server topology is described in detail in the 
 official EL documentation so we won't repeat this information unnecessarily. The important detail is that 
-there are ~4 active EL Servers that synchronize with each other. An EL node can interact with any one of the servers.  Known servers are naeast.echolink.org, nasouth.echolink.org, servers.echolink.org, backup.echolink.org.
+there are ~4 active Servers that synchronize with each other. An EL node can interact with any one of the servers.  Known servers are naeast.echolink.org, nasouth.echolink.org, servers.echolink.org, backup.echolink.org.
 
 Nodes initiate the interaction by opening a TCP connection to the EL Server on TCP port 5200.  Data will flow in both 
 directions on this connection. The protocol used on this TCP connection appears to be ad-hoc and is entirely 
@@ -95,7 +103,7 @@ the server sends a response to the client and then disconnects. This is similar 
 The server interaction accomplishes a few things:
 
 * Allows a node to authenticate itself and to tell the rest of the network about its status. Your callsign must 
-be pre-validated for this to work. You use your password to authenticate securely.
+be pre-validated for this to work. You use your password to authenticate securely, or leverage the challenge-response login protocol for improved security.
 * Provides the ability to download the entire directory of EchoLink nodes.
 * Provides the ability to authenticate the status of a single callsign for the purposes of approving
 inbound connection requests.
@@ -114,15 +122,12 @@ reliably.
 
 ### Notes About Password Security
 
-There appear to be two message formats supported by the EL network:
+There appear to be at least three login message formats supported by the EL Addressing Server:
 * Old/insecure, wherein the password is transmitted to the server in plain text.
+* Newer/more secure, uses a challenge-response protocol.
 * New/secure, where the server provides an RSA public key and the client encrypts its authentication request.  
 
-Unfortunately, I have not been able to figure out the details of the "secure" exchange yet so all of my research 
-is based on the insecure method. (**I'd be very happy to get some information here since it would 
-eliminate the security risk of sending clear-text passwords across the network.**)
-
-### ONLINE/BUSY Status Message Format 
+### Login Message Format (Original, less secure)
 
 The messages used to authenticate and establish the ONLINE or BUSY status are the same.  Packet format is as follows:
 
@@ -150,6 +155,98 @@ Here's an example of an ONLINE packet:
 The server response is generally something like "OK 2.6" with no header/delimiters/etc. In fact,
 I think you'll get an OK response even if the password was bad, which is good for security
 reasons.
+
+#### Notes on Status
+
+> Per Scott (N1VG): BUSY status indicates that the node has reached connection limit and can't
+accept more.  OFF-V is used to indicate that you're logging off.
+
+### Challenge-Response Login Flow
+
+_(NOTE: Thanks to Jonathan K1RFD for the information here. I have added some more detail around message formats
+and have captured some example messages.)_
+
+This login flow avoids the need to send your password in the clear.  The request is in the "Extended Format" that uses name-value pairs rather than positional parameters.  Optional parameters can 
+be omitted completely. The tag and the value for each parameter are separated by a colon and a 
+space (0x3a 0x20).  Parameters are separated using a \n (0x0a) character.  A double \n must be sent to end the 
+message.  Please see the network capture to understand the exact format.
+
+There are four steps required in the login sequence.
+
+#### Step 1: Client Sends Initial -LOGIN
+
+The client starts off by making a TCP connection on port 5200 just like all the other Addressing Server commands.  Once the connection opens,
+a message with the following forward is sent by the client:
+
+* -LOGIN
+* callsign: _(callsign)_ (Upper case, between 3 and 10 characters in length, valid ITU format)
+* status: _(status)_ (ONLINE or BUSY, see above for information on statuses)
+* client-addr: _(address)_ (This is optional and is used if running through a Relay; IP address in dotted-decimal format)
+* rtp-port: 5198
+* rtcp-port: 5199
+* client-version: _(version string)_
+* location: _(location string)_ (Only ASCII-7 characters, max length 30)
+* local-time: _(time)_ (HH:MM, exactly 5 characters)
+* code-page: _(code-page)_ (Optional)
+* os-version: _(os-version)_ (Optional)
+* sw-tag: _(sw-tag)_ (An arbitrary, persistent string that identifies the client, max 22 characters, like a GUID)
+
+Here's an example of a valid request:
+
+![](packet-9.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
+
+#### Step 2: Server Sends LOGIN-RESULT
+
+The server sends back a challenge in this format:
+
+* LOGIN-RESULT
+* result: challenge (There are also error results if the original request was bad)
+* challenge: _(challenge string)_ (This is the crucial piece of information since it is needed to form the next request from the client)
+
+As usual, the server disconnects after sending the response.
+
+Here's an example of a valid response:
+
+![](packet-10.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
+
+#### Step 3: Client Sends Second -LOGIN
+
+The client re-connects and sends back a second -LOGIN request that is exactly the same as the first 
+(see above), but includes an additional parameter that contains a special hash.  Presumably this needs to happen 
+reasonably quickly since the challenge string should have some time-dependent information in it to prevent replay attack.
+
+The hashed password is computed by concatenating the upper-cased password with the _(challenge string)_ that was returned in step 2, computing the MD5 hash of this combined string, and then converting the result of the hash to a hex string.
+
+So the response has this additional parameter:
+
+* hashed-password: _(hashed-password)_ (Which is a 32-character representation of the 128 bit MD5 hash value)
+
+Here's an example of a valid request:
+
+![](packet-11.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
+
+The added parameter with the hashed challenge/password combination can be seen at the end of the message.
+
+#### Step 4: Server Sends Second LOGIN-RESULT
+
+Finally, the server responds with success or failure as one parameter:
+
+* LOGIN-RESULT
+* result: success (Or other failure reasons are bad-password, barred, not-validated, bad-data)
+
+As usual, the server disconnects after sending the response.
+
+Here's an example of a response after a successful login:
+
+![](packet-12.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
 
 ### OFF Status Message Format
 
@@ -386,10 +483,14 @@ being sent (in hex), which spells "<01>P5198." This is likely a reference to the
 
         01 50 35 31 39 38
 
-* A type 8 item with an unknown meaning (**does anyone know?**). The values sent by the official EchoLink client are consistent 
-over time. Is see these byte being sent (in hex):
+* A type 8 item provides an indication of whether DTMF is supported by the node. The values sent by the official EchoLink client are consistent 
+over time. I see these bytes being sent (in hex), which corresponds to ASCII "D0":
 
         01 44 30
+
+> Per Scott (N1VG): The EchoLink Windows client has a DTMF keypad for sending tones over the link.  This feature is 
+enabled if the remote end has PRIV D1 set.  PRIV D0 disables the keypad. Note that nothing prevents the user from passing
+DTMF tones of their own creation. PRIV 'dpx1' seems to indicate full duplex, supported only by theBridge.
 
 Finally, padding may be added to fill up to the next 4-byte boundary (per SDES termination requirement), and then the entire packet is padded again following the RTCP requirement.
 

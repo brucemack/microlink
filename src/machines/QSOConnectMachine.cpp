@@ -381,8 +381,9 @@ uint32_t QSOConnectMachine::formatRTCPPacket_SDES(uint32_t ssrc,
     *(p++) = 0x03;
 
     *(p++) = 0x01;
+    // Sending D1 (enabled)
     *(p++) = 0x44;
-    *(p++) = 0x30;
+    *(p++) = 0x31;
 
     // SDES padding (as needed)
     for (uint32_t i = 0; i < sdesPadSize; i++)

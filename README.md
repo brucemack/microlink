@@ -99,10 +99,15 @@ specs is in the works.
 
 ![Audio Preamp Schematic](docs/preamp-1.png)
 
-The microphone part will go away once the radio is integrated. I will probably leave
+The microphone part will not be used when the radio is integrated. I will probably leave
 the speaker/amplifier in for monitoring purposes.
 
 **Audio Input**
+
+This repeats some of the circuit shown above (minus the microphone gain). This also shows
+the circuit used for carrier detect (COS). The idea is to boost up the rig's audio 
+output (U6) and then compare it to an adjustable threshold (U8).  There is no debounce
+in the analog part of the COS circuit - that is all done in software.
 
 ![MicroLink Audio Input](docs/AudioInput.png)
 
@@ -128,6 +133,8 @@ approximately 14,000 baud.
 * The RP2040 runs at 125 MHz. Only one of the two processors is used at this time.
 * The DAC runs on an I2C bus running at 400 kHz.
 * The ESP-32 is on a serial port that runs at 115,200 baud.
+* The voice prompts (all letters, numbers, and a few words) take up about 40K of 
+flash. The audio is stored in GSM full-rate format for efficiency.
 
 # Test Notes
 
@@ -139,13 +146,6 @@ the code shown in the video demonstration.
 At the moment this uses a serial console to take commands and display 
 status.
 
-## link-test-1p
-
-The test build for the -L station.  
-
-At the moment this uses a serial console to take commands and display 
-status.
-
 ## client-test-2
 
 Runs on a Windows desktop, used for testing purposes only. No TX at this time.
@@ -153,6 +153,21 @@ Runs on a Windows desktop, used for testing purposes only. No TX at this time.
 * Set environment variables EL_CALLSIGN, EL_PASSWORD, EL_FULLNAME, EL_LOCATION.
 
 # Technical/Development Notes
+
+## GSM CODEC
+
+I implemented my audio compression/decompression CODEC for the GSM 0610 Full Rate 
+protocol [by following the specification here](https://www.etsi.org/deliver/etsi_en/300900_300999/300961/08.01.01_60/en_300961v080101p.pdf).  The coding scheme is the so-called **Regular Pulse Excitation - Long Term 
+prediction - Linear Predictive Coder**, generally referred to as "RPE-LTP."  This standard was developed
+as part of the modernization of the European mobile phone system in the late 1990s and is a good
+balance between efficiency, quality, and compactness. 
+
+The European Telecommunications Standards
+Institute (ETSI) publishes a comprehensive set of test vectors containing known audio streams (PCM) and the 
+corresponding GSM encoding. I have used that test data to validate that my CODEC is 100% complaint.
+
+The smallest/cheapest microcontrollers lack hardware support for floating-point, so I built my CODEC using
+fixed point (Q15) math.  This was my first major foray into fixed-point DSP.
 
 ## Regarding Audio Smoothness
 
@@ -174,19 +189,19 @@ packet contains
 samples which each represent exactly 125 uS of audio.  From point #1 above, we already 
 know that the timing of the 160 samples within each frame is critical.  However, 
 we also need ensure that the 20 ms frames are played continuously 
-**without the slighest gap between them.** This gets into an interesting problem
+**without the slightest gap between them.** This gets into an interesting problem
 because the frames are streaming across the busy internet (not to mention 
 low-cost WIFI hardware) and may be subject to 
 small timing inconsistencies. There is simply no way to ensure that an EchoLink packet
 will arrive every 80 ms. Sometimes the gap might be 81 ms, sometimes 79 ms, etc. 
 This variability is known as "jitter" and it is a common issue in VoIP systems.
 The fix is simple: we need to delay/buffer the audio generation in the receiver 
-slighly to give ourselves a margin of error to accumulate packets. The
+slightly to give ourselves a margin of error to accumulate packets. The
 MicroLink system keeps a buffer of 16 audio packets and holds back the start 
-of audio generation (after sqelch break) until the buffer is half full.  This 
+of audio generation (after squelch break) until the buffer is half full.  This 
 means that the receive path is delayed by around 8 x 80 ms *above and beyond* any delay
-in the Internet itself. Experimential work is ongoing to make this adaptive
-so that the delay is minimized.  Of course if the buffer emplies out (i.e. several
+in the Internet itself. Experimental work is ongoing to make this adaptive
+so that the delay is minimized.  Of course if the buffer empties out (i.e. several
 slow packets in a row), all bets are off.
 
 ## Regarding the Pi Pico ADC
@@ -208,6 +223,22 @@ Per Pico datasheet:
 running under these signals and terminating at this pin. If the ADC is not used or 
 ADC performance is not critical, this pin can be connected to digital ground.
 
+## Building the Link Station
+
+This is the official binary that runs in production.
+
+(These notes are not comprehensive yet.)
+
+    git clone https://github.com/brucemack/microlink.git
+    cd microlink
+    git submodule update --remote
+    mkdir build
+    cd build
+    export PICO_BUILD=1
+    cmake ..
+    make link-main
+    openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main.elf verify reset exit"
+   
 ## Building Tests on Windows (CYGWIN)
 
 (These notes are not comprehensive yet.)
@@ -243,6 +274,9 @@ ADC performance is not critical, this pin can be connected to digital ground.
     # Used to send UDP packets.  The printf command supports non-printable.
     printf 'Hello\rWorld' | nc -u -w1 192.168.8.210 5198
 
+    # Login test
+    printf "lKC1FSZ\254\254xxx\rONLINE0.02MLZ(08:11)\rWellesley, MA USA\r" | nc -w 10 naeast.echolink.org 5200
+   
 # Rig Integration Notes
 
 ## Baofeng BF-F8HP HT
@@ -262,7 +296,7 @@ ADC performance is not critical, this pin can be connected to digital ground.
 
 This has been discussed at length in other venues.  The method of detecting the 
 receive carrier depends on the radio you are using.  Unless you are willing 
-to crack it open, there is no explicit carrier detect "signal" on the Baofent HT.  My 
+to crack it open, there is no explicit carrier detect "signal" on the Baofeng HT.  My 
 integration with this rig just listens for noise on the audio output line
 and triggers accordingly.  That seems to work just fine.  See the schematic for 
 details.
@@ -304,5 +338,7 @@ References
   - https://en.wikipedia.org/wiki/OpenVPN
   - https://www.analog.com/media/en/technical-documentation/application-notes/an-1368.pdf
   - [Information about Ferite Beads from Altium](https://resources.altium.com/sites/default/files/2022-05/Guide%20to%20Using%20Ferrite%20Beads%20in%20a%20PCB.pdf). 
+  - MD5 Implementation: https://www.cs.cmu.edu/~jcl/linux/seal/md5.c
+
 
 
