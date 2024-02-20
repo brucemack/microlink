@@ -122,7 +122,7 @@ reliably.
 
 ### Notes About Password Security
 
-There appear to be two message formats supported by the EL network:
+There appear to be at least three login message formats supported by the EL Addressing Server:
 * Old/insecure, wherein the password is transmitted to the server in plain text.
 * Newer/more secure, uses a challenge-response protocol.
 * New/secure, where the server provides an RSA public key and the client encrypts its authentication request.  
