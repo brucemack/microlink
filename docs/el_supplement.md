@@ -13,6 +13,9 @@ and he helped to fill in some places where I lacked visibility.  Please don't as
 this document has been fully reviewed and/or endorsed by Jonathan, but I will credit him in some of the 
 new sections below._
 
+_NOTE: Thanks also to Scott Miller (N1VG) who filled in a few details.  Scott's firm (Agent Data Systems, Inc.)
+sells an interesting piece of EchoLink hardware called EchoBridge.  Check it out._
+
 Notes like these may make it possible for others to start tinkering around in EchoLink space. If you do so, **please proceed
 with caution.** We all love EchoLink but none of us pay when we use it, so I can only assume that there are many volunteer hours 
 going on behind the scenes. The last thing anyone needs is an accidental denial-of-service incident on the EL network. I
@@ -153,27 +156,31 @@ The server response is generally something like "OK 2.6" with no header/delimite
 I think you'll get an OK response even if the password was bad, which is good for security
 reasons.
 
+#### Notes on Status
+
+> Per Scott (N1VG): BUSY status indicates that the node has reached connection limit and can't
+accept more.  OFF-V is used to indicate that you're logging off.
+
 ### Challenge-Response Login Flow
 
 _(NOTE: Thanks to Jonathan K1RFD for the information here. I have added some more detail around message formats
-and have captured some examples.)_
+and have captured some example messages.)_
 
-This login flow avoids the need to send the password in the clear.  The request uses a new message format 
-called the "Extended Format" that uses name-value pairs rather than positional parameters.  Optional parameters can 
+This login flow avoids the need to send your password in the clear.  The request is in the "Extended Format" that uses name-value pairs rather than positional parameters.  Optional parameters can 
 be omitted completely. The tag and the value for each parameter are separated by a colon and a 
 space (0x3a 0x20).  Parameters are separated using a \n (0x0a) character.  A double \n must be sent to end the 
 message.  Please see the network capture to understand the exact format.
 
-There are a few steps required in the login:
+There are four steps required in the login sequence.
 
 #### Step 1: Client Sends Initial -LOGIN
 
-The client starts off by making a TCP connection on port 5200 like the other Addressing Server commands.  Once the connection opens,
+The client starts off by making a TCP connection on port 5200 just like all the other Addressing Server commands.  Once the connection opens,
 a message with the following forward is sent by the client:
 
 * -LOGIN
 * callsign: _(callsign)_ (Upper case, between 3 and 10 characters in length, valid ITU format)
-* status: _(status)_ (ONLINE or BUSY)
+* status: _(status)_ (ONLINE or BUSY, see above for information on statuses)
 * client-addr: _(address)_ (This is optional and is used if running through a Relay; IP address in dotted-decimal format)
 * rtp-port: 5198
 * rtcp-port: 5199
@@ -209,8 +216,8 @@ There are some additional TCP header bytes that can be disregarded.  The actual 
 #### Step 3: Client Sends Second -LOGIN
 
 The client re-connects and sends back a second -LOGIN request that is exactly the same as the first 
-(see above), but contains an additional parameter that contains a hashed password.  Presumably this needs to happen 
-reasonably quickly since the challenge string has some time-dependent information in it to prevent replay attack.
+(see above), but includes an additional parameter that contains a special hash.  Presumably this needs to happen 
+reasonably quickly since the challenge string should have some time-dependent information in it to prevent replay attack.
 
 The hashed password is computed by concatenating the upper-cased password with the _(challenge string)_ that was returned in step 2, computing the MD5 hash of this combined string, and then converting the result of the hash to a hex string.
 
@@ -224,6 +231,8 @@ Here's an example of a valid request:
 
 There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
 
+The added parameter with the hashed challenge/password combination can be seen at the end of the message.
+
 #### Step 4: Server Sends Second LOGIN-RESULT
 
 Finally, the server responds with success or failure as one parameter:
@@ -233,7 +242,7 @@ Finally, the server responds with success or failure as one parameter:
 
 As usual, the server disconnects after sending the response.
 
-Here's an example of a valid response:
+Here's an example of a response after a successful login:
 
 ![](packet-12.png)
 
@@ -474,10 +483,14 @@ being sent (in hex), which spells "<01>P5198." This is likely a reference to the
 
         01 50 35 31 39 38
 
-* A type 8 item with an unknown meaning (**does anyone know?**). The values sent by the official EchoLink client are consistent 
-over time. Is see these byte being sent (in hex):
+* A type 8 item provides an indication of whether DTMF is supported by the node. The values sent by the official EchoLink client are consistent 
+over time. I see these bytes being sent (in hex), which corresponds to ASCII "D0":
 
         01 44 30
+
+> Per Scott (N1VG): The EchoLink Windows client has a DTMF keypad for sending tones over the link.  This feature is 
+enabled if the remote end has PRIV D1 set.  PRIV D0 disables the keypad. Note that nothing prevents the user from passing
+DTMF tones of their own creation. PRIV 'dpx1' seems to indicate full duplex, supported only by theBridge.
 
 Finally, padding may be added to fill up to the next 4-byte boundary (per SDES termination requirement), and then the entire packet is padded again following the RTCP requirement.
 

@@ -37,6 +37,55 @@ message("Desktop build!")
 add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
 endif()
 
+# ------ link-main -------------------------------------------------------------
+#
+# Runs on the RP2040
+
+add_executable(link-main
+  link-main.cpp
+  src/ATResponseProcessor.cpp
+  src/common.cpp
+  src/Prompts.cpp
+  src/Synth.cpp
+  src/contexts/ESP32CommContext.cpp
+  src/contexts/I2CAudioOutputContext.cpp
+  src/contexts/PicoAudioInputContext.cpp
+  src/machines/LinkRootMachine.cpp
+  src/machines/LogonMachine.cpp
+  src/machines/QSOAcceptMachine.cpp
+  src/machines/ValidationMachine.cpp
+  src/machines/WelcomeMachine.cpp
+  src/machines/QSOConnectMachine.cpp
+  src/machines/QSOFlowMachine.cpp
+  src/machines/WaitMachine.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+  kc1fsz-tools-cpp/src/md5/md5.c
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
+)
+
+if(DEFINED ENV{PICO_BUILD})
+pico_enable_stdio_usb(link-main 1)
+# Watch out!  Don't let the STDIO get sent to the UART
+pico_enable_stdio_uart(link-main 0)
+target_compile_definitions(link-main PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
+target_compile_definitions(link-main PRIVATE PICO_BUILD=1)
+target_link_libraries(link-main pico_stdlib hardware_i2c hardware_adc pico_multicore)
+endif()
+
+target_include_directories(link-main PRIVATE src)
+target_include_directories(link-main PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(link-main PRIVATE gsm-0610-codec/include)
+
+# TEMPORARY!
+#target_include_directories(link-test-1p PRIVATE ../mock-pico-sdk)
+
 # ------ server-test-1 -------------------------------------------------------
 
 add_executable(server-test-1
@@ -265,53 +314,6 @@ target_include_directories(client-test-2p PRIVATE src)
 target_include_directories(client-test-2p PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(client-test-2p PRIVATE gsm-0610-codec/include)
 
-# ------ link-test-1p ---------------------------------------------------------
-#
-# Runs on the RP2040
-
-add_executable(link-test-1p
-  tests/link-test-1p.cpp
-  src/ATResponseProcessor.cpp
-  src/common.cpp
-  src/Prompts.cpp
-  src/Synth.cpp
-  src/contexts/ESP32CommContext.cpp
-  src/contexts/I2CAudioOutputContext.cpp
-  src/contexts/PicoAudioInputContext.cpp
-  src/machines/LinkRootMachine.cpp
-  src/machines/LogonMachine.cpp
-  src/machines/QSOAcceptMachine.cpp
-  src/machines/ValidationMachine.cpp
-  src/machines/WelcomeMachine.cpp
-  src/machines/QSOConnectMachine.cpp
-  src/machines/QSOFlowMachine.cpp
-  src/machines/WaitMachine.cpp
-  kc1fsz-tools-cpp/src/Common.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
-  gsm-0610-codec/src/fixed_math.cpp
-  gsm-0610-codec/src/wav_util.cpp
-  gsm-0610-codec/src/Parameters.cpp
-  gsm-0610-codec/src/Encoder.cpp
-  gsm-0610-codec/src/Decoder.cpp
-)
-
-if(DEFINED ENV{PICO_BUILD})
-pico_enable_stdio_usb(link-test-1p 1)
-# Watch out!  Don't let the STDIO get sent to the UART
-pico_enable_stdio_uart(link-test-1p 0)
-target_compile_definitions(link-test-1p PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
-target_compile_definitions(link-test-1p PRIVATE PICO_BUILD=1)
-target_link_libraries(link-test-1p pico_stdlib hardware_i2c hardware_adc pico_multicore)
-endif()
-
-target_include_directories(link-test-1p PRIVATE src)
-target_include_directories(link-test-1p PRIVATE kc1fsz-tools-cpp/include)
-target_include_directories(link-test-1p PRIVATE gsm-0610-codec/include)
-
-# TEMPORARY!
-target_include_directories(link-test-1p PRIVATE ../mock-pico-sdk)
 
 # ------ make-sdes-1 -------------------------------------------------------
 
@@ -362,3 +364,15 @@ target_include_directories(audio-test-3 PRIVATE src)
 target_include_directories(audio-test-3 PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(audio-test-3 PRIVATE gsm-0610-codec/include)
 target_link_libraries(audio-test-3 winmm)
+
+# ------ login-test-1 -------------------------------------------------------
+
+add_executable(login-test-1
+  tests/login-test-1.cpp
+  src/common.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/md5/md5c.c
+)
+
+target_include_directories(login-test-1 PRIVATE src)
+target_include_directories(login-test-1 PRIVATE kc1fsz-tools-cpp/include)

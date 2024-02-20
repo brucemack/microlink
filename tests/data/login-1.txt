@@ -1,5 +1,9 @@
-$ printf "\055LOGIN\ncallsign: KC1FSZ\nstatus: ONLINE\nrtp-port: 5198\nrtcp-port: 5199\nclient-version: 0.02MLZ\nlocation: Wellesley MA USA\nlocal-time: 07:45\nsw-tag: cookie1\n\n" | nc -w 10 naeast.echolink.org 5200
+printf "\055LOGIN\ncallsign: KC1FSZ\nstatus: ONLINE\nrtp-port: 5198\nrtcp-port: 5199\nclient-version: 0.02MLZ\nlocation: Wellesley MA USA\nlocal-time: 07:45\nsw-tag: cookie1\n\n" | nc -w 10 naeast.echolink.org 5200
+
 LOGIN-RESULT
 result: challenge
 challenge: 859597ef9c5567cba23a64e14850ef40
+
+printf "\055LOGIN\ncallsign: KC1FSZ\nstatus: ONLINE\nrtp-port: 5198\nrtcp-port: 5199\nclient-version: 0.02MLZ\nlocation: Wellesley MA USA\nlocal-time: 07:45\nsw-tag: cookie1\nhashed-password: ef627472bc94091dc26bffe6d25f8405\n\n" | nc -w 10 naeast.echolink.org 5200
+
 
