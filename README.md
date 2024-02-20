@@ -99,10 +99,15 @@ specs is in the works.
 
 ![Audio Preamp Schematic](docs/preamp-1.png)
 
-The microphone part will go away once the radio is integrated. I will probably leave
+The microphone part will not be used when the radio is integrated. I will probably leave
 the speaker/amplifier in for monitoring purposes.
 
 **Audio Input**
+
+This repeats some of the circuit shown above (minus the microphone gain). This also shows
+the circuit used for carrier detect (COS). The idea is to boost up the rig's audio 
+output (U6) and then compare it to an adjustable threshold (U8).  There is no debounce
+in the analog part of the COS circuit - that is all done in software.
 
 ![MicroLink Audio Input](docs/AudioInput.png)
 
@@ -128,6 +133,8 @@ approximately 14,000 baud.
 * The RP2040 runs at 125 MHz. Only one of the two processors is used at this time.
 * The DAC runs on an I2C bus running at 400 kHz.
 * The ESP-32 is on a serial port that runs at 115,200 baud.
+* The voice prompts (all letters, numbers, and a few words) take up about 40K of 
+flash. The prompts are stored in GSM format for efficiency.
 
 # Test Notes
 
