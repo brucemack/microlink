@@ -13,7 +13,7 @@ and he helped to fill in some places where I lacked visibility.  Please don't as
 this document has been fully reviewed and/or endorsed by Jonathan, but I will credit him in some of the 
 new sections below._
 
-_NOTE: Thanks also to Scott Miller (N1VG) who filled in a few details.  Scott's firm (Agent Data Systems, Inc.)
+_NOTE: Thanks also to Scott Miller (N1VG) who filled in a few details.  Scott's firm (Argent Data Systems, Inc.)
 sells an interesting piece of EchoLink hardware called EchoBridge.  Check it out._
 
 Notes like these may make it possible for others to start tinkering around in EchoLink space. If you do so, **please proceed
