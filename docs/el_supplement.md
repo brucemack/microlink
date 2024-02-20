@@ -8,6 +8,11 @@ notes are based on examinations of EL packet captures and a review of the variou
 am not affiliated with the EchoLink team and I have no inside information.  Please take these notes for what they are 
 worth - just one random ham's observations.  Do your own research.
 
+_NOTE from 20-Feb-2024: I later received some very helpful comments/input from the EchoLink creator Jonathan Taylor (K1RFD), 
+and he helped to fill in some places where I lacked visibility.  Please don't assume that 
+this document has been fully reviewed and/or endorsed by Jonathan, but I will credit him in some of the 
+new sections below._
+
 Notes like these may make it possible for others to start tinkering around in EchoLink space. If you do so, **please proceed
 with caution.** We all love EchoLink but none of us pay when we use it, so I can only assume that there are many volunteer hours 
 going on behind the scenes. The last thing anyone needs is an accidental denial-of-service incident on the EL network. I
@@ -77,15 +82,15 @@ text in the oNDATA packets can be changed during the course of QSO as needed.  T
 the latest oNDATA message on the bottom of the screen.
 14. At the end of the QSO, Station A sends an RTCP BYE packet.
 
-## EchoLink Server Protocol
+## EchoLink Addressing Server Protocol
 
 > [!IMPORTANT] 
-> The EchoLink Server is a shared resource maintained by 
+> The EchoLink Addressing Server is a shared resource maintained by 
 > a team of volunteers. Use it carefully.
 
-Things start off with an exchange with the EchoLink Server. The EL Server topology is described in detail in the 
+Things start off with an exchange with the EchoLink Addressing Server. The Addressing Server topology is described in detail in the 
 official EL documentation so we won't repeat this information unnecessarily. The important detail is that 
-there are ~4 active EL Servers that synchronize with each other. An EL node can interact with any one of the servers.  Known servers are naeast.echolink.org, nasouth.echolink.org, servers.echolink.org, backup.echolink.org.
+there are ~4 active Servers that synchronize with each other. An EL node can interact with any one of the servers.  Known servers are naeast.echolink.org, nasouth.echolink.org, servers.echolink.org, backup.echolink.org.
 
 Nodes initiate the interaction by opening a TCP connection to the EL Server on TCP port 5200.  Data will flow in both 
 directions on this connection. The protocol used on this TCP connection appears to be ad-hoc and is entirely 
@@ -95,7 +100,7 @@ the server sends a response to the client and then disconnects. This is similar 
 The server interaction accomplishes a few things:
 
 * Allows a node to authenticate itself and to tell the rest of the network about its status. Your callsign must 
-be pre-validated for this to work. You use your password to authenticate securely.
+be pre-validated for this to work. You use your password to authenticate securely, or leverage the challenge-response login protocol for improved security.
 * Provides the ability to download the entire directory of EchoLink nodes.
 * Provides the ability to authenticate the status of a single callsign for the purposes of approving
 inbound connection requests.
@@ -116,13 +121,10 @@ reliably.
 
 There appear to be two message formats supported by the EL network:
 * Old/insecure, wherein the password is transmitted to the server in plain text.
+* Newer/more secure, uses a challenge-response protocol.
 * New/secure, where the server provides an RSA public key and the client encrypts its authentication request.  
 
-Unfortunately, I have not been able to figure out the details of the "secure" exchange yet so all of my research 
-is based on the insecure method. (**I'd be very happy to get some information here since it would 
-eliminate the security risk of sending clear-text passwords across the network.**)
-
-### ONLINE/BUSY Status Message Format 
+### Login Message Format (Original, less secure)
 
 The messages used to authenticate and establish the ONLINE or BUSY status are the same.  Packet format is as follows:
 
@@ -150,6 +152,92 @@ Here's an example of an ONLINE packet:
 The server response is generally something like "OK 2.6" with no header/delimiters/etc. In fact,
 I think you'll get an OK response even if the password was bad, which is good for security
 reasons.
+
+### Challenge-Response Login Flow
+
+_(NOTE: Thanks to Jonathan K1RFD for the information here. I have added some more detail around message formats
+and have captured some examples.)_
+
+This login flow avoids the need to send the password in the clear.  The request uses a new message format 
+called the "Extended Format" that uses name-value pairs rather than positional parameters.  Optional parameters can 
+be omitted completely. The tag and the value for each parameter are separated by a colon and a 
+space (0x3a 0x20).  Parameters are separated using a \n (0x0a) character.  A double \n must be sent to end the 
+message.  Please see the network capture to understand the exact format.
+
+There are a few steps required in the login:
+
+#### Step 1: Client Sends Initial -LOGIN
+
+The client starts off by making a TCP connection on port 5200 like the other Addressing Server commands.  Once the connection opens,
+a message with the following forward is sent by the client:
+
+* -LOGIN
+* callsign: _(callsign)_ (Upper case, between 3 and 10 characters in length, valid ITU format)
+* status: _(status)_ (ONLINE or BUSY)
+* client-addr: _(address)_ (This is optional and is used if running through a Relay; IP address in dotted-decimal format)
+* rtp-port: 5198
+* rtcp-port: 5199
+* client-version: _(version string)_
+* location: _(location string)_ (Only ASCII-7 characters, max length 30)
+* local-time: _(time)_ (HH:MM, exactly 5 characters)
+* code-page: _(code-page)_ (Optional)
+* os-version: _(os-version)_ (Optional)
+* sw-tag: _(sw-tag)_ (An arbitrary, persistent string that identifies the client, max 22 characters, like a GUID)
+
+Here's an example of a valid request:
+
+![](packet-9.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
+
+#### Step 2: Server Sends LOGIN-RESULT
+
+The server sends back a challenge in this format:
+
+* LOGIN-RESULT
+* result: challenge (There are also error results if the original request was bad)
+* challenge: _(challenge string)_ (This is the crucial piece of information since it is needed to form the next request from the client)
+
+As usual, the server disconnects after sending the response.
+
+Here's an example of a valid response:
+
+![](packet-10.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
+
+#### Step 3: Client Sends Second -LOGIN
+
+The client re-connects and sends back a second -LOGIN request that is exactly the same as the first 
+(see above), but contains an additional parameter that contains a hashed password.  Presumably this needs to happen 
+reasonably quickly since the challenge string has some time-dependent information in it to prevent replay attack.
+
+The hashed password is computed by concatenating the upper-cased password with the _(challenge string)_ that was returned in step 2, computing the MD5 hash of this combined string, and then converting the result of the hash to a hex string.
+
+So the response has this additional parameter:
+
+* hashed-password: _(hashed-password)_ (Which is a 32-character representation of the 128 bit MD5 hash value)
+
+Here's an example of a valid request:
+
+![](packet-11.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
+
+#### Step 4: Server Sends Second LOGIN-RESULT
+
+Finally, the server responds with success or failure as one parameter:
+
+* LOGIN-RESULT
+* result: success (Or other failure reasons are bad-password, barred, not-validated, bad-data)
+
+As usual, the server disconnects after sending the response.
+
+Here's an example of a valid response:
+
+![](packet-12.png)
+
+There are some additional TCP header bytes that can be disregarded.  The actual message starts at the red mark.
 
 ### OFF Status Message Format
 
