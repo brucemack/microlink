@@ -134,7 +134,7 @@ approximately 14,000 baud.
 * The DAC runs on an I2C bus running at 400 kHz.
 * The ESP-32 is on a serial port that runs at 115,200 baud.
 * The voice prompts (all letters, numbers, and a few words) take up about 40K of 
-flash. The prompts are stored in GSM format for efficiency.
+flash. The audio is stored in GSM full-rate format for efficiency.
 
 # Test Notes
 
@@ -181,19 +181,19 @@ packet contains
 samples which each represent exactly 125 uS of audio.  From point #1 above, we already 
 know that the timing of the 160 samples within each frame is critical.  However, 
 we also need ensure that the 20 ms frames are played continuously 
-**without the slighest gap between them.** This gets into an interesting problem
+**without the slightest gap between them.** This gets into an interesting problem
 because the frames are streaming across the busy internet (not to mention 
 low-cost WIFI hardware) and may be subject to 
 small timing inconsistencies. There is simply no way to ensure that an EchoLink packet
 will arrive every 80 ms. Sometimes the gap might be 81 ms, sometimes 79 ms, etc. 
 This variability is known as "jitter" and it is a common issue in VoIP systems.
 The fix is simple: we need to delay/buffer the audio generation in the receiver 
-slighly to give ourselves a margin of error to accumulate packets. The
+slightly to give ourselves a margin of error to accumulate packets. The
 MicroLink system keeps a buffer of 16 audio packets and holds back the start 
-of audio generation (after sqelch break) until the buffer is half full.  This 
+of audio generation (after squelch break) until the buffer is half full.  This 
 means that the receive path is delayed by around 8 x 80 ms *above and beyond* any delay
-in the Internet itself. Experimential work is ongoing to make this adaptive
-so that the delay is minimized.  Of course if the buffer emplies out (i.e. several
+in the Internet itself. Experimental work is ongoing to make this adaptive
+so that the delay is minimized.  Of course if the buffer empties out (i.e. several
 slow packets in a row), all bets are off.
 
 ## Regarding the Pi Pico ADC
@@ -269,7 +269,7 @@ ADC performance is not critical, this pin can be connected to digital ground.
 
 This has been discussed at length in other venues.  The method of detecting the 
 receive carrier depends on the radio you are using.  Unless you are willing 
-to crack it open, there is no explicit carrier detect "signal" on the Baofent HT.  My 
+to crack it open, there is no explicit carrier detect "signal" on the Baofeng HT.  My 
 integration with this rig just listens for noise on the audio output line
 and triggers accordingly.  That seems to work just fine.  See the schematic for 
 details.
