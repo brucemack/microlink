@@ -47,7 +47,7 @@ that I would recommend looking at:
 ## High-Level Protocol Flow Notes
 
 As has been documented in several places, there are two distinct protocol flows that make up the EL system:
-* A client/server interaction with one of the EchoLink servers (TCP port 5200).
+* A client/server interaction with one of the EchoLink Addressing Servers (TCP port 5200).
 * A peer-to-peer "QSO" interaction between EchoLink nodes:
   - UDP port 5198 is used to carry audio traffic (and a bit of out-of-band texting) using the RTP protocol.
   - UDP port 5199 is used to carry session control information using something very similar to the RTCP protocol.
@@ -60,9 +60,9 @@ and "servers" for most in this flow.  Instead I will use the terms "Station A" a
 Station A is the originator of the call. From tracing a QSO using the official EchoLink client I can see the 
 following flow pattern:
 
-1. Station A logs into the network by interacting with the EchoLink Server over TCP port 5200.  This 
+1. Station A logs into the network by interacting with the EchoLink Addressing Server over TCP port 5200.  This 
 step may not need to happen on every QSO since the logged-on status persists for some time.
-2. Station A requests the directory information from the EchoLink Server to determine the 
+2. Station A requests the directory information from the Addressing Server to determine the 
 status of the target node and its current IP address.
 3. Station A sends an RTCP SDES packet with the identification information to Station B on the RTCP port, **but using 
 the socket that is bound to the RTP port on the local side!**.  I suspect we need to originate data using both local-side 
@@ -71,7 +71,7 @@ UDP ports in order for routers/firewalls to forward return traffic from Station 
 5. Station A sends an oNDATA packet to the RTP port of Station B.
 6. Station A appears to wait at this point.  If nothing happens after 5 seconds then a retry happens by returning to step #3.
 7. Station B uses the call-sign provided in the RTCP SDES message sent in step 4 to contact
-the EchoLink Server and validate that the Station A user is authorized to use the network. (I'm told that Station B also 
+the EchoLink Addressing Server and validate that the Station A user is authorized to use the network. (I'm told that Station B also 
 maintains a cache of recently-validated stations to reduce the number of validation calls.  Presumably there is a reasonable
 time-to-live on this caching mechanism so that invalid callsigns will not be allowed to stay on the network for long.)
 8. Station B sends an RTCP SDES packet on the RTCP channel.
