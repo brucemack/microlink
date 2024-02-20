@@ -49,19 +49,26 @@ ease of use with radios (link mode) and/or direct integration with repeaters.
 This project required an in-depth examination of how the EchoLink protocol works. [The notes
 I created during this analysis are located here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
 
+The hardware is used in two configurations:
+* A client, with microphone and speaker for connecting to EchoLink conferences, links, and repeaters.
+* A link station, with integration to a radio to allow remote access.
+
 ## Current Parts List (HW)
 
 * The main processor is a Pi Pico (RP2040) development board.  $4.00 on DigiKey.
 * Internet connectivity currently comes over WIFI using an ESP-32-WROOM development 
-board. $5.00 on Amazon. Work
+board. $5.00 on Amazon. Work 
 is underway to provide a 4G cellular data option using a SIM7600 module. More on 
 this to follow.
 * The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
-filter.  The microphone part needs work.
+filter.  The microphone part needs work. The next revision will use a TLV9161 op amp for the 
+microphone pre-amp to reduce noise.
 * Audio input sampling uses the integrated ADC in the RP2040.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
 * The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
+* Isolation transformers and optocouplers are used to eliminate the need for common ground 
+between the radio and the MicroLink system. This helps to reduce digital noise.
 * The radio link is a Baofeng BF-F8HP.
 
 ## Current Parts List (SW)
@@ -82,7 +89,9 @@ Here's a picture of the parts on the bench so you can tell what you're looking a
 
 MicroLink identifies itself using a version string of **0.02MLZ**.
 
-## Microphone Pre-Amp
+## Analog Schematics
+
+**Microphone Pre-Amp**
 
 Performance audio circuits are not my forte.  The quality is improving with each 
 iteration.  This is what I built originally, but a new version using parts with better noise 
@@ -93,11 +102,13 @@ specs is in the works.
 The microphone part will go away once the radio is integrated. I will probably leave
 the speaker/amplifier in for monitoring purposes.
 
-## Analog Schematic
+**Audio Input**
 
-Audio input:
+![MicroLink Audio Input](docs/AudioInput.png)
 
-Audio output:
+**Audio Output**
+
+![MicroLink Audio Output](docs/AudioOutput.png)
 
 ## Cellular Data Interface
 
