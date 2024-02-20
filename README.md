@@ -163,15 +163,18 @@ Runs on a Windows desktop, used for testing purposes only. No TX at this time.
 
 ## GSM CODEC
 
-I implemented my CODEC for the GSM 0610 Full Rate 
+I implemented my audio compression/decompression CODEC for the GSM 0610 Full Rate 
 protocol [by following the specification here](https://www.etsi.org/deliver/etsi_en/300900_300999/300961/08.01.01_60/en_300961v080101p.pdf).  The coding scheme is the so-called **Regular Pulse Excitation - Long Term 
-prediction - Linear Predictive Coder**, generally referred to as "RPE-LTP."  This code was developed
+prediction - Linear Predictive Coder**, generally referred to as "RPE-LTP."  This standard was developed
 as part of the modernization of the European mobile phone system in the late 1990s and is a good
 balance between efficiency, quality, and compactness. 
 
 The European Telecommunications Standards
 Institute (ETSI) publishes a comprehensive set of test vectors containing known audio streams (PCM) and the 
 corresponding GSM encoding. I have used that test data to validate that my CODEC is 100% complaint.
+
+The smallest/cheapest microcontrollers lack hardware support for floating-point, so I built my CODEC using
+fixed point (Q15) math.  This was my first major foray into fixed-point DSP.
 
 ## Regarding Audio Smoothness
 
