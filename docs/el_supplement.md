@@ -589,7 +589,11 @@ RTP audio packets. These are sent by the client every ~10 seconds which suggests
 These packets do not conform to any RTP standard format and contain no header information.  They appear to be plain text with 
 tokens delimited with 0x0d (\r).  The text is also null terminated.  The official EchoLink client also includes SSRC information at the end of the packet, but the ECHOTEST station does not.
 
-For example:
+Per Jonathan K1RFD: if the first byte of this text is '\r', OR the first four characters are "CONF", it's a 
+"station information" text packet, meant to be displayed to the client, and potentially updated during the 
+QSO.  Any other prefix denotes a "text chat" message, to be displayed in a different area.
+
+Here's an example message:
 
 ![](packet-4.png)
 
@@ -668,6 +672,10 @@ actually happen, so it might not be worth implementing.
 
 (To follow)
 
+> _Per Jonathan K1RFD: In the EchoLink software, it's a random number which remains constant during the QSO. 
+Its reason-for-being is to detect and discard packets which come back to the sender, indicating a 
+conferencing loop._
+
 ## GSM CODEC Notes
 
 EchoLink uses GSM 06.10 "full-rate" audio coding. The complete description can be found in the [European Telecommunications Standards Institute specification document](https://www.etsi.org/deliver/etsi_EN/300900_300999/300961/08.00.01_40/en_300961v080001o.pdf).
@@ -683,7 +691,7 @@ Note that the official EchoLink client is smart enough to stop generating RTP fr
 during periods of silence.  So the receiver needs to keep careful track of the 
 decode frequency and not drive the audio decoding rate by the arrival of packets.  
 
-## EchoLink OPEN/OVER Protocol
+## EchoLink PING/OPEN/OVER Protocol
 
 (_Research in process, not complete._)
 
@@ -692,7 +700,7 @@ from behind a firewall. I have used explicit port forwarding on my implementatio
 things work find without using this protocol.)
 
 One of the challenges of running a peer-to-peer network is the limitation on the 
-abilty to pass packets
+ability to pass packets
 through firewalls. This is particularly relevant given the fact that the majority of EchoLink
 stations are likely sitting behind commodity cable/telco routers that block all  
 inbound traffic, for obvious reasons. As described above, EchoLink nodes need to pass
@@ -709,14 +717,14 @@ There may still be situations where this doesn't work, but those are less common
 Understanding this mechanism requires an understanding of dynamic firewall capabilities known 
 as [Stateful Packet Inspection](https://en.wikipedia.org/wiki/Stateful_firewall) and/or [UDP Hole Punching](https://en.wikipedia.org/wiki/UDP_hole_punching). A full explanation is beyond the scope of this
 document, but the key thing to understand is: on most "normal" internet routers **sending a UDP
-packet to a remote address will automatically grant tempoary permission for the return trip.** 
+packet to a remote address will automatically grant temporary permission for the return trip.** 
 This temporary permission is sometimes called a "UDP hole" because it enables a traffic pattern
 that would not normally be possible. The hole being 
 described here includes (a) a firewall opening to allow return traffic **on the same port** and (b) the
 routing entries needed to get the return traffic back to the right place on your LAN.
 
 The UDP hole is transient and will only persist as long as the network path is actively being 
-used. Once a path becomes innactive the UDP hole is closed.
+used. Once a path becomes inactive the UDP hole is closed.
 
 EchoLink leverages this feature to reduce the need for users to manually create firewall rules
 and/or port forwarding policies. 
@@ -767,6 +775,47 @@ A standard RTCP header is sent which matches the RTCP-RR format.  Following the 
 * Four bytes: the word "OVER"
 
 ![](packet-7.png)
+
+### Notes From Jonathan K1RFD on PING/OPEN/OVER
+
+The EchoLink apps use some additional UDP messages to behave in a more "firewall-friendly" way. This is specifically 
+to handle the case of at least one peer being behind a NAT router which has not been configured for port forwarding.  
+(This technique works only for NAT which is not also doing PAT.)  It works similarly to one function of TURN servers.
+
+Whenever the app is connected to an addressing server, it also begins periodically sending RTCP packets to that 
+same server, called PING, with an SDES item like this:
+
+LOC: "PING"
+CNAME: (my) callsign
+
+The addressing server responds with the same PING packet back to the app, which ignores it.  The purpose of this 
+communication is to keep a "flow" open in the NAT router, allowing the addressing server to send a future, unsolicited 
+OPEN packet, when it detects that someone is trying to connect to this node.
+
+The OPEN packet is initiated by a remote client (peer A) when it is trying to establish a connection to peer B.  
+Peer A sends an RTCP packet to one of the addressing servers (any one) with an SDES item like this:
+
+LOC: "OPEN"
+CNAME: Peer A's callsign
+Email: Dotted IP address of Peer B
+
+The worldwide cluster of addressing servers replicates this packet amongst themselves, and whichever one Peer B is 
+connected to sends a copy of it directly to Peer B over the established "flow", substituting Peer A's address in 
+the "Email" item slot.  (Note that neither Peer A nor Peer B is likely to know their own public IP address, but the 
+addressing servers know this.)
+
+Peer B responds by sending a pair of packets directly to Peer A, since it now knows Peer A's address and its desire to 
+start a QSO.  It sends both an RTCP packet and an RTP text packet to ensure that a new flow is opened over both 
+ports.  The format of these packets is unimportant, since they are only for establishing a router flow, and Peer B 
+will ignore them, but the EchoLink app uses these to avoid interfering with other functions:
+
+RTCP: Payload type 201 (empty RR)
+      Payload type 204 (application-defined packet "OVER")    
+
+RTP: Four bytes of data: 0x6D, 0x63, 0x41, 0x64
+
+Peer A sends the usual RTCP ID packet and RTP text packet directly to Peer B, which can now receive them 
+since flows had been opened, and the QSO begins.
 
 ## EchoLink Proxy Protocol Notes
 
