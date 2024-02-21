@@ -223,6 +223,7 @@ bool I2CAudioOutputContext::run() {
 
     // Manage squelch off
     if (_squelchOpen && 
+        (time_ms() > _lastAudioTime) &&
         (time_ms() - _lastAudioTime) > SQUELCH_INTERVAL_MS ) {
         _squelchOpen = false;
         _userInfo->setSquelchOpen(_squelchOpen);

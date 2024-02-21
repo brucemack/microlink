@@ -65,7 +65,9 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "machines/WelcomeMachine.h"
 
 #include "../tests/TestUserInfo.h"
+
 #include "Synth.h"
+#include "RXMonitor.h"
 
 // ===============
 // LEFT SIDE PINS 
@@ -110,7 +112,6 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #define U_STOP_BITS 1
 #define U_PARITY UART_PARITY_NONE
 
-#define PTT_DEBOUNCE_INTERVAL_MS (250)
 #define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
 
 #define TX_TIMEOUT_MS (90 * 1000)
@@ -235,10 +236,14 @@ int main(int, const char**) {
 
     LinkRootMachine rm(&ctx, &info, &audioOutContext);
 
+    RXMonitor rxMonitor;
+
     // Cross-connects
     info.setAudioOut(&audioOutContext);
-    audioInContext.setSink(&rm);
+    audioInContext.setSink(&rxMonitor);
     ctx.setEventProcessor(&rm);
+    rxMonitor.setSink(&rm);
+    rxMonitor.setInfo(&info);
 
     // TODO: Move configuration out 
     rm.setServerName(HostName("naeast.echolink.org"));
@@ -262,15 +267,14 @@ int main(int, const char**) {
     uint32_t longCycleCounter = 0;
     PicoPerfTimer taskTimer;
 
-    bool pttState = false;
-    uint32_t lastPttTransition = 0;
-    bool lastRigCos = false;
     bool rigCosState = false;
-    uint32_t lastRigCosTransition = 0;
+    uint32_t lastRigCosDetection = 0;
     bool rigKeyState = false;
     uint32_t lastRigKeyTransitionTime = 0;
     uint32_t rigKeyLockoutTime = 0;
     uint32_t rigKeyLockoutCount = 0;
+
+    audioInContext.setADCEnabled(true);
 
     // Start the state machine
     rm.start();
@@ -282,21 +286,12 @@ int main(int, const char**) {
 
         // ----- External Controls ------------------------------------------
 
-        bool ptt = !gpio_get(PTT_PIN);
-        // Simple de-bounce
-        if (ptt != pttState && 
-            time_ms() > (lastPttTransition + PTT_DEBOUNCE_INTERVAL_MS)) {
-            lastPttTransition = time_ms();
-            pttState = ptt;
-            audioInContext.setPtt(pttState);
-        }
-
         bool rigCos = gpio_get(RIG_COS_PIN);
         // Look for activity on the line (not debounced)
-        if (rigCos != lastRigCos) {
-            lastRigCosTransition = time_ms();
+        if (rigCos) {
+            lastRigCosDetection = time_ms();
+            rm.radioCarrierDetect();
         }
-        lastRigCos = rigCos;
 
         // If the carrier is currently not detected
         if (rigCosState == false) {
@@ -306,10 +301,10 @@ int main(int, const char**) {
                     info.getMsSinceLastSquelchClose() < 500) {
                 } 
                 else {
-                    cout << "COS on" << endl;
+                    info.setStatus("Rig COS on");
                     rigCosState = true;
                     if (rm.isInQSO()) {
-                        audioInContext.setPtt(rigCosState);
+                        rxMonitor.setForward(rigCosState);
                     }
                 }
             }
@@ -318,18 +313,18 @@ int main(int, const char**) {
         else {
             // The HI->LO transition is fully debounced
             if (!rigCos && 
-                (time_ms() - lastRigCosTransition) > RIG_COS_DEBOUNCE_INTERVAL_MS) {
+                (time_ms() - lastRigCosDetection) > RIG_COS_DEBOUNCE_INTERVAL_MS) {
                 if (!rigCos) {
-                    cout << "COS off" << endl;
+                    info.setStatus("Rig COS off");
                 }
                 rigCosState = false;
-                audioInContext.setPtt(rigCosState);
+                rxMonitor.setForward(rigCosState);
             }
         }
 
         // ----- Indicator Lights --------------------------------------------
 
-        if (audioInContext.getPtt() || 
+        if (rxMonitor.getForward() || 
             (info.getSquelch() && (time_ms() % 1024) > 512)) {
             gpio_put(KEY_LED_PIN, 1);
         } 
@@ -368,6 +363,7 @@ int main(int, const char**) {
             }
         }
 
+        audioInContext.setADCEnabled(!rigKeyState);
         gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
 
         // ----- Serial Commands ---------------------------------------------
@@ -383,9 +379,6 @@ int main(int, const char**) {
             else if (c == 'q') {
                 break;
             } 
-            else if (c == ' ') {
-                audioInContext.setPtt(!audioInContext.getPtt());
-            }
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }

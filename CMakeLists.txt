@@ -47,6 +47,7 @@ add_executable(link-main
   src/common.cpp
   src/Prompts.cpp
   src/Synth.cpp
+  src/RXMonitor.cpp
   src/contexts/ESP32CommContext.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp

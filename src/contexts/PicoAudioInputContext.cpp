@@ -64,8 +64,7 @@ void __not_in_flash_func(PicoAudioInputContext::_adc_irq_handler) () {
 }
 
 PicoAudioInputContext::PicoAudioInputContext() 
-:   _keyed(false),
-    _statsPtr(0) {
+:   _statsPtr(0) {
 
     if (INSTANCE != 0) {
         panic("Init error");
@@ -74,13 +73,13 @@ PicoAudioInputContext::PicoAudioInputContext()
     INSTANCE = this;
 }
 
-void PicoAudioInputContext::setPtt(bool keyed) { 
+void PicoAudioInputContext::setADCEnabled(bool en) { 
 
-    _keyed = keyed; 
+    _adcEnabled = en; 
 
     // Turn on/off the ADC to minimize interrupt activity when not 
     // actually transmitting.
-    adc_run(_keyed);
+    adc_run(_adcEnabled);
 }
 
 void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
@@ -183,17 +182,11 @@ bool PicoAudioInputContext::run() {
         // (This is optional)
         _updateStats(_audioInBuf[slot]);
         
-        if (_keyed) {
-            // Pull down a 4xframe and try to move it into the transmitter
-            bool accepted = _sink->play(_audioInBuf[slot]);
-            if (accepted) {
-                // Move the read pointer forward (we already know that 
-                // the write counter is larger than the read counter)
-                _audioInBufReadCount.inc();
-            }
-        } 
-        // If the transmitter isn't keyed then just discard the input audio
-        else {
+        // Pull down a 4xframe and try to move it into the transmitter
+        bool accepted = _sink->play(_audioInBuf[slot]);
+        if (accepted) {
+            // Move the read pointer forward (we already know that 
+            // the write counter is larger than the read counter)
             _audioInBufReadCount.inc();
         }
     }

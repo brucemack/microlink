@@ -21,6 +21,8 @@
 #include <cstdint>
 #include "Prompts.h"
 
+namespace kc1fsz {
+
 Sound SoundMeta[40] = {
 {'A',0, 27}, 
 {'B',27, 23}, 
@@ -1145,3 +1147,4 @@ void Sound::getGSMFrame(int f, uint8_t* gsmData) {
     }
 }
 
+}

@@ -40,6 +40,10 @@ int LinkRootMachine::traceLevel = 0;
 
 static const uint32_t ACCEPT_TIMEOUT_MS = 5 * 60 * 1000;
 
+// This is how long the radio needs to be silent before we will start
+// using the welcome message.
+static const uint32_t QUIET_INTERVAL_MS = 2 * 60 * 1000;
+
 LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
 :   _state(IDLE),
@@ -110,6 +114,15 @@ void LinkRootMachine::processEvent(const Event* ev) {
     else if (_state == State::ACCEPTING) {
         if (isDoneAfterEvent(_acceptMachine, ev)) {
             if (_acceptMachine.isGood()) {
+                // The connect process establishes the callsign
+                _welcomeMachine.setCallSign(_acceptMachine.getRemoteCallSign());
+                // The connect process establishes UDP communication paths, 
+                // so transfer them over to the QSO machine.
+                _qsoMachine.setRTCPChannel(_acceptMachine.getRTCPChannel());
+                _qsoMachine.setRTPChannel(_acceptMachine.getRTPChannel());
+                _qsoMachine.setSSRC(_acceptMachine.getSSRC());
+                _qsoMachine.setPeerAddress(_acceptMachine.getRemoteAddress());
+                // Pass information over to the validation machine
                 _validationMachine.setRequestCallSign(_acceptMachine.getRemoteCallSign());
                 _validationMachine.setRequestAddr(_acceptMachine.getRemoteAddress());
                 _validationMachine.start();
@@ -128,9 +141,15 @@ void LinkRootMachine::processEvent(const Event* ev) {
     else if (_state == State::IN_VALIDATION) {
         if (isDoneAfterEvent(_validationMachine, ev)) {
             if (_validationMachine.isGood()) {
-                _welcomeMachine.setCallSign(_acceptMachine.getRemoteCallSign());
-                _welcomeMachine.start();
-                _state = State::IN_WELCOME;
+                // We only play the welcome message if the radio is quiet
+                if ((time_ms() - _lastRadioCarrierDetect) > QUIET_INTERVAL_MS) {
+                    _welcomeMachine.start();
+                    _state = State::IN_WELCOME;
+                } else {
+                    _userInfo->setStatus("Skipping welcome, radio active");
+                    _qsoMachine.start();
+                    _state = State::QSO;
+                }
             } 
             else {
                 // Back to square 1
@@ -141,12 +160,6 @@ void LinkRootMachine::processEvent(const Event* ev) {
     else if (_state == State::IN_WELCOME) {
         if (isDoneAfterEvent(_welcomeMachine, ev)) {
             if (_welcomeMachine.isGood()) {
-                // The connect process establishes UDP communication paths, 
-                // so transfer them over to the QSO machine.
-                _qsoMachine.setRTCPChannel(_acceptMachine.getRTCPChannel());
-                _qsoMachine.setRTPChannel(_acceptMachine.getRTPChannel());
-                _qsoMachine.setSSRC(_acceptMachine.getSSRC());
-                _qsoMachine.setPeerAddress(_acceptMachine.getRemoteAddress());
                 _qsoMachine.start();
                 _state = QSO;
             } 

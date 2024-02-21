@@ -62,6 +62,12 @@ public:
     */
     bool requestCleanStop();
 
+    /** 
+     * Used to tell the state machine that there is activity being
+     * heard on the radio receiver.
+     */
+    void radioCarrierDetect() { _lastRadioCarrierDetect = time_ms(); }
+
     // ----- From StateMachine ------------------------------------------------
 
     virtual void processEvent(const Event* event);
@@ -113,6 +119,8 @@ private:
     ValidationMachine _validationMachine;
     WelcomeMachine _welcomeMachine;
     QSOFlowMachine _qsoMachine;
+
+    uint32_t _lastRadioCarrierDetect = 0;
 };
 
 }

@@ -18,28 +18,30 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _Prompts_h
-#define _Prompts_h
-
 #include <cstdint>
+
+#include "RXMonitor.h"
 
 namespace kc1fsz {
 
-struct Sound {
-
-    char code;
-    int start;
-    uint32_t length;
-
-    uint32_t getFrameCount() const { return length; }
-    
-    void getGSMFrame(int f, uint8_t* gsmData);
-
-    static int findSound(char code);
-};
-
-extern Sound SoundMeta[];
-
+RXMonitor::RXMonitor()
+{
 }
 
-#endif
+bool RXMonitor::play(const int16_t* frame) {
+    if (_keyed) {
+        if (_sink) {
+            return _sink->play(frame);
+        } else {
+            return true;
+        }
+    } else {
+        return true;
+    }
+}
+
+bool RXMonitor::run() {    
+    return false;
+}
+
+}

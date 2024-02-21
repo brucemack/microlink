@@ -47,8 +47,8 @@ public:
 
     void setSink(AudioProcessor *sink) { _sink = sink; }
 
-    void setPtt(bool keyed);
-    bool getPtt() const { return _keyed; }
+    void setADCEnabled(bool en);
+    
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
     int16_t getGain() const { return _gain; }
     void setGain(int16_t g) { _gain = g; }
@@ -98,7 +98,7 @@ private:
     // of 0.5.
     int16_t _gain = 16;
 
-    bool _keyed = false;
+    bool _adcEnabled = false;
 
     // Used for capturing audio statistics
     struct FrameStats {
