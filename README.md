@@ -104,7 +104,7 @@ the speaker/amplifier in for monitoring purposes.
 
 **Audio Input**
 
-This repeats some of the circuit shown above (minus the microphone gain). This also shows
+This is the circuit used when connecting directly to a radio's AF output (i.e. no microphone). This repeats some of the circuit shown above (but minus the high gain). This also shows
 the circuit used for carrier detect (COS). The idea is to boost up the rig's audio 
 output (U6) and then compare it to an adjustable threshold (U8).  There is no debounce
 in the analog part of the COS circuit - that is all done in software.
@@ -112,6 +112,8 @@ in the analog part of the COS circuit - that is all done in software.
 ![MicroLink Audio Input](docs/AudioInput.png)
 
 **Audio Output**
+
+This is a work in process. The performance on the low end of the audio spectrum is not good yet.
 
 ![MicroLink Audio Output](docs/AudioOutput.png)
 
@@ -339,6 +341,7 @@ References
   - https://www.analog.com/media/en/technical-documentation/application-notes/an-1368.pdf
   - [Information about Ferite Beads from Altium](https://resources.altium.com/sites/default/files/2022-05/Guide%20to%20Using%20Ferrite%20Beads%20in%20a%20PCB.pdf). 
   - MD5 Implementation: https://www.cs.cmu.edu/~jcl/linux/seal/md5.c
-
+  - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
+  
 
 
