@@ -97,12 +97,9 @@ private:
     uint32_t _lastAudioTime;
 
     // Tone features
-    static const uint32_t _toneBufSize = 20;
-    int16_t _toneBuf[_toneBufSize];
-    volatile bool _inTone;
     volatile uint32_t _toneCount;
-    volatile uint32_t _toneStep;
-    volatile uint32_t _tonePtr;
+    volatile bool _inTone;
+    volatile float _ym1, _ym2, _a;
 };
 
 }

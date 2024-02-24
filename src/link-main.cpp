@@ -393,8 +393,11 @@ int main(int, const char**) {
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }
+            else if (c == 'a') {
+                audioOutContext.tone(500, 250);
+            }
             else if (c == 'z') {
-                audioOutContext.tone(800, 60000);
+                audioOutContext.tone(800, 5000);
             }
             else if (c == 'i') {
                 cout << endl;

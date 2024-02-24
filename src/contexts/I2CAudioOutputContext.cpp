@@ -55,6 +55,7 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
     _dacAddr = 0x60;
     _triggerDepth = (1 << _bufferDepthLog2) / 2;
 
+    /*        
     // Build a fixed table with an 800 Hz tone
     float omega = (2.0 * 3.14159 * 800.0) / (float)sampleRate;
     float phi = 0;
@@ -62,6 +63,7 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
         _toneBuf[i] = 32767.0 * std::cos(phi);
         phi += omega;
     }
+    */
 
     // TODO: Pass in I2C port
     // One-time initialization of the I2C channel
@@ -85,7 +87,6 @@ void I2CAudioOutputContext::reset() {
     _playing = false;
     _inTone = false;
     _toneCount = 0;
-    _toneStep = 0;
     _squelchOpen = false;
     _lastAudioTime = 0;
     // Park DAC at middle of range
@@ -95,16 +96,12 @@ void I2CAudioOutputContext::reset() {
 void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
     
     _toneCount = (durationMs * 8000 / 1000);
-    _tonePtr = 0;
-    _inTone = true;
 
-    if (freq == 800) {
-        _toneStep = 4;
-    } else if (freq == 400) {
-        _toneStep = 2;
-    } else {
-        _toneStep = 1;
-    }
+    // See: https://dspguru.com/dsp/tricks/sine_tone_generator/
+    _ym1 = 0;
+    _ym2 = -std::sin(2.0 * 3.1415926 * ((float)freq / 8000.0));
+    _a = 2.0 * std::cos(2.0 * 3.1415926 * ((float)freq / 8000.0));
+    _inTone = true;
 
     _openSquelchIfNecessary();
 
@@ -226,14 +223,15 @@ void I2CAudioOutputContext::_play(int16_t sample) {
 void I2CAudioOutputContext::_tick() {
 
     if (_inTone) {
-        // TODO: HAVE A GAIN SETTING
-        _play(_toneBuf[_tonePtr >> 2]);
-        // Move across tone, looking for wrap
-        _tonePtr += _toneStep;
-        if (_tonePtr == (_toneBufSize << 2)) {
-            _tonePtr = 0;
-        }   
-        // Manage duration
+
+        // NOTE: Floating point in an ISR?
+        float ym0 = (_a * _ym1) - _ym2;
+        _ym2 = _ym1;
+        _ym1 = ym0;
+
+        _play(ym0 * 32767.0);
+
+        // Manage duration of tone
         _toneCount--;
         if (_toneCount == 0) {
             _inTone = false;
