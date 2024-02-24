@@ -303,8 +303,76 @@ integration with this rig just listens for noise on the audio output line
 and triggers accordingly.  That seems to work just fine.  See the schematic for 
 details.
 
-References
-==========
+## Notes Regarding Interface with MCP4725
+
+The RP2040 has no DAC and the MCP4725 is cheap and plentiful. This could certainly be 
+done with a fancier audio CODEC, but we'll think about that later.
+
+As mentioned previously, it is important to deliver audio very smoothly, and with 
+as little CPU overhead as possible.  To that end, we are leveraging the TX FIFO 
+on the I2C channel to quickly write to the I2C bus without any blocking.  
+
+This is a bit tricky because there are two completely independent data formats
+that need to work together:
+* The RP2040 I2C format (really the DW_apb_i2c format) that is manifest in the 
+format of the IC_DATA_CMD register.  Aside from the "normal" byte of data in this 
+register, we have extra bits that control the START/STOP/RESTART cycles of the 
+I2C bus.  Each write to the I2C_DATA_CMD register contributes both 
+data bits and control bits.
+* THe MCP4725 I2C format.  This is a 12-bit DAC, but it's not as simple as
+justing writing 12 bits to it.  There are other control bits in the message
+being sent to the MCP4725 on the I2C bus and those need to be configured
+properly.
+
+### Bus Protocol
+
+There are some different ways of using the I2C bus but we're using the 
+simple way since speed is not a big issue.  What we really care about 
+is consistency. Each audio sample will be transmitted
+on the I2C bus using a normal START-address-data-STOP sequence. There are fancier 
+things you can do on the I2C bus involving restarts but we don't need that
+for our audio bandwidth requirements.  
+
+The MCP4725 also provides some choices to improve efficiency.  The "fast mode" 
+described in section 6.1.1 of [the datasheet](https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf) 
+allows you to perform continuous data writes without addressing cycles. We don't 
+need that for the 8kHz application (at least I don't think we do).
+
+In the "slow" mode, the MCP4725 needs the regular I2C address byte followed
+by three data bytes.  Actually, the first of the three data bytes is more 
+like a command byte from the perspective of the MCP4725. So the complete
+sequence will need to look like this:
+
+* -> I2C START
+* -> Address Byte (MCP4725 "first byte")
+* <- I2C ACK
+* -> Data Byte 0 (MCP4725 "second byte")
+* <- I2C ACK
+* -> Data Byte 1 (MCP4725 "third byte")
+* <- I2C ACK
+* -> Data Byte 2 (MCP4725 "fourth byte")
+* <- I2C ACK
+* -> I2C STOP
+
+The START and STOP steps are commanded by bits in the RP2040 I2C_DATA_CMD word
+so they don't require distinct writes to the TX FIFO. Likewise, the address
+byte is generated automatically on start.  In order to achieve 
+the sequence above we'll need to make three distinct data writes into the I2C
+TX FIFO for each audio sample.
+
+Combining the RP2040 datasheet figure 72 and the MCP4725 figure 6-2, we
+can determine that the three writes will look like this:
+
+    0 0 0 | 0   1   0   x   x   0   0   x 
+    0 0 0 | d11 d10 d09 d08 d07 d06 d05 d04
+    0 1 0 | d03 d02 d01 d00 x   x   x   x
+
+These writes are happening into the LSB end of the I2C_DATA_CMD
+register (i.e. data bits [10-0]).  Bits [31-11] are not used and
+will be set to zero.  The x's in the illustration above show 
+where the MCP4725 has don't-cares.  These will be set to zero.
+
+# References
 
 * Official EchoLink Site: https://www.echolink.org/
 * Pi PICO Stuff
@@ -343,5 +411,4 @@ References
   - MD5 Implementation: https://www.cs.cmu.edu/~jcl/linux/seal/md5.c
   - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
   
-
 
