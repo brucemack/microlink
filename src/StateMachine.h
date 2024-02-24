@@ -52,6 +52,8 @@ protected:
     }
 
     void _setState(int state, uint32_t timeoutMs) {        
+        _state = state;
+        _timeoutTargetMs = time_ms() + timeoutMs;
     }
 
     void _setTimeoutMs(uint32_t t) {
@@ -61,6 +63,10 @@ protected:
     bool _isTimedOut() const {
         return (time_ms() > _timeoutTargetMs);
     }
+
+protected:
+
+    int _state;
 
 private:
 

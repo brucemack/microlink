@@ -410,5 +410,7 @@ where the MCP4725 has don't-cares.  These will be set to zero.
   - [Information about Ferite Beads from Altium](https://resources.altium.com/sites/default/files/2022-05/Guide%20to%20Using%20Ferrite%20Beads%20in%20a%20PCB.pdf). 
   - MD5 Implementation: https://www.cs.cmu.edu/~jcl/linux/seal/md5.c
   - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
+  - Very interesting audio processing stuff: https://www.repeater-builder.com/tech-info/audio-processing.html
+  
   
 

@@ -59,7 +59,14 @@ public:
 
 private:
 
-    enum State { IDLE, DNS_WAIT, CONNECTING, WAITING_FOR_DISCONNECT, FAILED, SUCCEEDED } _state;
+    enum State { 
+        IDLE, 
+        DNS_WAIT, 
+        CONNECTING, 
+        WAITING_FOR_DISCONNECT, 
+        FAILED, 
+        SUCCEEDED 
+    };
 
     CommContext* _ctx;
     UserInfo* _userInfo;

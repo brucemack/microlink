@@ -35,8 +35,7 @@ int RootMachine::traceLevel = 0;
 
 RootMachine::RootMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
-:   _state(IDLE),
-    _ctx(ctx),
+:   _ctx(ctx),
     _userInfo(userInfo),
     _logonMachine(ctx, userInfo),
     _lookupMachine(ctx, userInfo),
@@ -54,7 +53,6 @@ bool RootMachine::run() {
 }
 
 void RootMachine::start() {
-    // Reset
     _ctx->reset();
     _state = State::IN_RESET;
 }

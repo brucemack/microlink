@@ -47,6 +47,11 @@ public:
 
     void setSink(AudioProcessor *sink) { _sink = sink; }
 
+    void setSampleCb(void (*sampleCb)(void*), void* sampleCbData) {
+        _sampleCb = sampleCb;
+        _sampleCbData = sampleCbData;
+    }
+
     void setADCEnabled(bool en);
     
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
@@ -71,6 +76,9 @@ private:
     void _interruptHandler();
 
     AudioProcessor* _sink = 0;
+    void (*_sampleCb)(void*) = 0;
+    void* _sampleCbData = 0;
+
     PicoPollTimer _timer;
 
     static const uint32_t _adcClockHz = 48000000;

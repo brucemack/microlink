@@ -71,7 +71,7 @@ private:
         WAITING_FOR_DISCONNECT, 
         FAILED, 
         SUCCEEDED 
-    } _state;
+    };
 
     CommContext* _ctx;
     UserInfo* _userInfo;
