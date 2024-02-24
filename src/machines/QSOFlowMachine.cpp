@@ -274,8 +274,7 @@ void QSOFlowMachine::processEvent(const Event* ev) {
         // Look for a shutdown request
         if (_stopRequested || _byeReceived) {
             _sendBYE();
-            _state = State::OPEN_RX_STOP_0;
-            _setTimeoutMs(time_ms() + SEND_OK_TIMEOUT_MS);
+            _setState(State::OPEN_RX_STOP_0, SEND_OK_TIMEOUT_MS);
         }
         // Look to see if we should key up and change to TX mode
         else if (_txAudioWriteCount > _txAudioSentCount) {
@@ -307,22 +306,27 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             _callSign, _fullName, _ssrc, packet, packetSize); 
         _ctx->sendUDPChannel(_rtcpChannel, _peerAddr, RTCP_PORT, packet, packetLen);
 
-        _state = State::OPEN_RX_RTCP_PING_1;
         _lastRTCPKeepAliveSentMs = time_ms();
-        // TODO: SETUP TIMOUT
+
+        _setState(State::OPEN_RX_RTCP_PING_1, SEND_OK_TIMEOUT_MS);
     }
     else if (_state == State::OPEN_RX_RTP_PING_0) {
+
         _sendONDATA();
-        _state = State::OPEN_RX_RTP_PING_1;
         _lastRTPKeepAliveSentMs = time_ms();
-        // TODO: SETUP TIMOUT
+
+        _setState(State::OPEN_RX_RTP_PING_1, SEND_OK_TIMEOUT_MS);
     }
     else if (_state == State::OPEN_RX_RTCP_PING_1 ||
              _state == State::OPEN_RX_RTP_PING_1) {
+
         if (ev->getType() == SendEvent::TYPE) {
             _state = State::OPEN_RX;
         }
-        // TODO: SETUP TIMOUT
+        else if (_isTimedOut()) {
+            _userInfo->setStatus("Timeout 2");
+            _state = State::FAILED;
+        }
     }
     else if (_state == State::OPEN_RX_STOP_0) {
         if (ev->getType() == SendEvent::TYPE) {
@@ -360,10 +364,10 @@ void QSOFlowMachine::processEvent(const Event* ev) {
                 0, gsmFrames, packet, 144);
             
             _ctx->sendUDPChannel(_rtpChannel, _peerAddr, RTP_PORT, packet, packetLen);
-            _state = State::OPEN_TX_AUDIO_1;
-            
+
             _txAudioSentCount++;
-            // TODO: SET TIMEOUT
+
+            _setState(State::OPEN_TX_AUDIO_1, SEND_OK_TIMEOUT_MS);
         }
         // Check to see if the transmit activity has ended and we
         // should be switching back into RX mode
@@ -393,16 +397,20 @@ void QSOFlowMachine::processEvent(const Event* ev) {
         uint32_t packetLen = QSOConnectMachine::formatRTCPPacket_SDES(0, _callSign, _fullName, _ssrc, packet, packetSize); 
         _ctx->sendUDPChannel(_rtcpChannel, _peerAddr, RTCP_PORT, packet, packetLen);
 
-        _state = State::OPEN_TX_RTCP_PING_1;
         _lastRTCPKeepAliveSentMs = time_ms();
-        // TODO: SET TIMEOUT
+
+        _setState(State::OPEN_TX_RTCP_PING_1, SEND_OK_TIMEOUT_MS);
     }
     else if (_state == State::OPEN_TX_AUDIO_1 ||
              _state == State::OPEN_TX_RTCP_PING_1) {
+
         if (ev->getType() == SendEvent::TYPE) {
             _state = State::OPEN_TX;
         }
-        // TODO: SET TIMEOUT
+        else if (_isTimedOut()) {
+            _userInfo->setStatus("Timeout 3");
+            _state = State::FAILED;
+        }
     }
 }
 

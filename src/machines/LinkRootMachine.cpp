@@ -46,8 +46,7 @@ static const uint32_t QUIET_INTERVAL_MS = 2 * 60 * 1000;
 
 LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo, 
     AudioOutputContext* audioOutput) 
-:   _state(IDLE),
-    _ctx(ctx),
+:   _ctx(ctx),
     _userInfo(userInfo),
     _logonMachine(ctx, userInfo),
     _acceptMachine(ctx, userInfo),

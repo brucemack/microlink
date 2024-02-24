@@ -122,6 +122,7 @@ private:
         IN_DNS, 
         IN_TCP_CONNECT, 
         IN_UDP_SETUP, 
+        // State 5: 
         IN_SEND_PROMPT_WAIT,
         IN_SEND_OK_WAIT 
     };

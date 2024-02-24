@@ -48,8 +48,7 @@ static const char* UNSUCCESSFUL_MSG = "Callsign not valid or not online";
 int ValidationMachine::traceLevel = 0;
 
 ValidationMachine::ValidationMachine(CommContext* ctx, UserInfo* userInfo)
-:   _state(IDLE),
-    _ctx(ctx),
+:   _ctx(ctx),
     _userInfo(userInfo) {
 }
 

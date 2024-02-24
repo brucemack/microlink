@@ -87,6 +87,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #define QSO_LED_PIN (11)
 // Physical pin 9.  Input from physical PTT button.
 #define PTT_PIN (6)
+// Physical pin 20.  Used for diagnostics/timing checks
+#define DIAG_PIN (15)
 
 // ===============
 // RIGHT SIDE PINS 
@@ -167,6 +169,11 @@ int main(int, const char**) {
     gpio_init(RIG_KEY_PIN);
     gpio_set_dir(RIG_KEY_PIN, GPIO_OUT);
     gpio_put(RIG_KEY_PIN, 0);
+
+    // Diag
+    gpio_init(DIAG_PIN);
+    gpio_set_dir(DIAG_PIN, GPIO_OUT);
+    gpio_put(DIAG_PIN, 0);
        
     // UART0 setup
     uart_init(UART_ID, U_BAUD_RATE);
@@ -234,6 +241,9 @@ int main(int, const char**) {
         audioBufDepthLog2, audioBuf, &info);
     PicoAudioInputContext audioInContext;
 
+    // Connect the input (ADC) timer to the output (DAC)
+    audioInContext.setSampleCb(I2CAudioOutputContext::tickISR, &audioOutContext);
+
     LinkRootMachine rm(&ctx, &info, &audioOutContext);
 
     RXMonitor rxMonitor;
@@ -277,9 +287,10 @@ int main(int, const char**) {
     audioInContext.setADCEnabled(true);
 
     // Start the state machine
-    rm.start();
+    //rm.start();
 
-    // Here is the main event loop
+    cout << "Entering event loop" << endl;
+
     while (true) {
 
         cycleTimer.reset();
@@ -363,7 +374,7 @@ int main(int, const char**) {
             }
         }
 
-        audioInContext.setADCEnabled(!rigKeyState);
+        //audioInContext.setADCEnabled(!rigKeyState);
         gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
 
         // ----- Serial Commands ---------------------------------------------
@@ -383,7 +394,7 @@ int main(int, const char**) {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }
             else if (c == 'z') {
-                audioOutContext.tone(800, 500);
+                audioOutContext.tone(800, 60000);
             }
             else if (c == 'i') {
                 cout << endl;

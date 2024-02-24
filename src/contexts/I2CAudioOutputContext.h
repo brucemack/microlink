@@ -24,7 +24,6 @@
 #include <cstdint>
 
 #include "kc1fsz-tools/AudioOutputContext.h"
-#include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
 namespace kc1fsz {
 
@@ -60,10 +59,14 @@ public:
 
     virtual void tone(uint32_t freq, uint32_t durationMs);
 
-private:
+    // Called from the 8 kHz timer ISR
+    static void tickISR(void* obj) { static_cast<I2CAudioOutputContext*>(obj)->_tick(); }
 
+private:
+    
     void _play(int16_t pcm);
     void _openSquelchIfNecessary();
+    void _tick();
 
     const uint32_t _bufferDepthLog2;
     const uint32_t _bufferMask;
@@ -100,15 +103,6 @@ private:
     volatile uint32_t _toneCount;
     volatile uint32_t _toneStep;
     volatile uint32_t _tonePtr;
-
-    PicoPollTimer _timer;
-
-    static I2CAudioOutputContext* _INSTANCE;
-    /*
-    absolute_time_t _nextTick;
-    static void _alarm(uint);
-    void _tick();
-    */
 };
 
 }
