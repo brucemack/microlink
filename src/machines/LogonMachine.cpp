@@ -44,8 +44,7 @@ static const uint32_t CONNECT_TIMEOUT_MS = 2000;
 int LogonMachine::traceLevel = 0;
 
 LogonMachine::LogonMachine(CommContext* ctx, UserInfo* userInfo) 
-:   _state(IDLE),
-    _ctx(ctx),
+:   _ctx(ctx),
     _userInfo(userInfo),
     _serverPort(0),
     _logonRespPtr(0) {

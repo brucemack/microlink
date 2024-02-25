@@ -26,7 +26,7 @@
 #include "hardware/adc.h"
 
 #include "kc1fsz-tools/Runnable.h"
-#include "kc1fsz-tools/rp2040/PicoPollTimer.h"
+#include "kc1fsz-tools/rp2040/PicoPerfTimer.h"
 
 #include "AtomicInteger.h"
 
@@ -47,6 +47,11 @@ public:
 
     void setSink(AudioProcessor *sink) { _sink = sink; }
 
+    void setSampleCb(void (*sampleCb)(void*), void* sampleCbData) {
+        _sampleCb = sampleCb;
+        _sampleCbData = sampleCbData;
+    }
+
     void setADCEnabled(bool en);
     
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
@@ -57,6 +62,9 @@ public:
     int16_t getAverage() const;
     int16_t getMax() const;
     int16_t getClips() const;
+    uint32_t getMaxSkew() const { return _maxSkew; }
+    uint32_t getMaxLen() const { return _maxLen; }
+    void resetMax() { _maxSkew = 0; _maxLen = 0; }
 
     // ----- From Runnable ---------------------------------------------------
 
@@ -71,7 +79,8 @@ private:
     void _interruptHandler();
 
     AudioProcessor* _sink = 0;
-    PicoPollTimer _timer;
+    void (*_sampleCb)(void*) = 0;
+    void* _sampleCbData = 0;
 
     static const uint32_t _adcClockHz = 48000000;
     static const uint32_t _audioSampleRate = 8000;
@@ -110,6 +119,10 @@ private:
     static const uint32_t _statsSize = 4;
     FrameStats _stats[_statsSize];
     uint32_t _statsPtr;
+
+    PicoPerfTimer _perfTimer;
+    volatile uint32_t _maxSkew = 0;
+    volatile uint32_t _maxLen = 0;
 };
 
 }

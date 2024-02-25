@@ -19,6 +19,8 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include <iostream>
+#include <algorithm>
+
 #include "hardware/adc.h"
 
 // Physical pin 31
@@ -37,21 +39,31 @@ PicoAudioInputContext* PicoAudioInputContext::INSTANCE = 0;
 
 void PicoAudioInputContext::setup() {
 
-    // Get the ADC initialized
+    // Get the ADC pin initialized
     adc_gpio_init(AUDIO_IN_PIN);
     adc_init();
     uint8_t adcChannel = 0;
-    adc_select_input(adcChannel);
+    adc_select_input(adcChannel);    
     adc_fifo_setup(
+        // Enable
         true,   
+        // DREQ not enabled
         false,
+        // DREQ threshold (but assuming this also applies to INT)
         1,
+        // If enabled, bit 15 of the FIFO contains error flag for each sample
         false,
+        // Shift FIFO contents to be one byte in size (for byte DMA) - enables 
+        // DMA to byte buffers.
         false
     );
+    // Divide clock to 8 kHz
     adc_set_clkdiv(_adcClockHz / _audioSampleRate);
+    // Install INT handler
     irq_set_exclusive_handler(ADC_IRQ_FIFO, PicoAudioInputContext::_adc_irq_handler);    
+    // Enable ADC->INT
     adc_irq_set_enabled(true);
+    // Enable the ADC INT
     irq_set_enabled(ADC_IRQ_FIFO, true);
 }
 
@@ -83,46 +95,65 @@ void PicoAudioInputContext::setADCEnabled(bool en) {
 }
 
 void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
-    // We clear as much as possible on every interrupt
-    while (!adc_fifo_is_empty()) {
-        uint32_t slot = _audioInBufWriteCount.get() & _audioInBufDepthMask;
-        // This will be a number from 0->4095 (12 bits).  
-        // We are using a 32-bit integer to implement saturation
-        int32_t sample = adc_fifo_get();
-        // Center to give a number from -2048->2047 (12 bits)
-        sample -= 2048;
-        // Small tweaks
-        sample += _dcBias;
-        // Apply a gain and shift up to form 16-bit PCM.
-        sample *= _gain;
-        // Saturate to 16 bits
-        if (sample > 32767) {
-            sample = 32767;
-        } else if (sample < -32768) {
-            sample = -32768;
-        }
-        _audioInBuf[slot][_audioInBufWritePtr++] = (int16_t)sample;
-        // Check to see if we've reached the end of the 4xframe
-        if (_audioInBufWritePtr == _audioFrameSize * _audioFrameBlockFactor) {
-            _audioInBufWritePtr = 0;
-            if (_audioInBufWriteCount.get() >= _audioInBufReadCount.get()) {
-                // Figure out how many slots have been used
-                uint32_t used = _audioInBufWriteCount.get() - _audioInBufReadCount.get();
-                // Check to see if there is room before wrapping onto the reader
-                if (used < _audioInBufDepth - 1) {
-                    _audioInBufWriteCount.inc();
-                } else {
-                    // In this case we just start writing on the same 4xframe
-                    // again and lose the previous values.
-                    _audioInBufOverflow++;
-                }
-            } 
-            else {
-                panic("Sanity check 1");
+
+    // Capture time and reset skew tracker
+    uint32_t t = _perfTimer.elapsedUs();
+    _perfTimer.reset();
+    _maxSkew = std::max((uint32_t)_maxSkew, (uint32_t)std::abs(125 - (int32_t)t));
+
+    // We clear one sample every interrupt
+    if (adc_fifo_is_empty()) {
+        panic("ADC empty");
+    }
+
+    // This will be a number from 0->4095 (12 bits).  
+    // We are using a 32-bit integer to implement saturation
+    int32_t rawSample = adc_fifo_get();
+    // Center to give a number from -2048->2047 (12 bits)
+    int32_t sample = rawSample - 2048;
+    // Small tweaks
+    sample += _dcBias;
+    // Apply a gain and shift up to form 16-bit PCM.
+    sample *= _gain;
+    // Saturate to 16 bits
+    if (sample > 32767) {
+        sample = 32767;
+    } else if (sample < -32768) {
+        sample = -32768;
+    }
+
+    uint32_t slot = _audioInBufWriteCount.get() & _audioInBufDepthMask;
+    _audioInBuf[slot][_audioInBufWritePtr++] = (int16_t)sample;
+
+    // Check to see if we've reached the end of the 4xframe
+    if (_audioInBufWritePtr == _audioFrameSize * _audioFrameBlockFactor) {
+        _audioInBufWritePtr = 0;
+        if (_audioInBufWriteCount.get() >= _audioInBufReadCount.get()) {
+            // Figure out how many slots have been used
+            uint32_t used = _audioInBufWriteCount.get() - _audioInBufReadCount.get();
+            // Check to see if there is room before wrapping onto the reader
+            if (used < _audioInBufDepth - 1) {
+                _audioInBufWriteCount.inc();
+            } else {
+                // In this case we just start writing on the same 4xframe
+                // again and lose the previous values.
+                _audioInBufOverflow++;
             }
+        } 
+        else {
+            panic("Sanity check 1");
         }
     }
-}
+
+    // Optionally call out to let someone do something on the same sample
+    // clock.
+    if (_sampleCb) {
+        _sampleCb(_sampleCbData);
+    }    
+
+    t = _perfTimer.elapsedUs();
+    _maxLen = std::max((uint32_t)_maxLen, t);
+}    
 
 int16_t PicoAudioInputContext::getAverage() const {
     int16_t r = 0;

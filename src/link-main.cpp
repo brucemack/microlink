@@ -50,6 +50,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "hardware/irq.h"
 #include "hardware/sync.h"
 
+#include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
@@ -87,6 +88,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #define QSO_LED_PIN (11)
 // Physical pin 9.  Input from physical PTT button.
 #define PTT_PIN (6)
+// Physical pin 20.  Used for diagnostics/timing checks
+#define DIAG_PIN (15)
 
 // ===============
 // RIGHT SIDE PINS 
@@ -167,6 +170,11 @@ int main(int, const char**) {
     gpio_init(RIG_KEY_PIN);
     gpio_set_dir(RIG_KEY_PIN, GPIO_OUT);
     gpio_put(RIG_KEY_PIN, 0);
+
+    // Diag
+    gpio_init(DIAG_PIN);
+    gpio_set_dir(DIAG_PIN, GPIO_OUT);
+    gpio_put(DIAG_PIN, 0);
        
     // UART0 setup
     uart_init(UART_ID, U_BAUD_RATE);
@@ -234,6 +242,14 @@ int main(int, const char**) {
         audioBufDepthLog2, audioBuf, &info);
     PicoAudioInputContext audioInContext;
 
+    // Connect the input (ADC) timer to the output (DAC)
+    audioInContext.setSampleCb(I2CAudioOutputContext::tickISR, &audioOutContext);
+
+    // Analyzers for sound data
+    int16_t txAnalyzerHistory[2048];
+    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 2048);
+    audioOutContext.setAnalyzer(&txAnalyzer);
+
     LinkRootMachine rm(&ctx, &info, &audioOutContext);
 
     RXMonitor rxMonitor;
@@ -275,11 +291,17 @@ int main(int, const char**) {
     uint32_t rigKeyLockoutCount = 0;
 
     audioInContext.setADCEnabled(true);
+    audioInContext.resetMax();
+
+    PicoPollTimer analyzerTimer;
+    analyzerTimer.setIntervalUs(1000000);
+    bool analyzerOn = true;
 
     // Start the state machine
     rm.start();
 
-    // Here is the main event loop
+    cout << "Entering event loop" << endl;
+
     while (true) {
 
         cycleTimer.reset();
@@ -363,7 +385,7 @@ int main(int, const char**) {
             }
         }
 
-        audioInContext.setADCEnabled(!rigKeyState);
+        //audioInContext.setADCEnabled(!rigKeyState);
         gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
 
         // ----- Serial Commands ---------------------------------------------
@@ -382,8 +404,11 @@ int main(int, const char**) {
             else if (c == 'e') {
                 cout << endl << "ESP32 Test: " <<  ctx.test() << endl;
             }
+            else if (c == 'a') {
+                audioOutContext.tone(500, 250);
+            }
             else if (c == 'z') {
-                audioOutContext.tone(800, 500);
+                audioOutContext.tone(800, 1000);
             }
             else if (c == 'i') {
                 cout << endl;
@@ -395,6 +420,8 @@ int main(int, const char**) {
                 cout << "Audio In Max%     : " << (100 * audioInContext.getMax()) / 32767 << endl;
                 cout << "Audio In Clips    : " << audioInContext.getClips() << endl;
                 cout << "Audio Gain        : " << audioInContext.getGain() << endl;
+                cout << "Max Skew (us)     : " << audioInContext.getMaxSkew() << endl;
+                cout << "Max Len (us)      : " << audioInContext.getMaxLen() << endl;
                 cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
                 cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
                 cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
@@ -418,6 +445,7 @@ int main(int, const char**) {
                 for (uint32_t t = 0; t < taskCount; t++) {
                     maxTaskTime[t] = 0;
                 }
+                audioInContext.resetMax();
             }
             else {
                 cout << (char)c;
@@ -440,6 +468,16 @@ int main(int, const char**) {
         if (ela > 125) {
             longCycleCounter++;
         }
+
+        // Analysis display
+        if (analyzerOn) {
+            if (analyzerTimer.poll()) {
+                cout << txAnalyzer.getRMS() << " " << txAnalyzer.getPeakDBFS() << " dB " 
+                    << txAnalyzer.getPeak() << endl;
+                analyzerTimer.reset();
+            }
+        }
+
     }
 
     cout << "Left event loop" << endl;

@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include "hardware/i2c.h"
+#include "kc1fsz-tools/AudioAnalyzer.h"
 
 #include "common.h"
 #include "UserInfo.h"
@@ -31,8 +32,6 @@ namespace kc1fsz {
 // How long we wait in silence before deciding that the audio
 // output has stopped.
 static const uint32_t SQUELCH_INTERVAL_MS = 1000;
-
-I2CAudioOutputContext* I2CAudioOutputContext::_INSTANCE = 0;
 
 I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate,
     uint32_t bufferDepthLog2, int16_t* audioBuf,
@@ -54,10 +53,10 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
     _squelchOpen(false),
     _lastAudioTime(0)
 {
-    _timer.setIntervalUs(_intervalUs);
     _dacAddr = 0x60;
     _triggerDepth = (1 << _bufferDepthLog2) / 2;
 
+    /*        
     // Build a fixed table with an 800 Hz tone
     float omega = (2.0 * 3.14159 * 800.0) / (float)sampleRate;
     float phi = 0;
@@ -65,23 +64,19 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
         _toneBuf[i] = 32767.0 * std::cos(phi);
         phi += omega;
     }
-
-    _INSTANCE = this;
-    /*
-    // ---
-    // Attempt to get a hardware clock
-    hardware_alarm_claim(1);
-    hardware_alarm_set_callback(1, _alarm);
-    _nextTick = delayed_by_us(get_absolute_time(), 12500);
-    hardware_alarm_set_target(1, _nextTick);
-    // ---
     */
+
+    // TODO: Pass in I2C port
+    // One-time initialization of the I2C channel
+    i2c_hw_t *hw = i2c_get_hw(i2c_default);
+    hw->enable = 0;
+    hw->tar = _dacAddr;
+    hw->enable = 1;
 
     reset();
 }
 
 I2CAudioOutputContext::~I2CAudioOutputContext() {    
-    //hardware_alarm_unclaim(1);
 }
 
 void I2CAudioOutputContext::reset() {
@@ -93,10 +88,8 @@ void I2CAudioOutputContext::reset() {
     _playing = false;
     _inTone = false;
     _toneCount = 0;
-    _toneStep = 0;
     _squelchOpen = false;
     _lastAudioTime = 0;
-    _timer.reset();
     // Park DAC at middle of range
     _play(0);
 }
@@ -104,16 +97,12 @@ void I2CAudioOutputContext::reset() {
 void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
     
     _toneCount = (durationMs * 8000 / 1000);
-    _tonePtr = 0;
-    _inTone = true;
 
-    if (freq == 800) {
-        _toneStep = 4;
-    } else if (freq == 400) {
-        _toneStep = 2;
-    } else {
-        _toneStep = 1;
-    }
+    // See: https://dspguru.com/dsp/tricks/sine_tone_generator/
+    _ym1 = 0;
+    _ym2 = -std::sin(2.0 * 3.1415926 * ((float)freq / 8000.0));
+    _a = 2.0 * std::cos(2.0 * 3.1415926 * ((float)freq / 8000.0));
+    _inTone = true;
 
     _openSquelchIfNecessary();
 
@@ -136,6 +125,9 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
     // Copy the data into the slot
     bool nonZeroSample = false;
     for (uint32_t i = 0; i < _frameSize; i++) {
+        if (_analyzer) {
+            _analyzer->sample(frame[i]);
+        }
         start[i] = frame[i];
         if (frame[i] != 0) {
             nonZeroSample = true;
@@ -164,65 +156,9 @@ bool I2CAudioOutputContext::run() {
 
     bool activity = false;
 
-    // Pacing at the audio sample clock (ex: 8kHz)
-    activity = _timer.poll();
-
-    if (activity) {
-        if (_inTone) {
-            
-            // TODO: HAVE A GAIN SETTING
-            _play((_toneBuf[_tonePtr >> 2]) >> 2);
-            // Move across tone, looking for wrap
-            _tonePtr += _toneStep;
-            if (_tonePtr == (_toneBufSize << 2)) {
-                _tonePtr = 0;
-            }   
-            // Manage duration
-            _toneCount--;
-            if (_toneCount == 0) {
-                _inTone = false;
-                // Park DAC at middle of range
-                _play(0);
-            }
-        }
-        else if (!_playing) {
-            // Decide whether to start playing
-            if ((_frameWriteCount > _framePlayCount) &&
-                (_frameWriteCount - _framePlayCount) > _triggerDepth) {
-                _playing = true;
-            }
-        } 
-        else {
-            if (_frameWriteCount > _framePlayCount) {
-
-                uint32_t slot = _framePlayCount & _bufferMask;
-                const int16_t* start = _audioBuf + (_frameSize * slot);
-
-                _play(start[_samplePtr++]);
-
-                // Have we played the entire frame?
-                if (_samplePtr == _frameSize) {
-                    _samplePtr = 0;
-                    _framePlayCount++;
-
-                    // Look for the wrap-around case (rare)
-                    if (_framePlayCount == 0) {
-                        // Move way from the discontinuity
-                        _frameWriteCount += (_frameSize * 2);
-                        _framePlayCount += (_frameSize * 2);
-                    }
-                }
-            } else {
-                _playing = false;
-                _idleCount++;
-                // Park DAC at middle of range
-                _play(0);
-            }
-        }
-    }
-
     // Manage squelch off
     if (_squelchOpen && 
+        // Watch out, sometimes the _lastAudioTime is in the future
         (time_ms() > _lastAudioTime) &&
         (time_ms() - _lastAudioTime) > SQUELCH_INTERVAL_MS ) {
         _squelchOpen = false;
@@ -231,6 +167,13 @@ bool I2CAudioOutputContext::run() {
     }
 
     return activity;
+}
+
+void I2CAudioOutputContext::_openSquelchIfNecessary() {
+    if (!_squelchOpen) {
+        _squelchOpen = true;
+        _userInfo->setSquelchOpen(_squelchOpen);
+    }
 }
 
 /*
@@ -253,57 +196,46 @@ See https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf
 (page 25). The bits are aligned in the same way, once you 
 consider
 */
-
-static void makeFrame0(uint8_t* buf, uint16_t data) {
-    buf[0] = 0x40;
-    buf[1] = (data >> 8) & 0xff;
-    buf[2] = (uint8_t)(data & 0xf0);
-}
-
-static void makeFrame1(uint8_t* buf, uint16_t data) {
-    buf[0] = 0x0f & (data >> 8);
-    buf[1] = data & 0xff;
-}
-
-void I2CAudioOutputContext::_openSquelchIfNecessary() {
-    if (!_squelchOpen) {
-        _squelchOpen = true;
-        _userInfo->setSquelchOpen(_squelchOpen);
-    }
-}
-
 void I2CAudioOutputContext::_play(int16_t sample) {
-    uint16_t centeredSample = (sample + 32767);
-    uint8_t buf[3];
-    makeFrame0(buf, centeredSample);
-    // TODO: MAKE THIS NON-BLOCKING
-    i2c_write_blocking(i2c_default, _dacAddr, buf, 3, true);
-}
 
-/*
-void I2CAudioOutputContext::_alarm(uint timer) {
-    if (_INSTANCE) {
-        _INSTANCE->_tick();
-    }
+    // This was measured to take 310ns
+
+    // Go from 16-bit PCM -32768->32767 to 12-bit PCM 0->4095
+    uint16_t centeredSample = (sample + 32767);
+    uint16_t rawSample = centeredSample >> 4;
+
+    i2c_hw_t *hw = i2c_get_hw(i2c_default);
+    // Tx FIFO must not be full
+    assert(hw->status & I2C_IC_STATUS_TFNF_BITS); 
+
+    // To create an output sample we need to write three words.  The STOP flag
+    // is set on the last one.
+    //
+    // 0 0 0 | 0   1   0   x   x   0   0   x 
+    // 0 0 0 | d11 d10 d09 d08 d07 d06 d05 d04
+    // 0 1 0 | d03 d02 d01 d00 x   x   x   x
+    //   ^
+    //   |
+    //   +------ STOP BIT!
+    //
+    hw->data_cmd = 0b000'0100'0000;
+    hw->data_cmd = 0b000'0000'0000 | ((rawSample >> 4) & 0xff); // High 8 bits
+    // STOP requested.  Data is low 4 bits of sample, padded on right with zeros
+    hw->data_cmd = 0b010'0000'0000 | ((rawSample << 4) & 0xff); 
 }
 
 void I2CAudioOutputContext::_tick() {
 
-    // Re-schedule the alarm
-    _nextTick = delayed_by_us(_nextTick, 125);
-    while (hardware_alarm_set_target(1, _nextTick)) {
-        _nextTick = delayed_by_us(_nextTick, 125);
-    } 
-
     if (_inTone) {
-        // TODO: HAVE A GAIN SETTING
-        _play((_toneBuf[_tonePtr >> 2]) >> 2);
-        // Move across tone, looking for wrap
-        _tonePtr += _toneStep;
-        if (_tonePtr == (_toneBufSize << 2)) {
-            _tonePtr = 0;
-        }   
-        // Manage duration
+
+        // NOTE: Floating point in an ISR?
+        float ym0 = (_a * _ym1) - _ym2;
+        _ym2 = _ym1;
+        _ym1 = ym0;
+
+        _play(ym0 * 32767.0);
+
+        // Manage duration of tone
         _toneCount--;
         if (_toneCount == 0) {
             _inTone = false;
@@ -346,5 +278,5 @@ void I2CAudioOutputContext::_tick() {
         }
     }
 }
-*/
+
 }

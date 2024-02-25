@@ -24,11 +24,11 @@
 #include <cstdint>
 
 #include "kc1fsz-tools/AudioOutputContext.h"
-#include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
 namespace kc1fsz {
 
 class UserInfo;
+class AudioAnalyzer;
 
 /**
  * An implementation of the AudioOutputContext that assumes a
@@ -49,6 +49,13 @@ public:
         UserInfo* userInfo);
     virtual ~I2CAudioOutputContext();
 
+    // Called from the 8 kHz timer ISR
+    static void tickISR(void* obj) { static_cast<I2CAudioOutputContext*>(obj)->_tick(); }
+
+    void setAnalyzer(AudioAnalyzer* aa) { _analyzer = aa; }
+
+    // ----- From AudioOutputContext ------------------------------------------
+
     virtual void reset();
 
     // IMPORTANT: This assumes 16-bit PCM audio
@@ -58,12 +65,14 @@ public:
 
     virtual uint32_t getSyncErrorCount() { return _idleCount + _overflowCount; }
 
+    // TODO: Consolidate in Synth
     virtual void tone(uint32_t freq, uint32_t durationMs);
 
 private:
-
+    
     void _play(int16_t pcm);
     void _openSquelchIfNecessary();
+    void _tick();
 
     const uint32_t _bufferDepthLog2;
     const uint32_t _bufferMask;
@@ -94,21 +103,11 @@ private:
     uint32_t _lastAudioTime;
 
     // Tone features
-    static const uint32_t _toneBufSize = 20;
-    int16_t _toneBuf[_toneBufSize];
-    volatile bool _inTone;
-    volatile uint32_t _toneCount;
-    volatile uint32_t _toneStep;
-    volatile uint32_t _tonePtr;
+    volatile uint32_t _toneCount = 0;
+    volatile bool _inTone = false;
+    volatile float _ym1 = 0, _ym2 = 0, _a = 0;
 
-    PicoPollTimer _timer;
-
-    static I2CAudioOutputContext* _INSTANCE;
-    /*
-    absolute_time_t _nextTick;
-    static void _alarm(uint);
-    void _tick();
-    */
+    AudioAnalyzer* _analyzer = 0;
 };
 
 }

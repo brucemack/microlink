@@ -83,7 +83,7 @@ private:
         CONNECTING_1, 
         SUCCEEDED, 
         FAILED 
-    } _state;
+    };
 
     CommContext* _ctx;
     UserInfo* _userInfo;

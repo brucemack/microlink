@@ -57,7 +57,7 @@ private:
         PLAYING,  
         FAILED, 
         SUCCEEDED 
-    } _state;
+    };
 
     CommContext* _ctx;
     UserInfo* _userInfo;

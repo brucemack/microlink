@@ -82,7 +82,7 @@ private:
         WAITING,
         SUCCEEDED, 
         FAILED 
-    } _state;
+    };
 
     CommContext* _ctx;
     UserInfo* _userInfo;

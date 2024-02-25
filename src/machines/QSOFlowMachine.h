@@ -115,7 +115,7 @@ private:
         SUCCEEDED, 
         // QSO failed/aborted unexpectedly
         FAILED 
-    } _state;
+    };
 
     CommContext* _ctx;
     UserInfo* _userInfo;
