@@ -21,6 +21,7 @@
 #include <cmath>
 
 #include "hardware/i2c.h"
+#include "kc1fsz-tools/AudioAnalyzer.h"
 
 #include "common.h"
 #include "UserInfo.h"
@@ -124,6 +125,9 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
     // Copy the data into the slot
     bool nonZeroSample = false;
     for (uint32_t i = 0; i < _frameSize; i++) {
+        if (_analyzer) {
+            _analyzer->sample(frame[i]);
+        }
         start[i] = frame[i];
         if (frame[i] != 0) {
             nonZeroSample = true;

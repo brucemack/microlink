@@ -19,6 +19,8 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include <iostream>
+#include <algorithm>
+
 #include "hardware/adc.h"
 
 // Physical pin 31
@@ -94,6 +96,11 @@ void PicoAudioInputContext::setADCEnabled(bool en) {
 
 void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
 
+    // Capture time and reset skew tracker
+    uint32_t t = _perfTimer.elapsedUs();
+    _perfTimer.reset();
+    _maxSkew = std::max((uint32_t)_maxSkew, (uint32_t)std::abs(125 - (int32_t)t));
+
     // We clear one sample every interrupt
     if (adc_fifo_is_empty()) {
         panic("ADC empty");
@@ -143,6 +150,9 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     if (_sampleCb) {
         _sampleCb(_sampleCbData);
     }    
+
+    t = _perfTimer.elapsedUs();
+    _maxLen = std::max((uint32_t)_maxLen, t);
 }    
 
 int16_t PicoAudioInputContext::getAverage() const {

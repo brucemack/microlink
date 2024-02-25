@@ -50,6 +50,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "hardware/irq.h"
 #include "hardware/sync.h"
 
+#include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
@@ -244,6 +245,11 @@ int main(int, const char**) {
     // Connect the input (ADC) timer to the output (DAC)
     audioInContext.setSampleCb(I2CAudioOutputContext::tickISR, &audioOutContext);
 
+    // Analyzers for sound data
+    int16_t txAnalyzerHistory[2048];
+    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 2048);
+    audioOutContext.setAnalyzer(&txAnalyzer);
+
     LinkRootMachine rm(&ctx, &info, &audioOutContext);
 
     RXMonitor rxMonitor;
@@ -285,9 +291,14 @@ int main(int, const char**) {
     uint32_t rigKeyLockoutCount = 0;
 
     audioInContext.setADCEnabled(true);
+    audioInContext.resetMax();
+
+    PicoPollTimer analyzerTimer;
+    analyzerTimer.setIntervalUs(1000000);
+    bool analyzerOn = true;
 
     // Start the state machine
-    //rm.start();
+    rm.start();
 
     cout << "Entering event loop" << endl;
 
@@ -397,7 +408,7 @@ int main(int, const char**) {
                 audioOutContext.tone(500, 250);
             }
             else if (c == 'z') {
-                audioOutContext.tone(800, 5000);
+                audioOutContext.tone(800, 1000);
             }
             else if (c == 'i') {
                 cout << endl;
@@ -409,6 +420,8 @@ int main(int, const char**) {
                 cout << "Audio In Max%     : " << (100 * audioInContext.getMax()) / 32767 << endl;
                 cout << "Audio In Clips    : " << audioInContext.getClips() << endl;
                 cout << "Audio Gain        : " << audioInContext.getGain() << endl;
+                cout << "Max Skew (us)     : " << audioInContext.getMaxSkew() << endl;
+                cout << "Max Len (us)      : " << audioInContext.getMaxLen() << endl;
                 cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
                 cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
                 cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
@@ -432,6 +445,7 @@ int main(int, const char**) {
                 for (uint32_t t = 0; t < taskCount; t++) {
                     maxTaskTime[t] = 0;
                 }
+                audioInContext.resetMax();
             }
             else {
                 cout << (char)c;
@@ -454,6 +468,16 @@ int main(int, const char**) {
         if (ela > 125) {
             longCycleCounter++;
         }
+
+        // Analysis display
+        if (analyzerOn) {
+            if (analyzerTimer.poll()) {
+                cout << txAnalyzer.getRMS() << " " << txAnalyzer.getPeakDBFS() << " dB " 
+                    << txAnalyzer.getPeak() << endl;
+                analyzerTimer.reset();
+            }
+        }
+
     }
 
     cout << "Left event loop" << endl;
