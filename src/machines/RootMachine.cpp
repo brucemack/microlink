@@ -147,7 +147,7 @@ void RootMachine::processEvent(const Event* ev) {
     }
 }
 
-bool RootMachine::play(const int16_t* frame) {
+bool RootMachine::play(const int16_t* frame, uint32_t frameLen) {
     if (_state == State::QSO) {
         return _qsoMachine.txAudio(frame);
     } else {

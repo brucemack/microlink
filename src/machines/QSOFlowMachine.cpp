@@ -152,7 +152,7 @@ void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
             }
 
             // Hand off 160x4 samples to the audio context to play the audio
-            _audioOutput->play(pcmData);
+            _audioOutput->play(pcmData, framesPerPacket * samplesPerFrame);
         } 
         else if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
             if (traceLevel > 0) {

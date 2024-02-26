@@ -55,7 +55,8 @@ private:
     uint32_t _framePtr;
 
     bool _workingFrameReady;
-    int16_t _workingFrame[160 * 4];
+    static const uint32_t _frameSize = 160 * 4;
+    int16_t _workingFrame[_frameSize];
 };
 
 }

@@ -178,7 +178,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
     }
 }
 
-bool LinkRootMachine::play(const int16_t* frame) {
+bool LinkRootMachine::play(const int16_t* frame, uint32_t frameLen) {
     if (_state == State::QSO) {
         return _qsoMachine.txAudio(frame);
     } else {

@@ -28,10 +28,10 @@ RXMonitor::RXMonitor()
 {
 }
 
-bool RXMonitor::play(const int16_t* frame) {
+bool RXMonitor::play(const int16_t* frame, uint32_t frameLen) {
     if (_keyed) {
         if (_sink) {
-            return _sink->play(frame);
+            return _sink->play(frame, frameLen);
         } else {
             return true;
         }

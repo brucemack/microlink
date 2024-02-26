@@ -59,7 +59,7 @@ public:
     virtual void reset();
 
     // IMPORTANT: This assumes 16-bit PCM audio
-    virtual bool play(const int16_t* frame);
+    virtual bool play(const int16_t* frame, uint32_t frameLen);
 
     virtual bool run();
 

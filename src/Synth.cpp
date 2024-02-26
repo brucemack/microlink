@@ -83,7 +83,7 @@ bool Synth::run() {
     // Attempt to play some sound
     if (_workingFrameReady) {
         // This will return false if the player is busy
-        if (_sink->play(_workingFrame)) {
+        if (_sink->play(_workingFrame, _frameSize)) {
             // Signal that we need to make a new one
             _workingFrameReady = false;
             // All frames in the sound played?

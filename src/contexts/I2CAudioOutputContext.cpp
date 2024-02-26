@@ -56,16 +56,6 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
     _dacAddr = 0x60;
     _triggerDepth = (1 << _bufferDepthLog2) / 2;
 
-    /*        
-    // Build a fixed table with an 800 Hz tone
-    float omega = (2.0 * 3.14159 * 800.0) / (float)sampleRate;
-    float phi = 0;
-    for (unsigned int i = 0; i < _toneBufSize; i++) {
-        _toneBuf[i] = 32767.0 * std::cos(phi);
-        phi += omega;
-    }
-    */
-
     // TODO: Pass in I2C port
     // One-time initialization of the I2C channel
     i2c_hw_t *hw = i2c_get_hw(i2c_default);
@@ -110,7 +100,7 @@ void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
     _lastAudioTime = time_ms() + durationMs;
 }
 
-bool I2CAudioOutputContext::play(const int16_t* frame) {
+bool I2CAudioOutputContext::play(const int16_t* frame, uint32_t frameLen) {
 
     // Check for the full situation and push back if necessary
     if (((_frameWriteCount + 1) & _bufferMask) ==
@@ -125,9 +115,6 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
     // Copy the data into the slot
     bool nonZeroSample = false;
     for (uint32_t i = 0; i < _frameSize; i++) {
-        if (_analyzer) {
-            _analyzer->sample(frame[i]);
-        }
         start[i] = frame[i];
         if (frame[i] != 0) {
             nonZeroSample = true;
@@ -135,6 +122,11 @@ bool I2CAudioOutputContext::play(const int16_t* frame) {
     }
 
     _frameWriteCount++;
+
+    // Give the audio to the analyzer, if enabled
+    if (_analyzer) {
+        _analyzer->play(frame, frameLen);
+    }
 
     if (nonZeroSample) {
         _openSquelchIfNecessary();

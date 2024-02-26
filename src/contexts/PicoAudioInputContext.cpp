@@ -23,11 +23,13 @@
 
 #include "hardware/adc.h"
 
+#include "kc1fsz-tools/AudioProcessor.h"
+#include "kc1fsz-tools/AudioAnalyzer.h"
+
+#include "PicoAudioInputContext.h"
+
 // Physical pin 31
 #define AUDIO_IN_PIN (26)
-
-#include "kc1fsz-tools/AudioProcessor.h"
-#include "PicoAudioInputContext.h"
 
 using namespace std;
 
@@ -206,15 +208,22 @@ bool PicoAudioInputContext::run() {
 
     // Check to see if we have data availble 
     if (_audioInBufWriteCount.get() > _audioInBufReadCount.get()) {
+
         activity = true;
 
         uint32_t slot = _audioInBufReadCount.get() & _audioInBufDepthMask;
 
+        // TODO: REMOVE THIS (ANALYZER SHOULD REPLACE)
         // (This is optional)
         _updateStats(_audioInBuf[slot]);
-        
+
+        // Give the audio to the analyzer, if enabled
+        if (_analyzer) {
+            _analyzer->play(_audioInBuf[slot], _audioFrameSize * _audioFrameBlockFactor);
+        }
+
         // Pull down a 4xframe and try to move it into the transmitter
-        bool accepted = _sink->play(_audioInBuf[slot]);
+        bool accepted = _sink->play(_audioInBuf[slot], _audioFrameSize * _audioFrameBlockFactor);
         if (accepted) {
             // Move the read pointer forward (we already know that 
             // the write counter is larger than the read counter)

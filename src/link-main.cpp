@@ -123,6 +123,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 using namespace std;
 using namespace kc1fsz;
 
+// Audio rate
+static const uint32_t sampleRate = 8000;
 // The size of one EchoLink audio frame (after decoding)
 static const int audioFrameSize = 160;
 // The number of audio frames packed into an RTP packet
@@ -238,7 +240,7 @@ int main(int, const char**) {
 
     TestUserInfo info;
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
-    I2CAudioOutputContext audioOutContext(audioFrameSize * 4, 8000, 
+    I2CAudioOutputContext audioOutContext(audioFrameSize * 4, sampleRate, 
         audioBufDepthLog2, audioBuf, &info);
     PicoAudioInputContext audioInContext;
 
@@ -247,8 +249,12 @@ int main(int, const char**) {
 
     // Analyzers for sound data
     int16_t txAnalyzerHistory[2048];
-    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 2048);
+    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 2048, sampleRate);
     audioOutContext.setAnalyzer(&txAnalyzer);
+
+    int16_t rxAnalyzerHistory[2048];
+    AudioAnalyzer rxAnalyzer(rxAnalyzerHistory, 2048, sampleRate);
+    audioInContext.setAnalyzer(&rxAnalyzer);
 
     LinkRootMachine rm(&ctx, &info, &audioOutContext);
 
@@ -294,7 +300,7 @@ int main(int, const char**) {
     audioInContext.resetMax();
 
     PicoPollTimer analyzerTimer;
-    analyzerTimer.setIntervalUs(1000000);
+    analyzerTimer.setIntervalUs(500000);
     bool analyzerOn = true;
 
     // Start the state machine
@@ -469,15 +475,31 @@ int main(int, const char**) {
             longCycleCounter++;
         }
 
-        // Analysis display
-        if (analyzerOn) {
-            if (analyzerTimer.poll()) {
-                cout << txAnalyzer.getRMS() << " " << txAnalyzer.getPeakDBFS() << " dB " 
-                    << txAnalyzer.getPeak() << endl;
-                analyzerTimer.reset();
-            }
-        }
+        const float powerThreshold = 1e11;
 
+        // Periodically do some analysis of the audio to find tones, etc.
+        if (analyzerTimer.poll()) {
+
+            bool dtmf_1209 = rxAnalyzer.getTonePower(1209) > powerThreshold; 
+            bool dtmf_1336 = rxAnalyzer.getTonePower(1336) > powerThreshold; 
+            bool dtmf_697 = rxAnalyzer.getTonePower(697) > powerThreshold; 
+
+            bool oneActive = dtmf_1209 && dtmf_697;
+            bool twoActive = dtmf_1336 && dtmf_697;
+
+            // Analysis display
+            //if (analyzerOn) {
+            //    cout << rxAnalyzer.getRMS() << " " << rxAnalyzer.getPeakDBFS() << " dB " 
+            //        << rxAnalyzer.getPeak() << endl;
+            //}
+
+            if (oneActive)
+                cout << "ONE" << endl;
+            if (twoActive)
+                cout << "TWO" << endl;
+
+            analyzerTimer.reset();
+        }
     }
 
     cout << "Left event loop" << endl;

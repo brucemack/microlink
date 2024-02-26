@@ -33,6 +33,7 @@
 namespace kc1fsz {
 
 class AudioProcessor;
+class AudioAnalyzer;
 
 class PicoAudioInputContext : public Runnable {
 public:
@@ -57,6 +58,8 @@ public:
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
     int16_t getGain() const { return _gain; }
     void setGain(int16_t g) { _gain = g; }
+
+    void setAnalyzer(AudioAnalyzer* aa) { _analyzer = aa; }
 
     // Used to assess DC bias
     int16_t getAverage() const;
@@ -123,6 +126,8 @@ private:
     PicoPerfTimer _perfTimer;
     volatile uint32_t _maxSkew = 0;
     volatile uint32_t _maxLen = 0;
+
+    AudioAnalyzer* _analyzer = 0;
 };
 
 }
