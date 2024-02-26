@@ -2028,7 +2028,7 @@
     (property "Value" "10k" (at 229.87 105.41 0)
       (effects (font (size 1.27 1.27)) (justify right))
     )
-    (property "Footprint" "Potentiometer_SMD:Potentiometer_Bourns_3314S_Horizontal" (at 232.41 104.14 0)
+    (property "Footprint" "KiCad-Library:POT_3362P" (at 232.41 104.14 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "~" (at 232.41 104.14 0)
