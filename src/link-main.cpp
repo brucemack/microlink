@@ -313,7 +313,7 @@ int main(int, const char**) {
     PicoAudioInputContext::setup();
 
     PicoUartChannel::traceLevel = 0;
-    ESP32CommContext::traceLevel = 0;
+    ESP32CommContext::traceLevel = 1;
 
     LinkRootMachine::traceLevel = 0;
     LogonMachine::traceLevel = 0;

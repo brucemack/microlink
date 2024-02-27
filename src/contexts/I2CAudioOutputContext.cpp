@@ -21,7 +21,9 @@
 #include <cmath>
 
 #include "hardware/i2c.h"
+
 #include "kc1fsz-tools/AudioAnalyzer.h"
+#include "kc1fsz-tools/Common.h"
 
 #include "common.h"
 #include "UserInfo.h"

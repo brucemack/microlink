@@ -18,6 +18,7 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include "kc1fsz-tools/Common.h"
 #include "LinkUserInfo.h"
 
 using namespace std;
@@ -25,19 +26,14 @@ using namespace std;
 namespace kc1fsz {
 
 void LinkUserInfo::setStatus(const char* msg) { 
-    if (_log) {
-        char stamp[16];
-        snprintf(stamp, 16, "%06lu", time_ms() % 1000000);
-        _log->info("Status: %s %s", stamp, msg);
-    }
+    if (_log)
+        _log->info("Status: %s", msg);
 }
 
 void LinkUserInfo::setOnData(const char* msg) { 
     if (_log) {
-        char stamp[16];
-        snprintf(stamp, 16, "%06lu", time_ms() % 1000000);
         //std::cout << "UserInfo(oNDATA): " << stamp << "[" << msg << "]" << std::endl; 
-        _log->info("oNDATA: %s", stamp);
+        _log->info("oNDATA");
     }
 }
 

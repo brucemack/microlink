@@ -23,9 +23,11 @@
 
 #include <cstdint>
 
-#include "common.h"
+#include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/Event.h"
 #include "kc1fsz-tools/EventProcessor.h"
+
+#include "common.h"
 
 namespace kc1fsz {
 

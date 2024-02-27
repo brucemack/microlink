@@ -42,7 +42,7 @@
 
 #include "ESP32CommContext.h"
 
-using namespace std;
+//using namespace std;
 
 namespace kc1fsz {
 
@@ -378,39 +378,37 @@ void ESP32CommContext::error() {
 void ESP32CommContext::sendPrompt() {
     if (_state == State::IN_SEND_PROMPT_WAIT) {
         if (traceLevel > 0) {
-            cout << "SEND PROMPT" << endl;
+            _log->info("SEND PROMPT");
         }
         _state = State::IN_SEND_OK_WAIT;
         // Send the actual data
         _esp32->write(_sendHold, _sendHoldLen);
     } else {
-        cout << "ESP32CommContext: ERROR (Send Prompt) " << _state << endl;
+        _log->error("ESP32CommContext: ERROR (Send Prompt) %d", _state);
     }
 }
 
 void ESP32CommContext::sendOk() {
     if (_state == State::IN_SEND_OK_WAIT) {
         if (traceLevel > 0) {
-            cout << "SEND OK" << endl;
+            _log->info("SEND OK");
         }
         _state = State::NONE;
         SendEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
     } else {
-        cout << "ESP32CommContext: ERROR (SEND OK)" << _state << endl;
+        _log->error("ESP32CommContext: ERROR (SEND OK) %d", _state);
     }
 }
 
 void ESP32CommContext::sendFail() {
     if (_state == State::IN_SEND_OK_WAIT) {
-        //if (traceLevel > 0) {
-            cout << "********* SEND FAIL **************************" << endl;
-        //}
+        _log->error("SEND FAIL");
         _state = State::NONE;
         SendEvent ev(_lastChannel, false);
         _eventProc->processEvent(&ev);
     } else {
-        cout << "ESP32CommContext: ERROR (SEND FAIL)" << endl;
+        _log->error("ESP32CommContext: ERROR (SEND FAIL) %d", _state);
     }
 }
 
@@ -422,7 +420,7 @@ void ESP32CommContext::domain(const char* addr) {
         _lastAddrResp = IPAddress(parseIP4Address(addr));
     }
     else {
-        cout << "ESP32CommContext: ERROR (Domain)" << _state << endl;
+        _log->error("ESP32CommContext: ERROR (Domain) %d", _state);
     }
 }
 
@@ -462,7 +460,7 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
             }    
             else if (_tracker[channel].type == ChannelTracker::Type::TYPE_UDP) {
                 if (traceLevel > 1) {
-                    cout << "(RX)" << endl;
+                    _log->info("(RX)");
                 }
                 UDPReceiveEvent ev(Channel(channel), data, len, 
                     IPAddress(parseIP4Address(addr)));
@@ -474,12 +472,7 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
 
 void ESP32CommContext::notification(const char* msg) {
 
-    if (traceLevel > 0) {
-        cout << "ESP32CommContext: " << msg << endl;
-    }
-
     // Look for messages that we don't recognized
-
     if (strcmp(msg, "ATE0")) {                
     }
     else if (strcmp(msg, "WIFI CONNECTED")) {                
@@ -489,7 +482,7 @@ void ESP32CommContext::notification(const char* msg) {
     else if (strcmp(msg, "WIFI GOT IP")) {                
     }
     else {                
-        cout << "************ ESP32CommContext: UNRECOGNIZED NOTIFICATION: " << msg << endl;
+        _log->error("UNRECOGNIZED NOTIFICATION: %s", msg);
     }
 
     if (_state == State::IN_INIT) {
@@ -508,8 +501,8 @@ void ESP32CommContext::notification(const char* msg) {
 }
 
 void ESP32CommContext::confused(const uint8_t* data, uint32_t len) {
-    cout << "ESP32CommContext: Confused" << endl;
-    prettyHexDump(data, len, cout);
+    _log->error("ESP32CommContext: Confused");
+    prettyHexDump(data, len, std::cout);
 }
 
 }
