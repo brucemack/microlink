@@ -402,6 +402,10 @@ where the MCP4725 has don't-cares.  These will be set to zero.
 * Analog/Audio
   - [Good article from Analog Devices about noise in mixed-signal systems](https://www.analog.com/media/en/analog-dialogue/volume-46/number-2/articles/staying_well_grounded.pdf)
   - [Detailed article about audio/rig integration](https://www.zs2ez.co.za/Soundcard/Soundcard.htm)
+* DSP Related
+  - [A useful article on implementing the Goertzel Algorithm in fixed point](https://remcycles.net/blog/goertzel.html)
+  - [Very good article on Fixed Point Math by Randy Yates](http://www.digitalsignallabs.com/downloads/fp.pdf)
+  - [Another Randy Yates paper on fixed point FIR](http://www.digitalsignallabs.com/downloads/fir.pdf)
 * Other
   - [Analog Devices Filter Wizard](https://tools.analog.com/en/filterwizard/)
   - https://www.purevpn.com/what-is-vpn/protocols/openvpn
