@@ -64,6 +64,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "machines/QSOFlowMachine.h"
 #include "machines/QSOAcceptMachine.h"
 #include "machines/WelcomeMachine.h"
+#include "machines/LookupMachine2.h"
+#include "machines/QSOConnectMachine.h"
 
 #include "../tests/TestUserInfo.h"
 
@@ -211,14 +213,17 @@ int main(int, const char**) {
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
 
     PicoUartChannel::traceLevel = 0;
-    ESP32CommContext::traceLevel = 0;
+    ESP32CommContext::traceLevel = 2;
 
     LinkRootMachine::traceLevel = 0;
     LogonMachine::traceLevel = 0;
     QSOAcceptMachine::traceLevel = 0;
     ValidationMachine::traceLevel = 0;
-    WelcomeMachine::traceLevel = 1;
+    WelcomeMachine::traceLevel = 0;
     QSOFlowMachine::traceLevel = 0;
+
+    LookupMachine2::traceLevel = 0;
+    QSOConnectMachine::traceLevel = 0;
 
     // Sertup UART and timer
     const uint32_t readBufferSize = 256;
@@ -248,12 +253,12 @@ int main(int, const char**) {
     audioInContext.setSampleCb(I2CAudioOutputContext::tickISR, &audioOutContext);
 
     // Analyzers for sound data
-    int16_t txAnalyzerHistory[2048];
-    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 2048, sampleRate);
+    int16_t txAnalyzerHistory[1024];
+    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 1024, sampleRate);
     audioOutContext.setAnalyzer(&txAnalyzer);
 
-    int16_t rxAnalyzerHistory[2048];
-    AudioAnalyzer rxAnalyzer(rxAnalyzerHistory, 2048, sampleRate);
+    int16_t rxAnalyzerHistory[1024];
+    AudioAnalyzer rxAnalyzer(rxAnalyzerHistory, 1024, sampleRate);
     audioInContext.setAnalyzer(&rxAnalyzer);
 
     LinkRootMachine rm(&ctx, &info, &audioOutContext);
@@ -296,15 +301,14 @@ int main(int, const char**) {
     uint32_t rigKeyLockoutTime = 0;
     uint32_t rigKeyLockoutCount = 0;
 
-    audioInContext.setADCEnabled(true);
-    audioInContext.resetMax();
-
     PicoPollTimer analyzerTimer;
-    analyzerTimer.setIntervalUs(500000);
+    // Was 500000
+    analyzerTimer.setIntervalUs(250000);
     bool analyzerOn = true;
 
-    // Start the state machine
-    rm.start();
+    bool firstLoop = true;
+    uint32_t lastConnectRequestMs = 0;
+    uint32_t lastStopRequestMs = 0;
 
     cout << "Entering event loop" << endl;
 
@@ -391,7 +395,6 @@ int main(int, const char**) {
             }
         }
 
-        //audioInContext.setADCEnabled(!rigKeyState);
         gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
 
         // ----- Serial Commands ---------------------------------------------
@@ -420,11 +423,6 @@ int main(int, const char**) {
                 cout << endl;
                 cout << "Diagnostics" << endl;
                 cout << "Audio In Overflow : " << audioInContext.getOverflowCount() << endl;
-                cout << "Audio In Avg      : " << audioInContext.getAverage() << endl;
-                cout << "Audio In Avg%     : " << (100 * audioInContext.getAverage()) / 32767 << endl;
-                cout << "Audio In Max      : " << audioInContext.getMax() << endl;
-                cout << "Audio In Max%     : " << (100 * audioInContext.getMax()) / 32767 << endl;
-                cout << "Audio In Clips    : " << audioInContext.getClips() << endl;
                 cout << "Audio Gain        : " << audioInContext.getGain() << endl;
                 cout << "Max Skew (us)     : " << audioInContext.getMaxSkew() << endl;
                 cout << "Max Len (us)      : " << audioInContext.getMaxLen() << endl;
@@ -452,6 +450,9 @@ int main(int, const char**) {
                     maxTaskTime[t] = 0;
                 }
                 audioInContext.resetMax();
+                audioInContext.resetOverflowCount();
+
+                longestCycleUs = 0;
             }
             else {
                 cout << (char)c;
@@ -464,15 +465,6 @@ int main(int, const char**) {
             taskTimer.reset();
             tasks[t]->run();
             maxTaskTime[t] = std::max(maxTaskTime[t], taskTimer.elapsedUs());
-        }
-
-        uint32_t ela = cycleTimer.elapsedUs();
-        if (ela > longestCycleUs) {
-            longestCycleUs = ela;
-            cout << "Longest Cycle (us) " << longestCycleUs << endl;
-        }
-        if (ela > 125) {
-            longCycleCounter++;
         }
 
         const float powerThreshold = 1e11;
@@ -493,12 +485,41 @@ int main(int, const char**) {
             //        << rxAnalyzer.getPeak() << endl;
             //}
 
-            if (oneActive)
-                cout << "ONE" << endl;
-            if (twoActive)
-                cout << "TWO" << endl;
-
             analyzerTimer.reset();
+
+            if (oneActive) {
+                if (time_ms() - lastConnectRequestMs > 2000) {
+                    bool b = rm.connectToStation(CallSign("*ECHOTEST*"));
+                    if (!b) {
+                        lastConnectRequestMs = time_ms();
+                    }
+                }
+            } else if (twoActive) {
+                if (rm.isInQSO() && time_ms() - lastStopRequestMs > 2000) {
+                    rm.requestCleanStop();  
+                    lastStopRequestMs = time_ms();
+                }
+            }
+        }
+
+        // Deal with evreything that should be started once we are actually 
+        // in the event loop.
+        if (firstLoop) {
+            audioInContext.setADCEnabled(true);
+            audioInContext.resetMax();
+            audioInContext.resetOverflowCount();
+            // Start the state machine
+            rm.start();
+            firstLoop = false;
+        }
+
+        uint32_t ela = cycleTimer.elapsedUs();
+        if (ela > longestCycleUs) {
+            longestCycleUs = ela;
+            cout << "Longest Cycle (us) " << longestCycleUs << endl;
+        }
+        if (ela > 5000) {
+            longCycleCounter++;
         }
     }
 

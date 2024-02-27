@@ -63,6 +63,8 @@ public:
 
     bool test();
 
+    int getState() const { return _state; }
+
     // ----- Runnable Methods ------------------------------------------------
 
     /**
@@ -124,7 +126,11 @@ private:
         IN_UDP_SETUP, 
         // State 5: 
         IN_SEND_PROMPT_WAIT,
-        IN_SEND_OK_WAIT 
+        // State 6:
+        IN_SEND_OK_WAIT,
+        // State 7: This is the state right after we have requested
+        // a send and are waiting for the initial OK response.
+        IN_SEND_WAIT 
     };
 
     AsyncChannel* _esp32;

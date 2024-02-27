@@ -50,8 +50,7 @@ static const char* UNSUCCESSFUL_MSG = "Callsign not valid or not online";
 int LookupMachine2::traceLevel = 0;
 
 LookupMachine2::LookupMachine2(CommContext* ctx, UserInfo* userInfo)
-:   _state(IDLE),
-    _ctx(ctx),
+:   _ctx(ctx),
     _userInfo(userInfo),
     _serverPort(0) { 
 }

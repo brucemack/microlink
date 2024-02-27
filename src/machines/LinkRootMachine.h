@@ -28,11 +28,13 @@
 #include "../StateMachine.h"
 
 #include "LogonMachine.h"
+#include "QSOConnectMachine.h"
 #include "QSOAcceptMachine.h"
 #include "ValidationMachine.h"
 #include "WelcomeMachine.h"
 #include "QSOFlowMachine.h"
 #include "WaitMachine.h"
+#include "LookupMachine2.h"
 
 namespace kc1fsz {
 
@@ -67,6 +69,15 @@ public:
      * heard on the radio receiver.
      */
     void radioCarrierDetect() { _lastRadioCarrierDetect = time_ms(); }
+
+    /**
+    * Used to start the process of connecting to the specified station.
+    * This will only work if we are in ACCEPTING state.
+    *
+    * @returns true if the request to conncet is allowable.  NOTE:
+    *   this doesn't mean that the connection was successful!
+    */
+    bool connectToStation(CallSign targetCs);
 
     // ----- From StateMachine ------------------------------------------------
 
@@ -105,11 +116,23 @@ private:
         IN_WELCOME,
         // State 6: In two-way QSO
         QSO,
+        // State 7:
         BYE, 
+        // State 8:
         FAILED, 
-        SUCCEEDED 
+        // State 9:
+        SUCCEEDED,
+        // State 10: Communicating with the Addressing Server
+        // to resolve requested callsign.
+        LOOKUP,
+        // State 11: In the process of connecting to a node.
+        CONNECT,
+        // State 12:
+        CONNECT_RETRY_WAIT
     };
     
+    uint16_t _stateCount;
+
     CommContext* _ctx;
     UserInfo* _userInfo;
 
@@ -119,6 +142,9 @@ private:
     ValidationMachine _validationMachine;
     WelcomeMachine _welcomeMachine;
     QSOFlowMachine _qsoMachine;
+
+    LookupMachine2 _lookupMachine;
+    QSOConnectMachine _connectMachine;
 
     uint32_t _lastRadioCarrierDetect = 0;
 };

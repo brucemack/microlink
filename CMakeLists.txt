@@ -59,6 +59,7 @@ add_executable(link-main
   src/machines/QSOConnectMachine.cpp
   src/machines/QSOFlowMachine.cpp
   src/machines/WaitMachine.cpp
+  src/machines/LookupMachine2.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/AudioAnalyzer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp

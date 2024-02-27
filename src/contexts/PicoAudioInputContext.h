@@ -56,15 +56,13 @@ public:
     void setADCEnabled(bool en);
     
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
+    void resetOverflowCount() { _audioInBufOverflow = 0; }
+    
     int16_t getGain() const { return _gain; }
     void setGain(int16_t g) { _gain = g; }
 
     void setAnalyzer(AudioAnalyzer* aa) { _analyzer = aa; }
 
-    // Used to assess DC bias
-    int16_t getAverage() const;
-    int16_t getMax() const;
-    int16_t getClips() const;
     uint32_t getMaxSkew() const { return _maxSkew; }
     uint32_t getMaxLen() const { return _maxLen; }
     void resetMax() { _maxSkew = 0; _maxLen = 0; }
@@ -74,8 +72,6 @@ public:
     virtual bool run();
 
 private:   
-
-    void _updateStats(int16_t* audio);
 
     static void _adc_irq_handler();
 
@@ -111,17 +107,6 @@ private:
     int16_t _gain = 16;
 
     bool _adcEnabled = false;
-
-    // Used for capturing audio statistics
-    struct FrameStats {
-        int16_t avg;
-        int16_t max;
-        uint32_t clips;
-    };
-
-    static const uint32_t _statsSize = 4;
-    FrameStats _stats[_statsSize];
-    uint32_t _statsPtr;
 
     PicoPerfTimer _perfTimer;
     volatile uint32_t _maxSkew = 0;

@@ -84,6 +84,7 @@ void QSOFlowMachine::start() {
 }
 
 void QSOFlowMachine::cleanup() {
+    _peerAddr = IPAddress();
 }
 
 void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
@@ -324,7 +325,9 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             _state = State::OPEN_RX;
         }
         else if (_isTimedOut()) {
-            _userInfo->setStatus("Timeout 2");
+            char buf[64];
+            snprintf(buf, 64, "Timeout 2 %d", 0);
+            _userInfo->setStatus(buf);
             _state = State::FAILED;
         }
     }
@@ -408,7 +411,9 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             _state = State::OPEN_TX;
         }
         else if (_isTimedOut()) {
-            _userInfo->setStatus("Timeout 3");
+            char buf[64];
+            snprintf(buf, 64, "Timeout 3 %d", 0);
+            _userInfo->setStatus(buf);
             _state = State::FAILED;
         }
     }

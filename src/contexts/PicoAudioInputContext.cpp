@@ -77,8 +77,7 @@ void __not_in_flash_func(PicoAudioInputContext::_adc_irq_handler) () {
     }
 }
 
-PicoAudioInputContext::PicoAudioInputContext() 
-:   _statsPtr(0) {
+PicoAudioInputContext::PicoAudioInputContext() {
 
     if (INSTANCE != 0) {
         panic("Init error");
@@ -139,6 +138,7 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
             } else {
                 // In this case we just start writing on the same 4xframe
                 // again and lose the previous values.
+                // THIS IS AN AUDIO GLITCH!
                 _audioInBufOverflow++;
             }
         } 
@@ -157,51 +157,6 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     _maxLen = std::max((uint32_t)_maxLen, t);
 }    
 
-int16_t PicoAudioInputContext::getAverage() const {
-    int16_t r = 0;
-    for (uint32_t s = 0; s < _statsSize; s++) 
-        r += _stats[s].avg;
-    return r / _statsSize;
-}
-
-int16_t PicoAudioInputContext::getMax() const {
-    int16_t r = 0;
-    for (uint32_t s = 0; s < _statsSize; s++) 
-        r = std::max(_stats[s].max, r);
-    return r;
-}
-
-int16_t PicoAudioInputContext::getClips() const {
-    int16_t r = 0;
-    for (uint32_t s = 0; s < _statsSize; s++) 
-        r += _stats[s].clips;
-    return r;
-}
-
-void PicoAudioInputContext::_updateStats(int16_t* audio) {
-
-    _stats[_statsPtr].avg = 0;
-    _stats[_statsPtr].max = 0;
-    _stats[_statsPtr].clips = 0;
-    
-    for (uint32_t i = 0; i < 160 * 4; i++) {
-        int16_t sample = audio[i];
-        _stats[_statsPtr].avg += sample;
-        _stats[_statsPtr].max = std::max(_stats[_statsPtr].max,
-            (int16_t)std::abs(sample));
-        if (sample == 32767 || sample == -32768) {
-            _stats[_statsPtr].clips++;
-        }
-    }
-
-    _stats[_statsPtr].avg /= (160 * 4);
-    
-    _statsPtr++;
-    if (_statsPtr == _statsSize) {
-        _statsPtr = 0;
-    }
-}
-
 bool PicoAudioInputContext::run() {
 
     bool activity = false;
@@ -212,10 +167,6 @@ bool PicoAudioInputContext::run() {
         activity = true;
 
         uint32_t slot = _audioInBufReadCount.get() & _audioInBufDepthMask;
-
-        // TODO: REMOVE THIS (ANALYZER SHOULD REPLACE)
-        // (This is optional)
-        _updateStats(_audioInBuf[slot]);
 
         // Give the audio to the analyzer, if enabled
         if (_analyzer) {

@@ -18,8 +18,8 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _QSOConnectMachine_h
-#define _QSOConnectMachine_h
+#ifndef _QSOAcceptMachine_h
+#define _QSOAcceptMachine_h
 
 #include "kc1fsz-tools/Event.h"
 #include "kc1fsz-tools/IPAddress.h"

@@ -296,7 +296,13 @@ void ESP32CommContext::sendUDPChannel(Channel c,
     _esp32->write((uint8_t*)buf, strlen(buf));
 
     // Now we wait for the prompt to tell us it's OK to send the data
-    _state = State::IN_SEND_PROMPT_WAIT;
+    //_state = State::IN_SEND_PROMPT_WAIT;
+    // Now we wait for the OK
+    _state = State::IN_SEND_WAIT;
+
+    if (traceLevel > 1) {
+        cout << "SEND" << endl;
+    }
 }
 
 void ESP32CommContext::ok() {
@@ -341,8 +347,14 @@ void ESP32CommContext::ok() {
         ChannelSetupEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
     }
+    else if (_state == State::IN_SEND_WAIT) {
+        if (traceLevel > 0) {
+            cout << "OK (Send)" << endl;
+        }
+        _state = State::IN_SEND_PROMPT_WAIT;
+    }
     else {
-        if (traceLevel > 1) {
+        if (traceLevel > 0) {
             cout << "ESP32CommContext: OK (?)" << endl;
         }
     }
@@ -361,19 +373,29 @@ void ESP32CommContext::error() {
 
 void ESP32CommContext::sendPrompt() {
     if (_state == State::IN_SEND_PROMPT_WAIT) {
+        if (traceLevel > 0) {
+            cout << "SEND PROMPT" << endl;
+        }
         // Send the actual data
         _esp32->write(_sendHold, _sendHoldLen);
         // TODO: ERROR CHECK
         _state = State::IN_SEND_OK_WAIT;
+    } else {
+        cout << "ESP32CommContext: ERROR (Send Prompt)" << endl;
     }
 }
 
 void ESP32CommContext::sendOk() {
     if (_state == State::IN_SEND_OK_WAIT) {
+        if (traceLevel > 0) {
+            cout << "SEND OK" << endl;
+        }
         _state = State::NONE;
         SendEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
-    } 
+    } else {
+        cout << "ESP32CommContext: ERROR (SEND OK)" << endl;
+    }
 }
 
 void ESP32CommContext::domain(const char* addr) {
@@ -421,6 +443,9 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
                 _eventProc->processEvent(&ev);
             }    
             else if (_tracker[channel].type == ChannelTracker::Type::TYPE_UDP) {
+                if (traceLevel > 1) {
+                    cout << "(RX)" << endl;
+                }
                 UDPReceiveEvent ev(Channel(channel), data, len, 
                     IPAddress(parseIP4Address(addr)));
                 _eventProc->processEvent(&ev);
