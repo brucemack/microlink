@@ -31,6 +31,7 @@
 Launch command:
 openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main.elf verify reset exit"
 */
+#include <ios>
 #include <iostream>
 #include <fstream>
 #include <cassert>
@@ -52,6 +53,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "hardware/watchdog.h"
 #include "hardware/flash.h"
 
+#include "kc1fsz-tools/Log.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
@@ -147,7 +149,12 @@ static const uint32_t audioBufDepth = 16;
 static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 
+static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
+    AudioAnalyzer* rxAnalyzer, AudioAnalyzer* txAnalyzer, ostream& str);
+
 int main(int, const char**) {
+
+    Log log;
 
     // Seup PICO
     stdio_init_all();
@@ -206,7 +213,7 @@ int main(int, const char**) {
     gpio_pull_up(I2C0_SDA);
     gpio_pull_up(I2C0_SCL);
     //i2c_set_baudrate(i2c_default, 400000 * 4);
-    i2c_set_baudrate(i2c_default, 400000);
+    i2c_set_baudrate(i2c_default, 800000);
 
     // Hello indicator
     for (int i = 0; i < 4; i++) {
@@ -216,8 +223,8 @@ int main(int, const char**) {
         sleep_ms(250);
     }
 
-    cout << "===== MicroLink Link Station ============" << endl;
-    cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
+    log.info("===== MicroLink Link Station ============");
+    log.info("Copyright (C) 2024 Bruce MacKinnon KC1FSZ");
 
     if (watchdog_caused_reboot()) {
         cout << "WATCHDOG REBOOT" << endl;
@@ -262,7 +269,7 @@ int main(int, const char**) {
     const uint8_t* addr = (uint8_t*)(XIP_BASE + (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE));
     auto p = (const StationConfig*)addr;
     if (p->version != CONFIG_VERSION) {
-        cout << "ERROR: Configuration data is invalid" << endl;
+        log.error("Configuration data is invalid");
         panic_unsupported();
         return -1;
     } 
@@ -274,10 +281,10 @@ int main(int, const char**) {
     ourFullName = FixedString(p->fullName);
     ourLocation = FixedString(p->location);
 
-    cout << "EL Addressing Server : " << addressingServerHost.c_str() 
-        << ":" << addressingServerPort << endl;
-    cout << "Identification       : " << ourCallSign.c_str() << "/" 
-        << ourFullName.c_str() << "/" << ourLocation.c_str() << endl;
+    log.info("EL Addressing Server : %s:%lu", addressingServerHost.c_str(),
+        addressingServerPort);
+    log.info("Identification       : %s/%s/%s", ourCallSign.c_str(),
+        ourFullName.c_str(), ourLocation.c_str());
 
     // ADC/audio in setup
     PicoAudioInputContext::setup();
@@ -307,14 +314,14 @@ int main(int, const char**) {
     PicoPollTimer timer;
     timer.setIntervalUs(1000 * 5000);
 
-    ESP32CommContext ctx(&channel, ESP_EN_PIN);
+    ESP32CommContext ctx(&log, &channel, ESP_EN_PIN);
 
     // Do a flush of any garbage on the serial line before we start 
     // protocol processing.
     ctx.flush(250);
 
     LinkUserInfo info;
-    info.setLog(0);
+    info.setLog(1);
 
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, sampleRate, 
@@ -343,13 +350,6 @@ int main(int, const char**) {
     ctx.setEventProcessor(&rm);
     rxMonitor.setSink(&rm);
     rxMonitor.setInfo(&info);
-
-    //rm.setServerName(HostName("naeast.echolink.org"));
-    //rm.setServerPort(5200);
-    //rm.setCallSign(CallSign("W1TKZ-L"));
-    //rm.setPassword(FixedString("xxx"));
-    //rm.setFullName(FixedString("Wellesley Amateur Radio Society"));
-    //rm.setLocation(FixedString("Wellesley, MA USA"));
 
     rm.setServerName(addressingServerHost);
     rm.setServerPort(addressingServerPort);
@@ -380,16 +380,18 @@ int main(int, const char**) {
     uint32_t rigKeyLockoutCount = 0;
 
     PicoPollTimer analyzerTimer;
-    // Was 500000
     analyzerTimer.setIntervalUs(250000);
-    bool analyzerOn = true;
+
+    bool statusPage = false;
+    PicoPollTimer renderTimer;
+    renderTimer.setIntervalUs(500000);
 
     bool firstLoop = true;
     uint32_t lastConnectRequestMs = 0;
     uint32_t lastStopRequestMs = 0;
 
     // Last thing before going into the event loop
-	watchdog_enable(WATCHDOG_DELAY_MS, true);
+	//watchdog_enable(WATCHDOG_DELAY_MS, true);
 
     cout << "Entering event loop" << endl;
 
@@ -503,6 +505,16 @@ int main(int, const char**) {
             else if (c == 'z') {
                 audioOutContext.tone(800, 1000);
             }
+            else if (c == 'o') {
+                info.setLog(0);
+                statusPage = true;
+                cout << "\033[2J";
+            }
+            else if (c == 'p') {
+                info.setLog(1);
+                statusPage = false;
+                cout << "\033[2J" << endl;
+            }
             else if (c == 'i') {
                 cout << endl;
                 cout << "Diagnostics" << endl;
@@ -510,6 +522,7 @@ int main(int, const char**) {
                 cout << "Audio Gain        : " << audioInContext.getGain() << endl;
                 cout << "Max Skew (us)     : " << audioInContext.getMaxSkew() << endl;
                 cout << "Max Len (us)      : " << audioInContext.getMaxLen() << endl;
+                cout << "Audio Out FIFO OF : " << audioOutContext.getTxFifoFull() << endl;
                 cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
                 cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
                 cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
@@ -530,7 +543,6 @@ int main(int, const char**) {
                 cout << "Gain is " << audioInContext.getGain() << endl;
             }
             else if (c == 'c') {
-                cout << "Clear Stats" << endl;
                 for (uint32_t t = 0; t < taskCount; t++) {
                     maxTaskTime[t] = 0;
                 }
@@ -557,20 +569,14 @@ int main(int, const char**) {
         // Periodically do some analysis of the audio to find tones, etc.
         if (analyzerTimer.poll()) {
 
+            analyzerTimer.reset();
+
             bool dtmf_1209 = rxAnalyzer.getTonePower(1209) > powerThreshold; 
             bool dtmf_1336 = rxAnalyzer.getTonePower(1336) > powerThreshold; 
             bool dtmf_697 = rxAnalyzer.getTonePower(697) > powerThreshold; 
 
             bool oneActive = dtmf_1209 && dtmf_697;
             bool twoActive = dtmf_1336 && dtmf_697;
-
-            // Analysis display
-            //if (analyzerOn) {
-            //    cout << rxAnalyzer.getRMS() << " " << rxAnalyzer.getPeakDBFS() << " dB " 
-            //        << rxAnalyzer.getPeak() << endl;
-            //}
-
-            analyzerTimer.reset();
 
             if (oneActive) {
                 if (time_ms() - lastConnectRequestMs > 2000) {
@@ -584,6 +590,14 @@ int main(int, const char**) {
                     rm.requestCleanStop();  
                     lastStopRequestMs = time_ms();
                 }
+            }
+        }
+
+        // Periodically do some analysis of the audio to find tones, etc.
+        if (statusPage) {
+            if (renderTimer.poll()) {
+                renderTimer.reset();
+                renderStatus(&rm, &audioInContext, &rxAnalyzer, &txAnalyzer, cout);
             }
         }
 
@@ -601,7 +615,7 @@ int main(int, const char**) {
         uint32_t ela = cycleTimer.elapsedUs();
         if (ela > longestCycleUs) {
             longestCycleUs = ela;
-            //cout << "Longest Cycle (us) " << longestCycleUs << endl;
+            cout << "Longest Cycle (us) " << longestCycleUs << endl;
         }
         if (ela > 40000) {
             longCycleCounter++;
@@ -613,3 +627,57 @@ int main(int, const char**) {
     while (true) {        
     }
 }
+
+static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
+    AudioAnalyzer* rxAnalyzer, 
+    AudioAnalyzer* txAnalyzer, ostream& str) {
+    // [K - Erase line
+    // [2J - Clear screen
+    // [H - Home
+    char ESC = '\033';
+
+    std::ios_base::fmtflags f(str.flags());
+
+    str << ESC << "[H";
+    str << "===== MicoLink Status =====";
+    str << endl << ESC << "[K";
+    str << endl << ESC << "[K";
+    str << "           In QSO? : " << (rm->isInQSO() ? "Yes" : "No");
+    str << endl << ESC << "[K";
+    str << "         Last Call : " << rm->getLastRemoteCallSign().c_str();
+    str << endl << ESC << "[K";
+    str << "        Accepting? : " << (rm->isAccepting() ? "Yes" : "No");
+    str << endl << ESC << "[K";
+    str << "    RX Audio Power : " << (int)rxAnalyzer->getRMS();
+    str << endl << ESC << "[K";
+    str << "    RX Audio Peak% : " << rxAnalyzer->getPeakPercent();
+    str << endl << ESC << "[K";
+    str << "      RX Audio Avg : " << rxAnalyzer->getAverage();
+    str << endl << ESC << "[K";
+    str.setf(ios::fixed,ios::floatfield);
+    str.precision(1);    
+    str << "RX Audio Peak dBFS : " << rxAnalyzer->getPeakDBFS();
+    str.flags(f);
+    str << endl << ESC << "[K";
+    str << "    TX Audio Power : " << (int)txAnalyzer->getRMS();
+    str << endl << ESC << "[K";
+    str << "   TX Audio Peak%  : " << txAnalyzer->getPeakPercent();
+    str << endl << ESC << "[K";
+    str << "      TX Audio Avg : " << txAnalyzer->getAverage();
+    str << endl << ESC << "[K";
+    str.setf(ios::fixed,ios::floatfield);
+    str.precision(1);    
+    str << "TX Audio Peak dBFS : " << txAnalyzer->getPeakDBFS();
+    str.flags(f);
+    str << endl << ESC << "[K";
+    str << " Audio In Overflow : " << inCtx->getOverflowCount();
+    str << endl << ESC << "[K";
+    str << "        Audio Gain : " << inCtx->getGain();
+    str << endl << ESC << "[K";
+    str << "     Max Skew (us) : " << inCtx->getMaxSkew();
+    str << endl << ESC << "[K";
+    str << "      Max Len (us) : " << inCtx->getMaxLen();
+}
+
+
+

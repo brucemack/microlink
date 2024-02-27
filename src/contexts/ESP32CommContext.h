@@ -32,6 +32,7 @@
 
 namespace kc1fsz {
 
+class Log;
 class EventProcessor;
 class AsyncChannel;
 
@@ -45,7 +46,7 @@ public:
 
     static int traceLevel;
 
-    ESP32CommContext(AsyncChannel* esp32, int esp32EnablePin);
+    ESP32CommContext(Log* log, AsyncChannel* esp32, int esp32EnablePin);
 
     /**
      * Indicates where the Event objects should be forwarded to
@@ -135,6 +136,7 @@ private:
         IN_SEND_WAIT 
     };
 
+    Log* _log;
     AsyncChannel* _esp32;
     ATResponseProcessor _respProc;
     EventProcessor* _eventProc;

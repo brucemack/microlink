@@ -54,6 +54,8 @@ public:
 
     void setAnalyzer(AudioAnalyzer* aa) { _analyzer = aa; }
 
+    uint32_t getTxFifoFull() const { return _txFifoFull; }
+
     // ----- From AudioOutputContext ------------------------------------------
 
     virtual void reset();
@@ -108,6 +110,7 @@ private:
     volatile float _ym1 = 0, _ym2 = 0, _a = 0;
 
     AudioAnalyzer* _analyzer = 0;
+    volatile uint32_t _txFifoFull = 0;
 };
 
 }

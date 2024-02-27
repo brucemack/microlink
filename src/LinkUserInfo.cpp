@@ -36,7 +36,8 @@ void LinkUserInfo::setOnData(const char* msg) {
     if (_log) {
         char stamp[16];
         snprintf(stamp, 16, "%06lu", time_ms() % 1000000);
-        std::cout << "UserInfo(oNDATA): " << stamp << "[" << msg << "]" << std::endl; 
+        //std::cout << "UserInfo(oNDATA): " << stamp << "[" << msg << "]" << std::endl; 
+        std::cout << "UserInfo(oNDATA): " << stamp << std::endl; 
     }
 }
 

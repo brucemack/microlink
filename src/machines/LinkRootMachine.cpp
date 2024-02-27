@@ -57,10 +57,6 @@ LinkRootMachine::LinkRootMachine(CommContext* ctx, UserInfo* userInfo,
     _connectMachine(ctx, userInfo) {
 }
 
-bool LinkRootMachine::isInQSO() const {
-    return _state == State::QSO;
-}
-
 bool LinkRootMachine::run() {
     processEvent(&tickEv);
     return true;
@@ -127,6 +123,8 @@ void LinkRootMachine::processEvent(const Event* ev) {
                 // Pass information over to the validation machine
                 _validationMachine.setRequestCallSign(_acceptMachine.getRemoteCallSign());
                 _validationMachine.setRequestAddr(_acceptMachine.getRemoteAddress());
+                _lastRemoteCallSign = _acceptMachine.getRemoteCallSign();
+                _lastRemoteAddress = _acceptMachine.getRemoteAddress();
                 _validationMachine.start();
                 _state = State::IN_VALIDATION;
             } else {
@@ -188,6 +186,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
                 _connectMachine.setTargetAddress(_lookupMachine.getTargetAddress());
                 _qsoMachine.setPeerAddress(_lookupMachine.getTargetAddress());
                 _connectMachine.start();
+                _lastRemoteAddress = _lookupMachine.getTargetAddress();
                 _state = State::CONNECT;
                 // Number of connect tries
                 _stateCount = 5;
@@ -307,8 +306,10 @@ bool LinkRootMachine::connectToStation(CallSign targetCs) {
 
     _lookupMachine.setTargetCallSign(targetCs);
     _lookupMachine.start();
+    _lastRemoteCallSign = targetCs;
 
     _state = State::LOOKUP;
+
     return true;
 }
 

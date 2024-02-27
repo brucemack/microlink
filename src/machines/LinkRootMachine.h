@@ -56,7 +56,9 @@ public:
     void setFullName(FixedString n);
     void setLocation(FixedString loc);
 
-    bool isInQSO() const;
+    bool isInQSO() const { return _state == State::QSO; }
+
+    bool isAccepting() const { return _state == State::ACCEPTING; }
 
     /**
      * Call this to put a QSO into a clean shutdown.  This will not be 
@@ -78,6 +80,8 @@ public:
     *   this doesn't mean that the connection was successful!
     */
     bool connectToStation(CallSign targetCs);
+
+    CallSign getLastRemoteCallSign() const { return _lastRemoteCallSign; }
 
     // ----- From StateMachine ------------------------------------------------
 
@@ -147,6 +151,8 @@ private:
     QSOConnectMachine _connectMachine;
 
     uint32_t _lastRadioCarrierDetect = 0;
+    CallSign _lastRemoteCallSign;
+    IPAddress _lastRemoteAddress;
 };
 
 }

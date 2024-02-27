@@ -25,6 +25,10 @@
 #include "pico/time.h"
 #include "hardware/gpio.h"
 
+#include "kc1fsz-tools/Log.h"
+#include "kc1fsz-tools/Common.h"
+#include "kc1fsz-tools/EventProcessor.h"
+#include "kc1fsz-tools/AsyncChannel.h"
 #include "kc1fsz-tools/events/DNSLookupEvent.h"
 #include "kc1fsz-tools/events/TCPConnectEvent.h"
 #include "kc1fsz-tools/events/ChannelSetupEvent.h"
@@ -33,9 +37,6 @@
 #include "kc1fsz-tools/events/UDPReceiveEvent.h"
 #include "kc1fsz-tools/events/SendEvent.h"
 #include "kc1fsz-tools/events/StatusEvent.h"
-#include "kc1fsz-tools/Common.h"
-#include "kc1fsz-tools/EventProcessor.h"
-#include "kc1fsz-tools/AsyncChannel.h"
 
 #include "../common.h"
 
@@ -49,8 +50,9 @@ static const char* OVERFLOW_MSG = "Overflow";
 
 int ESP32CommContext::traceLevel = 0;
 
-ESP32CommContext::ESP32CommContext(AsyncChannel* esp32, int esp32EnablePin) 
-:   _esp32(esp32),
+ESP32CommContext::ESP32CommContext(Log* log, AsyncChannel* esp32, int esp32EnablePin) 
+:   _log(log),
+    _esp32(esp32),
     _respProc(this),
     _state(State::NONE),
     _esp32EnablePin(esp32EnablePin) {
@@ -206,7 +208,7 @@ void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len)
     _state = State::IN_SEND_WAIT;
 
     if (traceLevel > 1) {
-        cout << "SEND" << endl;
+        _log->info("SEND");
     }
 }
 
@@ -305,7 +307,7 @@ void ESP32CommContext::sendUDPChannel(Channel c,
     _state = State::IN_SEND_WAIT;
 
     if (traceLevel > 1) {
-        cout << "SEND" << endl;
+        _log->info("SEND");
     }
 }
 
@@ -353,23 +355,23 @@ void ESP32CommContext::ok() {
     }
     else if (_state == State::IN_SEND_WAIT) {
         if (traceLevel > 0) {
-            cout << "OK (Send)" << endl;
+            _log->info("OK (Send)");
         }
         _state = State::IN_SEND_PROMPT_WAIT;
     }
     else {
-        cout << "ESP32CommContext: Unexpected OK " << _state << endl;
+        _log->error("ESP32CommContext: Unexpected OK %d",_state);
     }
 }
 
 void ESP32CommContext::error() {
     if (_state == State::IN_TCP_CONNECT) {
-        cout << "ESP32CommContext: ERROR (IN_TCP_CONNECT)" << endl;
+        _log->error("ESP32CommContext: ERROR (IN_TCP_CONNECT)");
         _state = State::NONE;
         TCPConnectEvent ev(_lastChannel, false);
         _eventProc->processEvent(&ev);
     } else {
-        cout << "ESP32CommContext: ERROR " << _state << endl;
+        _log->error("ESP32CommContext: ERROR %d", _state);
     }
 }
 

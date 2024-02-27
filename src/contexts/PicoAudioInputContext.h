@@ -57,7 +57,7 @@ public:
     
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
     void resetOverflowCount() { _audioInBufOverflow = 0; }
-    
+
     int16_t getGain() const { return _gain; }
     void setGain(int16_t g) { _gain = g; }
 
@@ -101,7 +101,8 @@ private:
     // Keep count of overflows/underflows
     uint32_t _audioInBufOverflow = 0;
     // Used to trim the centering
-    int16_t _dcBias = -95;
+    // TODO: MAKE THIS ADJUSTABLE
+    int16_t _dcBias = 100;
     // This includes x16 for 12 to 16 bit PCM conversion and a gain
     // of 0.5.
     int16_t _gain = 16;

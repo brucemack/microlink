@@ -197,8 +197,12 @@ void I2CAudioOutputContext::_play(int16_t sample) {
     uint16_t rawSample = centeredSample >> 4;
 
     i2c_hw_t *hw = i2c_get_hw(i2c_default);
+
     // Tx FIFO must not be full
-    assert(hw->status & I2C_IC_STATUS_TFNF_BITS); 
+    if (!(hw->status & I2C_IC_STATUS_TFNF_BITS)) {
+        _txFifoFull++;
+        return;
+    }
 
     // To create an output sample we need to write three words.  The STOP flag
     // is set on the last one.

@@ -137,7 +137,8 @@ void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
             const uint8_t* frame = (d + 12);
             for (uint16_t f = 0; f < framesPerPacket; f++) {
                 // TODO: EXPLAIN?
-                if (memcmp(SPEC_FRAME, frame, 33) == 0) {
+                //if (memcmp(SPEC_FRAME, frame, 33) == 0) {
+                if (false) {
                     for (uint32_t i = 0; i < 160; i++) {
                         pcmData[pcmPtr + i] = 0;
                     }
