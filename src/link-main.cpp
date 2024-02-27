@@ -69,7 +69,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "machines/LookupMachine2.h"
 #include "machines/QSOConnectMachine.h"
 
-#include "../tests/TestUserInfo.h"
+#include "LinkUserInfo.h"
 
 #include "Synth.h"
 #include "RXMonitor.h"
@@ -283,7 +283,7 @@ int main(int, const char**) {
     PicoAudioInputContext::setup();
 
     PicoUartChannel::traceLevel = 0;
-    ESP32CommContext::traceLevel = 2;
+    ESP32CommContext::traceLevel = 0;
 
     LinkRootMachine::traceLevel = 0;
     LogonMachine::traceLevel = 0;
@@ -313,7 +313,9 @@ int main(int, const char**) {
     // protocol processing.
     ctx.flush(250);
 
-    TestUserInfo info;
+    LinkUserInfo info;
+    info.setLog(0);
+
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, sampleRate, 
         audioBufDepthLog2, audioBuf, &info);
@@ -511,6 +513,7 @@ int main(int, const char**) {
                 cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
                 cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
                 cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
+                cout << "Longest Cycle (us): " << longestCycleUs << endl;
                 cout << "Long Cycles       : " << longCycleCounter << endl;
                 cout << "TX lockout count  : " << rigKeyLockoutCount << endl;
 
@@ -598,7 +601,7 @@ int main(int, const char**) {
         uint32_t ela = cycleTimer.elapsedUs();
         if (ela > longestCycleUs) {
             longestCycleUs = ela;
-            cout << "Longest Cycle (us) " << longestCycleUs << endl;
+            //cout << "Longest Cycle (us) " << longestCycleUs << endl;
         }
         if (ela > 40000) {
             longCycleCounter++;

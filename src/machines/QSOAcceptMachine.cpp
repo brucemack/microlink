@@ -165,10 +165,14 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
                     }
 
                     if (found) {
-                        cout << "Connection from " << _callSign.c_str() << endl;
+
                         char addr[32];
                         formatIP4Address(_addr.getAddr(), addr, 32);
-                        cout << "Address " << addr << endl;         
+
+                        char buf[128];
+                        snprintf(buf, 128, "Connection from %s at %s", 
+                            _callSign.c_str(), addr);
+                        _userInfo->setStatus(buf);
 
                         _localSsrc = _ssrcCounter++;       
                         _state = SUCCEEDED;
