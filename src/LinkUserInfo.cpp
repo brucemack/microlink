@@ -28,7 +28,7 @@ void LinkUserInfo::setStatus(const char* msg) {
     if (_log) {
         char stamp[16];
         snprintf(stamp, 16, "%06lu", time_ms() % 1000000);
-        std::cout << "UserInfo(Status): " << stamp << " " << msg << std::endl; 
+        _log->info("Status: %s %s", stamp, msg);
     }
 }
 
@@ -37,7 +37,7 @@ void LinkUserInfo::setOnData(const char* msg) {
         char stamp[16];
         snprintf(stamp, 16, "%06lu", time_ms() % 1000000);
         //std::cout << "UserInfo(oNDATA): " << stamp << "[" << msg << "]" << std::endl; 
-        std::cout << "UserInfo(oNDATA): " << stamp << std::endl; 
+        _log->info("oNDATA: %s", stamp);
     }
 }
 
@@ -52,7 +52,7 @@ void LinkUserInfo::setSquelchOpen(bool sq) {
     }
 
     if (_log)
-        std:: cout << "UserInfo: Squelch: " << _squelch << std::endl;
+        _log->info("Squelch: %d", _squelch);
 }
 
 bool LinkUserInfo::getSquelch() const { 

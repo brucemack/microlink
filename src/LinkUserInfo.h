@@ -23,6 +23,7 @@
 
 #include <iostream>
 
+#include "kc1fsz-tools/Log.h"
 #include "kc1fsz-tools/AudioOutputContext.h"
 
 #include "../src/common.h"
@@ -33,7 +34,7 @@ namespace kc1fsz {
 class LinkUserInfo : public UserInfo {
 public:
 
-    void setLog(int l) { _log = l; };
+    void setLog(Log* l) { _log = l; }
 
     void setAudioOut(AudioOutputContext* o) { _audioOutCtx = o; }
 
@@ -49,7 +50,7 @@ public:
 
 private:
 
-    int _log = 1;
+    Log* _log = 0;
     bool _squelch = false;
     AudioOutputContext* _audioOutCtx = 0;
     uint32_t _lastSquelchCloseTime = 0;

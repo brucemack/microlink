@@ -53,7 +53,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "hardware/watchdog.h"
 #include "hardware/flash.h"
 
-#include "kc1fsz-tools/Log.h"
+#include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
@@ -81,19 +81,28 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 // ===============
 
 // Serial connection to ESP32
-#define UART_TX_PIN 0
-#define UART_RX_PIN 1
-// Physical pin 11. Ouptut to hard reset on ESP32.
-// (Can be on left)
-#define ESP_EN_PIN (8)
+#define UART0_TX_PIN 0
+#define UART0_RX_PIN 1
 
+// Physical pin 9.  Input from physical PTT button.
+#define PTT_PIN (6)
 // Physical pin 10. Output to drive an LED indicating keyed status
 #define KEY_LED_PIN (7)
+
+// Physical pins 11/12
+#define UART1_TX_PIN (8)
+#define UART1_RX_PIN (9)
+// NOTE: Physical 13 is GND
+
 // Physical pin 15. This is an output to drive an LED indicating
 // that we are in a QSO. 
 #define QSO_LED_PIN (11)
-// Physical pin 9.  Input from physical PTT button.
-#define PTT_PIN (6)
+
+// WAS PHYSICAL 11 GPIO8!
+// Physical pin 16. Ouptut to hard reset on ESP32.
+// (Can be on left)
+#define ESP_EN_PIN (12)
+
 // Physical pin 20.  Used for diagnostics/timing checks
 #define DIAG_PIN (15)
 
@@ -104,16 +113,20 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #define LED_PIN (25)
 // Input from analog section
 #define ADC0_PIN (26)
-// Physical pin 12.  This is an output (active high) used to key 
-// the rig's transmitter. Typically drives an optocoupler to
-// get the pull-to-ground needed by the rig.
-#define RIG_KEY_PIN (9)
-// Physical pin 14. This is an input (active high) used to detect
-// receive carrier from the rig. 
-#define RIG_COS_PIN (10)
+
 // I2C -> DAC
 #define I2C0_SDA (16) // Phy Pin 21: I2C channel 0 - data
 #define I2C0_SCL (17) // Phy Pin 22: I2C channel 0 - clock
+
+// WAS PHY 12
+// Physical pin 24.  This is an output (active high) used to key 
+// the rig's transmitter. Typically drives an optocoupler to
+// get the pull-to-ground needed by the rig.
+#define RIG_KEY_PIN (18)
+// WAS PHY 14
+// Physical pin 25. This is an input (active high) used to detect
+// receive carrier from the rig. 
+#define RIG_COS_PIN (19)
 
 #define UART_ID uart0
 #define U_BAUD_RATE 115200
@@ -153,8 +166,6 @@ static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, AudioAnalyzer* txAnalyzer, ostream& str);
 
 int main(int, const char**) {
-
-    Log log;
 
     // Seup PICO
     stdio_init_all();
@@ -199,12 +210,21 @@ int main(int, const char**) {
        
     // UART0 setup
     uart_init(UART_ID, U_BAUD_RATE);
-    gpio_set_function(UART_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART_RX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART0_RX_PIN, GPIO_FUNC_UART);
     uart_set_hw_flow(UART_ID, false, false);
     uart_set_format(UART_ID, U_DATA_BITS, U_STOP_BITS, U_PARITY);
     uart_set_fifo_enabled(UART_ID, true);
     uart_set_translate_crlf(UART_ID, false);
+
+    // UART1 setup (logging)
+    uart_init(uart1, U_BAUD_RATE);
+    gpio_set_function(UART1_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART1_RX_PIN, GPIO_FUNC_UART);
+    uart_set_hw_flow(uart1, false, false);
+    uart_set_format(uart1, U_DATA_BITS, U_STOP_BITS, U_PARITY);
+    uart_set_fifo_enabled(uart1, true);
+    uart_set_translate_crlf(uart1, false);
 
     // Setup I2C
     i2c_init(i2c_default, 100 * 1000);
@@ -223,15 +243,18 @@ int main(int, const char**) {
         sleep_ms(250);
     }
 
+    SerialLog log(uart1);
+    log.setStdout(true);
+
     log.info("===== MicroLink Link Station ============");
     log.info("Copyright (C) 2024 Bruce MacKinnon KC1FSZ");
 
     if (watchdog_caused_reboot()) {
-        cout << "WATCHDOG REBOOT" << endl;
+        log.info("WATCHDOG REBOOT");
     } else if (watchdog_enable_caused_reboot()) {
-        cout << "WATCHDOG EANBLE REBOOT" << endl;
+        log.info("WATCHDOG EANBLE REBOOT");
     } else {
-        cout << "Normal reboot" << endl;
+        log.info("Normal reboot");
     }
 
     /*
@@ -321,7 +344,7 @@ int main(int, const char**) {
     ctx.flush(250);
 
     LinkUserInfo info;
-    info.setLog(1);
+    info.setLog(&log);
 
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext audioOutContext(audioFrameSize * 4, sampleRate, 
@@ -358,14 +381,12 @@ int main(int, const char**) {
     rm.setFullName(ourFullName);
     rm.setLocation(ourLocation);
 
-    const uint32_t taskCount = 4;
+    const uint32_t taskCount = 5;
     Runnable* tasks[taskCount] = {
-        &audioOutContext, &audioInContext, 
-        &ctx, &rm
+        &audioOutContext, &audioInContext, &ctx, &rm, &log
     };
     uint32_t maxTaskTime[taskCount] = { 
-        0, 0, 
-        0, 0 };
+        0, 0, 0, 0, 0 };
 
     PicoPerfTimer cycleTimer;
     uint32_t longestCycleUs = 0;
@@ -391,9 +412,9 @@ int main(int, const char**) {
     uint32_t lastStopRequestMs = 0;
 
     // Last thing before going into the event loop
-	//watchdog_enable(WATCHDOG_DELAY_MS, true);
+	watchdog_enable(WATCHDOG_DELAY_MS, true);
 
-    cout << "Entering event loop" << endl;
+    log.info("Entering event loop");
 
     while (true) {
 
@@ -506,12 +527,12 @@ int main(int, const char**) {
                 audioOutContext.tone(800, 1000);
             }
             else if (c == 'o') {
-                info.setLog(0);
+                log.setStdout(false);
                 statusPage = true;
                 cout << "\033[2J";
             }
             else if (c == 'p') {
-                info.setLog(1);
+                log.setStdout(true);
                 statusPage = false;
                 cout << "\033[2J" << endl;
             }
@@ -615,7 +636,7 @@ int main(int, const char**) {
         uint32_t ela = cycleTimer.elapsedUs();
         if (ela > longestCycleUs) {
             longestCycleUs = ela;
-            cout << "Longest Cycle (us) " << longestCycleUs << endl;
+            log.info("Longest Cycle (us) %lu", longestCycleUs);
         }
         if (ela > 40000) {
             longCycleCounter++;
