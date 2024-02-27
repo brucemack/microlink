@@ -381,6 +381,7 @@ where the MCP4725 has don't-cares.  These will be set to zero.
   - [Hardware Design with RP2040](https://datasheets.raspberrypi.com/rp2040/hardware-design-with-rp2040.pdf)
   - [Analysis of Pico ADC](https://pico-adc.markomo.me/)
   - Timers: https://vanhunteradams.com/Pico/TimerIRQ/SPI_DDS.html
+  - Flash Write: https://github.com/raspberrypi/pico-examples/blob/master/flash/program/flash_program.c
 * ESP-32 
   - [AT Command Reference](https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html)
 * SIM7600 Cellular

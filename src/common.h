@@ -103,4 +103,16 @@ uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
 
 }
 
+// IMPORTANT: MUST BE EXACTLY 256 BYTES!!
+struct StationConfig {
+    uint32_t version;
+    char addressingServerHost[32];
+    uint32_t addressingServerPort;
+    char callSign[32];
+    char password[32];
+    char fullName[32];
+    char location[32];
+    char padding[256 - (4 + 32 + 4 + 32 + 32 + 32 + 32)];
+};
+
 #endif

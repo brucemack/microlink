@@ -201,7 +201,13 @@ void ESP32CommContext::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len)
     _esp32->write((uint8_t*)buf, strlen(buf));
 
     // Now we wait for the prompt to tell us it's OK to send the data
-    _state = State::IN_SEND_PROMPT_WAIT;
+    //_state = State::IN_SEND_PROMPT_WAIT;
+    // Now we wait for the OK
+    _state = State::IN_SEND_WAIT;
+
+    if (traceLevel > 1) {
+        cout << "SEND" << endl;
+    }
 }
 
 Channel ESP32CommContext::createUDPChannel() {
@@ -295,8 +301,6 @@ void ESP32CommContext::sendUDPChannel(Channel c,
         addr, remotePort);
     _esp32->write((uint8_t*)buf, strlen(buf));
 
-    // Now we wait for the prompt to tell us it's OK to send the data
-    //_state = State::IN_SEND_PROMPT_WAIT;
     // Now we wait for the OK
     _state = State::IN_SEND_WAIT;
 
@@ -354,9 +358,7 @@ void ESP32CommContext::ok() {
         _state = State::IN_SEND_PROMPT_WAIT;
     }
     else {
-        if (traceLevel > 0) {
-            cout << "ESP32CommContext: OK (?)" << endl;
-        }
+        cout << "ESP32CommContext: Unexpected OK " << _state << endl;
     }
 }
 
@@ -367,7 +369,7 @@ void ESP32CommContext::error() {
         TCPConnectEvent ev(_lastChannel, false);
         _eventProc->processEvent(&ev);
     } else {
-        cout << "ESP32CommContext: ERROR (?) " << _state << endl;
+        cout << "ESP32CommContext: ERROR " << _state << endl;
     }
 }
 
@@ -376,12 +378,11 @@ void ESP32CommContext::sendPrompt() {
         if (traceLevel > 0) {
             cout << "SEND PROMPT" << endl;
         }
+        _state = State::IN_SEND_OK_WAIT;
         // Send the actual data
         _esp32->write(_sendHold, _sendHoldLen);
-        // TODO: ERROR CHECK
-        _state = State::IN_SEND_OK_WAIT;
     } else {
-        cout << "ESP32CommContext: ERROR (Send Prompt)" << endl;
+        cout << "ESP32CommContext: ERROR (Send Prompt) " << _state << endl;
     }
 }
 
@@ -394,7 +395,20 @@ void ESP32CommContext::sendOk() {
         SendEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);
     } else {
-        cout << "ESP32CommContext: ERROR (SEND OK)" << endl;
+        cout << "ESP32CommContext: ERROR (SEND OK)" << _state << endl;
+    }
+}
+
+void ESP32CommContext::sendFail() {
+    if (_state == State::IN_SEND_OK_WAIT) {
+        //if (traceLevel > 0) {
+            cout << "********* SEND FAIL **************************" << endl;
+        //}
+        _state = State::NONE;
+        SendEvent ev(_lastChannel, false);
+        _eventProc->processEvent(&ev);
+    } else {
+        cout << "ESP32CommContext: ERROR (SEND FAIL)" << endl;
     }
 }
 
@@ -405,7 +419,9 @@ void ESP32CommContext::domain(const char* addr) {
     if (_state == State::IN_DNS) {
         _lastAddrResp = IPAddress(parseIP4Address(addr));
     }
-    // TODO: ERROR
+    else {
+        cout << "ESP32CommContext: ERROR (Domain)" << _state << endl;
+    }
 }
 
 void ESP32CommContext::connected(uint32_t channel) {
@@ -455,14 +471,31 @@ void ESP32CommContext::ipd(uint32_t channel, uint32_t chunk,
 }
 
 void ESP32CommContext::notification(const char* msg) {
+
     if (traceLevel > 0) {
         cout << "ESP32CommContext: " << msg << endl;
     }
+
+    // Look for messages that we don't recognized
+
+    if (strcmp(msg, "ATE0")) {                
+    }
+    else if (strcmp(msg, "WIFI CONNECTED")) {                
+    }
+    else if (strcmp(msg, "WIFI DISCONNECTED")) {                
+    }
+    else if (strcmp(msg, "WIFI GOT IP")) {                
+    }
+    else {                
+        cout << "************ ESP32CommContext: UNRECOGNIZED NOTIFICATION: " << msg << endl;
+    }
+
     if (_state == State::IN_INIT) {
         if (_initCount == 0) {
             // The "Got IP" message is treated like the final sign
             // that the ESP32 is up and running.
             if (strcmp(msg,"WIFI GOT IP") == 0) {
+                // Immediately turn off echo
                 const char* cmd = "ATE0\r\n";
                 uint32_t cmdLen = strlen(cmd);
                 _esp32->write((uint8_t*)cmd, cmdLen);
@@ -470,6 +503,11 @@ void ESP32CommContext::notification(const char* msg) {
             }
         }
     }
+}
+
+void ESP32CommContext::confused(const uint8_t* data, uint32_t len) {
+    cout << "ESP32CommContext: Confused" << endl;
+    prettyHexDump(data, len, cout);
 }
 
 }

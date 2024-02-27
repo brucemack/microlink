@@ -49,14 +49,15 @@ class ATResponseProcessor {
 public:
 
     /**
-     * This interface is how the proessor reports its results to the 
+     * This interface is how the processor reports its results to the 
      * outside world.
      */
     class EventSink {
     public:
         virtual void ok() { }
         virtual void sendOk()  { }
-        virtual void error()  { }
+        virtual void sendFail() = 0;
+        virtual void error() = 0;
         virtual void ready()  { }
         virtual void sendPrompt() { }
         virtual void sendSize()  { }
@@ -66,7 +67,7 @@ public:
         virtual void connected(uint32_t channel)  { }
         virtual void closed(uint32_t channel)  { }
         virtual void notification(const char* msg);
-        virtual void confused(const uint8_t* data, uint32_t len)  { }
+        virtual void confused(const uint8_t* data, uint32_t len) = 0;
     };
 
     ATResponseProcessor(EventSink* sink);
@@ -109,11 +110,7 @@ private:
     };
 
     enum MatchType {
-        OK,
-        ERROR,
-        READY,
-        SEND_OK,
-        SEND_PROMPT,
+        SIMPLE,
         RECV_SIZE,
         IPD,
         DOMAIN_ADDR,

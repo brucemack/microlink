@@ -322,7 +322,16 @@ void QSOFlowMachine::processEvent(const Event* ev) {
              _state == State::OPEN_RX_RTP_PING_1) {
 
         if (ev->getType() == SendEvent::TYPE) {
-            _state = State::OPEN_RX;
+            const SendEvent* evt = static_cast<const SendEvent*>(ev);
+            if (evt->isGood()) {
+                _state = State::OPEN_RX;
+            }
+            // There's really nothing we can do if the send fails, so just 
+            // display an error and keep going.
+            else {
+                _userInfo->setStatus("Send failed, ignoring");
+                _state = State::OPEN_RX;
+            }
         }
         else if (_isTimedOut()) {
             char buf[64];
@@ -408,7 +417,16 @@ void QSOFlowMachine::processEvent(const Event* ev) {
              _state == State::OPEN_TX_RTCP_PING_1) {
 
         if (ev->getType() == SendEvent::TYPE) {
-            _state = State::OPEN_TX;
+            const SendEvent* evt = static_cast<const SendEvent*>(ev);
+            if (evt->isGood()) {
+                _state = State::OPEN_TX;
+            }
+            // There's really nothing we can do if the send fails, so just 
+            // display an error and keep going.
+            else {
+                _userInfo->setStatus("Send failed, ignoring");
+                _state = State::OPEN_TX;
+            }
         }
         else if (_isTimedOut()) {
             char buf[64];

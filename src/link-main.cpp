@@ -49,6 +49,8 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "hardware/uart.h"
 #include "hardware/irq.h"
 #include "hardware/sync.h"
+#include "hardware/watchdog.h"
+#include "hardware/flash.h"
 
 #include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/events/TickEvent.h"
@@ -121,6 +123,14 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 
 #define TX_TIMEOUT_MS (90 * 1000)
 #define TX_LOCKOUT_MS (30 * 1000)
+
+// This controls the maximum delay before the watchdog
+// will reboot the system
+#define WATCHDOG_DELAY_MS (2 * 1000)
+
+// The version of the configuration version that we expect 
+// to find (must be at least this version)
+#define CONFIG_VERSION (0xbab0)
 
 using namespace std;
 using namespace kc1fsz;
@@ -198,9 +208,6 @@ int main(int, const char**) {
     //i2c_set_baudrate(i2c_default, 400000 * 4);
     i2c_set_baudrate(i2c_default, 400000);
 
-    // ADC/audio in setup
-    PicoAudioInputContext::setup();
-
     // Hello indicator
     for (int i = 0; i < 4; i++) {
         gpio_put(LED_PIN, 1);
@@ -211,6 +218,69 @@ int main(int, const char**) {
 
     cout << "===== MicroLink Link Station ============" << endl;
     cout << "Copyright (C) 2024 Bruce MacKinnon KC1FSZ" << endl;
+
+    if (watchdog_caused_reboot()) {
+        cout << "WATCHDOG REBOOT" << endl;
+    } else if (watchdog_enable_caused_reboot()) {
+        cout << "WATCHDOG EANBLE REBOOT" << endl;
+    } else {
+        cout << "Normal reboot" << endl;
+    }
+
+    /*
+    // TEMPORARY!
+    {
+        // Write flash
+        StationConfig config;
+        config.version = 0xbab0;
+        strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
+        config.addressingServerPort = 5200;
+        strncpy(config.callSign, "W1TKZ-L", 32);
+        strncpy(config.password, "xxx", 32);
+        strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
+        strncpy(config.location, "Wellesley, MA USA FN42", 32);
+        uint32_t ints = save_and_disable_interrupts();
+        // Must erase a full sector first (4096 bytes)
+        flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
+        // IMPORTANT: Must be a multiple of 256!
+        flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 256);
+        restore_interrupts(ints);
+    } 
+    */   
+
+    // ----- READ CONFIGURATION FROM FLASH ------------------------------------
+
+    HostName addressingServerHost;
+    uint32_t addressingServerPort;
+    CallSign ourCallSign;
+    FixedString ourPassword;
+    FixedString ourFullName;
+    FixedString ourLocation;
+
+    // The very last sector of flash is used. Compute the memory-mapped address, 
+    // remembering to include the offset for RAM
+    const uint8_t* addr = (uint8_t*)(XIP_BASE + (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE));
+    auto p = (const StationConfig*)addr;
+    if (p->version != CONFIG_VERSION) {
+        cout << "ERROR: Configuration data is invalid" << endl;
+        panic_unsupported();
+        return -1;
+    } 
+
+    addressingServerHost = HostName(p->addressingServerHost);
+    addressingServerPort = p->addressingServerPort;
+    ourCallSign = CallSign(p->callSign);
+    ourPassword = FixedString(p->password);
+    ourFullName = FixedString(p->fullName);
+    ourLocation = FixedString(p->location);
+
+    cout << "EL Addressing Server : " << addressingServerHost.c_str() 
+        << ":" << addressingServerPort << endl;
+    cout << "Identification       : " << ourCallSign.c_str() << "/" 
+        << ourFullName.c_str() << "/" << ourLocation.c_str() << endl;
+
+    // ADC/audio in setup
+    PicoAudioInputContext::setup();
 
     PicoUartChannel::traceLevel = 0;
     ESP32CommContext::traceLevel = 2;
@@ -272,13 +342,19 @@ int main(int, const char**) {
     rxMonitor.setSink(&rm);
     rxMonitor.setInfo(&info);
 
-    // TODO: Move configuration out 
-    rm.setServerName(HostName("naeast.echolink.org"));
-    rm.setServerPort(5200);
-    rm.setCallSign(CallSign("W1TKZ-L"));
-    rm.setPassword(FixedString("xxx"));
-    rm.setFullName(FixedString("Wellesley Amateur Radio Society"));
-    rm.setLocation(FixedString("Wellesley, MA USA"));
+    //rm.setServerName(HostName("naeast.echolink.org"));
+    //rm.setServerPort(5200);
+    //rm.setCallSign(CallSign("W1TKZ-L"));
+    //rm.setPassword(FixedString("xxx"));
+    //rm.setFullName(FixedString("Wellesley Amateur Radio Society"));
+    //rm.setLocation(FixedString("Wellesley, MA USA"));
+
+    rm.setServerName(addressingServerHost);
+    rm.setServerPort(addressingServerPort);
+    rm.setCallSign(ourCallSign);
+    rm.setPassword(ourPassword);
+    rm.setFullName(ourFullName);
+    rm.setLocation(ourLocation);
 
     const uint32_t taskCount = 4;
     Runnable* tasks[taskCount] = {
@@ -310,9 +386,15 @@ int main(int, const char**) {
     uint32_t lastConnectRequestMs = 0;
     uint32_t lastStopRequestMs = 0;
 
+    // Last thing before going into the event loop
+	watchdog_enable(WATCHDOG_DELAY_MS, true);
+
     cout << "Entering event loop" << endl;
 
     while (true) {
+
+        // Keep things alive
+        watchdog_update();
 
         cycleTimer.reset();
 
@@ -451,8 +533,8 @@ int main(int, const char**) {
                 }
                 audioInContext.resetMax();
                 audioInContext.resetOverflowCount();
-
                 longestCycleUs = 0;
+                longCycleCounter = 0;
             }
             else {
                 cout << (char)c;
@@ -518,7 +600,7 @@ int main(int, const char**) {
             longestCycleUs = ela;
             cout << "Longest Cycle (us) " << longestCycleUs << endl;
         }
-        if (ela > 5000) {
+        if (ela > 40000) {
             longCycleCounter++;
         }
     }

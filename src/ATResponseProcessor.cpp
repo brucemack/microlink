@@ -40,147 +40,41 @@ namespace kc1fsz {
 static constexpr const char* ERROR_TOKEN = "\r\nERROR\r\n";
 static constexpr int ERROR_TOKEN_LEN = std::char_traits<char>::length(ERROR_TOKEN);
 
-// /**
-//  * A function that is helpful when dealing with AT+ command protocols.
-//  * Locates either the token specified or \r\nERROR\r\n and returns its 
-//  * starting position in the accumulator provided.
-//  *
-//  * @param acc
-//  * @param accLen
-//  * @param loc This is where the location of the start of the 
-//  *   token is located.
-//  * @returns true if something was found, or false if nothing was found.
-//  *  
-//  */
-// bool findCompletionToken(const uint8_t* acc, uint32_t accLen, const char* token, 
-//     uint32_t* loc, uint32_t* len) {
-
-//     // Check for the target token
-//     const unsigned int tokenLen = strlen(token);
-
-//     for (unsigned int i = 0; i < accLen; i++) {
-
-//         unsigned int matchLen = 0;
-
-//         for (unsigned int k = 0; k < tokenLen && i + k < accLen; k++) {
-//             if (acc[i + k] == token[k]) {
-//                 matchLen++;
-//             } else {
-//                 break;
-//             }
-//         }
-//         // Did we match an entire term?
-//         if (matchLen == tokenLen) {
-//             *loc = i;
-//             *len = tokenLen;
-//             return true;
-//         }
-
-//         matchLen = 0;
-//         for (unsigned int k = 0; k < ERROR_TOKEN_LEN && i + k < accLen; k++) {
-//             if (acc[i + k] == ERROR_TOKEN[k]) {
-//                 matchLen++;
-//             } else {
-//                 break;
-//             }
-//         }
-//         // Did we match an entire term?
-//         if (matchLen == ERROR_TOKEN_LEN) {
-//             *loc = i;
-//             *len = ERROR_TOKEN_LEN;
-//             return true;
-//         }
-//     }
-
-//     return false;
-// }
-
-// static const uint32_t accSize = 256;
-// static uint8_t acc[accSize];
-// static uint32_t accLen = 0;
-
-// /**
-//  * A utilty function that is helpful when dealing with AT-style 
-//  * protcols.  Reads continuously from the channel looking for 
-//  * the completion token.  But can also preserve/return any 
-//  * "other" traffic that comes on the line (i.e. notifications).
-//  *
-//  * @param preText A pointer to a buffer that will be filled 
-//  *  with any "pre text" (i.e. unrelated things that show up before
-//  *  the completion token.
-//  * @returns true on success, false on ERROR
-//  */
-// bool waitOnCompletion(AsyncChannel& channel, const char* token, uint32_t timeOut,
-//     uint8_t* preText, uint32_t preTextSize, uint32_t* preTextLen) {
-
-//     while (true) {
-
-//         // Since we're in a blocking loop here, prompt the channel to 
-//         // make sure we're making forward progress in all the right ways.        
-//         channel.run();
-
-//         if (channel.isReadable()) {
-            
-//             // Read directly into the end of the accumulator
-//             uint32_t accFree = accSize - accLen;
-//             accLen += channel.read(acc + accLen, accFree);
-
-//             // Check for termination
-//             uint32_t tokenLoc = 0;
-//             uint32_t tokenLen = 0;
-//             bool b = findCompletionToken(acc, accLen, token, &tokenLoc, &tokenLen);
-//             if (b) {
-
-//                 prettyHexDump(acc, accLen, cout);
-
-//                 // Copy the pre-text (if any)
-//                 if (tokenLoc > 0) {
-//                     for (unsigned int i = 0; 
-//                         i < preTextSize && i < tokenLoc; i++) {
-//                             preText[i] = acc[i];
-//                     }
-//                     *preTextLen = tokenLoc;
-//                 }
-//                 // Failure is when the ERROR token is found
-//                 bool ret = acc[tokenLoc + 2] != 'E';
-//                 // Flush the accumulator
-//                 accLen = 0;
-//                 return ret;
-//             }
-//         }
-//     }
-//     return false;
-// }
-
 // Here we define the set of matchers that are used.  The lambda
 // expression defines the "next move," assuming a match is
 // match successfully.
 ATResponseProcessor::Matcher ATResponseProcessor::_matchers[] = { 
-    { MatchType::OK, false, "\r\nOK\r\n",
+    { MatchType::SIMPLE, false, "\r\nOK\r\n",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             p._sink->ok();
             p._reset();
         }
     }, 
-    { MatchType::SEND_OK, false, "\r\nSEND OK\r\n",
+    { MatchType::SIMPLE, false, "\r\nSEND OK\r\n",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             p._sink->sendOk();
             p._reset();
         }
     } ,
-    { MatchType::ERROR, false, "\r\nERROR\r\n",
+    { MatchType::SIMPLE, false, "\r\nSEND FAIL\r\n",
+        [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
+            p._sink->sendFail();
+            p._reset();
+        }
+    } ,
+    { MatchType::SIMPLE, false, "\r\nERROR\r\n",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             p._sink->error();
             p._reset();
         }
     } ,
-    { MatchType::READY, false, "\r\nready\r\n",
+    { MatchType::SIMPLE, false, "\r\nready\r\n",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             p._sink->ready();
             p._reset();
         }
     } ,
-    { MatchType::SEND_PROMPT, false, "\r\n>",
+    { MatchType::SIMPLE, false, "\r\n>",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             p._sink->sendPrompt();
             p._reset();
@@ -191,7 +85,7 @@ ATResponseProcessor::Matcher ATResponseProcessor::_matchers[] = {
             p._state = State::IN_RECV;
         }
     } ,
-    { MatchType::IPD, false, "+CIPDOMAIN:\"",
+    { MatchType::DOMAIN_ADDR, false, "+CIPDOMAIN:\"",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             // Flush the accumulator
             p._accUsed = 0;
@@ -232,11 +126,7 @@ void ATResponseProcessor::Matcher::reset() {
 
 bool ATResponseProcessor::Matcher::process(uint8_t lastByte, uint8_t b) {
     // The processing/matching process depends on the type being used
-    if (type == MatchType::OK ||
-        type == MatchType::SEND_OK ||
-        type == MatchType::ERROR ||
-        type == MatchType::READY ||
-        type == MatchType::SEND_PROMPT ||
+    if (type == MatchType::SIMPLE ||
         type == MatchType::RECV_SIZE ||
         type == MatchType::DOMAIN_ADDR ||
         type == MatchType::IPD) {

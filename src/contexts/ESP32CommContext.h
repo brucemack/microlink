@@ -103,7 +103,8 @@ public:
     // ----- ATResponseProcessor::EventSink -----------------------------------
 
     virtual void ok();
-    void sendOk();
+    virtual void sendOk();
+    virtual void sendFail();
     virtual void error();
     virtual void sendPrompt();
     virtual void domain(const char* addr);
@@ -111,7 +112,8 @@ public:
     virtual void closed(uint32_t channel);
     virtual void ipd(uint32_t channel, uint32_t chunk,
         const uint8_t* data, uint32_t len, const char* addr);
-     virtual void notification(const char* msg);
+    virtual void notification(const char* msg);
+    virtual void confused(const uint8_t* data, uint32_t len);
 
 private:
 
