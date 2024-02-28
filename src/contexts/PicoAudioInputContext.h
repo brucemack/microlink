@@ -58,8 +58,13 @@ public:
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
     void resetOverflowCount() { _audioInBufOverflow = 0; }
 
-    int16_t getGain() const { return _gain; }
-    void setGain(int16_t g) { _gain = g; }
+    int16_t getBias() const { return _dcBias; }
+
+    /**
+     * The DC bias is added to every sample.  It is used to compensate for 
+     * centering inaccuracies in the circuit prior to the ADC.
+     */
+    void addBias(int16_t b) { _dcBias += (b >> 4); }
 
     void setAnalyzer(AudioAnalyzer* aa) { _analyzer = aa; }
 

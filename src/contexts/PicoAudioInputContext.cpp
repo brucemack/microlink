@@ -108,23 +108,23 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     }
 
     // This will be a number from 0->4095 (12 bits).  
-    // We are using a 32-bit integer to implement saturation
-    int32_t rawSample = adc_fifo_get();
+    int16_t rawSample = adc_fifo_get();
     // Center to give a number from -2048->2047 (12 bits)
-    int32_t sample = rawSample - 2048;
-    // Small tweaks
+    int16_t sample = rawSample - 2048;
+    // Adjust center
     sample += _dcBias;
-    // Apply a gain and shift up to form 16-bit PCM.
-    sample *= _gain;
-    // Saturate to 16 bits
-    if (sample > 32767) {
-        sample = 32767;
+    // Shift up to form 16-bit PCM.
+    int32_t sample32 = sample;
+    sample32 <<= 4;
+    // Saturate
+    if (sample32 > 32767) {
+        sample32 = 32767;
     } else if (sample < -32768) {
-        sample = -32768;
+        sample32 = -32768;
     }
 
     uint32_t slot = _audioInBufWriteCount.get() & _audioInBufDepthMask;
-    _audioInBuf[slot][_audioInBufWritePtr++] = (int16_t)sample;
+    _audioInBuf[slot][_audioInBufWritePtr++] = (int16_t)sample32;
 
     // Check to see if we've reached the end of the 4xframe
     if (_audioInBufWritePtr == _audioFrameSize * _audioFrameBlockFactor) {

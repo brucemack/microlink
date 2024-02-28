@@ -118,12 +118,10 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #define I2C0_SDA (16) // Phy Pin 21: I2C channel 0 - data
 #define I2C0_SCL (17) // Phy Pin 22: I2C channel 0 - clock
 
-// WAS PHY 12
 // Physical pin 24.  This is an output (active high) used to key 
 // the rig's transmitter. Typically drives an optocoupler to
 // get the pull-to-ground needed by the rig.
 #define RIG_KEY_PIN (18)
-// WAS PHY 14
 // Physical pin 25. This is an input (active high) used to detect
 // receive carrier from the rig. 
 #define RIG_COS_PIN (19)
@@ -142,6 +140,14 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 // This controls the maximum delay before the watchdog
 // will reboot the system
 #define WATCHDOG_DELAY_MS (2 * 1000)
+
+// The time the raw COS needs to be active to be consered "on"
+#define COS_DEBOUNCE_ON_MS 5
+// The time the raw COS needs to be inactive to be considered "off"
+#define COS_DEBOUNCE_OFF_MS 250
+// The time the COS is ignore immediate after a TX cycle (to avoid 
+// having the transmitter interfering with the receiver
+#define LINGER_AFTER_TX_MS 500
 
 // The version of the configuration version that we expect 
 // to find (must be at least this version)
@@ -163,7 +169,8 @@ static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 
 static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
-    AudioAnalyzer* rxAnalyzer, AudioAnalyzer* txAnalyzer, ostream& str);
+    AudioAnalyzer* rxAnalyzer, AudioAnalyzer* txAnalyzer, 
+    int16_t baselineRxNoise, uint32_t rxNoiseThreshold, bool cosState, ostream& str);
 
 int main(int, const char**) {
 
@@ -286,6 +293,8 @@ int main(int, const char**) {
     FixedString ourPassword;
     FixedString ourFullName;
     FixedString ourLocation;
+    uint32_t rxNoiseThreshold = 50;
+    bool useHardCos = false;
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
     // remembering to include the offset for RAM
@@ -355,12 +364,12 @@ int main(int, const char**) {
     audioInContext.setSampleCb(I2CAudioOutputContext::tickISR, &audioOutContext);
 
     // Analyzers for sound data
-    int16_t txAnalyzerHistory[1024];
-    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 1024, sampleRate);
+    int16_t txAnalyzerHistory[2048];
+    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 2048, sampleRate);
     audioOutContext.setAnalyzer(&txAnalyzer);
 
-    int16_t rxAnalyzerHistory[1024];
-    AudioAnalyzer rxAnalyzer(rxAnalyzerHistory, 1024, sampleRate);
+    int16_t rxAnalyzerHistory[2048];
+    AudioAnalyzer rxAnalyzer(rxAnalyzerHistory, 2048, sampleRate);
     audioInContext.setAnalyzer(&rxAnalyzer);
 
     LinkRootMachine rm(&ctx, &info, &audioOutContext);
@@ -393,8 +402,11 @@ int main(int, const char**) {
     uint32_t longCycleCounter = 0;
     PicoPerfTimer taskTimer;
 
-    bool rigCosState = false;
-    uint32_t lastRigCosDetection = 0;
+    uint32_t lastCosOn = 0;
+    bool cosState = false;
+    bool lastCosState = false;
+    uint32_t lastCosTransition = 0;
+
     bool rigKeyState = false;
     uint32_t lastRigKeyTransitionTime = 0;
     uint32_t rigKeyLockoutTime = 0;
@@ -407,9 +419,14 @@ int main(int, const char**) {
     PicoPollTimer renderTimer;
     renderTimer.setIntervalUs(500000);
 
-    bool firstLoop = true;
+    int startupMode = 2;
+    uint32_t startupMs = time_ms();
+    int16_t baselineRxNoise = 0;
+
     uint32_t lastConnectRequestMs = 0;
     uint32_t lastStopRequestMs = 0;
+
+    audioInContext.setADCEnabled(true);
 
     // Last thing before going into the event loop
 	watchdog_enable(WATCHDOG_DELAY_MS, true);
@@ -418,50 +435,85 @@ int main(int, const char**) {
 
     while (true) {
 
+        cycleTimer.reset();
+
         // Keep things alive
         watchdog_update();
 
-        cycleTimer.reset();
+        // At startup we wait some time to adjust a few parameters before 
+        // opening the state machines for connections.
+        if (startupMode == 2) {
+            if (time_ms() > startupMs + 500) {
+                int16_t avg = rxAnalyzer.getAvg();
+                log.info("Basline DC bias (V) %d", -avg);
+                audioInContext.addBias(-avg);
+                audioInContext.resetMax();
+                audioInContext.resetOverflowCount();
+                longestCycleUs = 0;
+                longCycleCounter = 0;
+                startupMode = 1;
+                startupMs = time_ms();
+            }
+        } 
+        else if (startupMode == 1) {
+            if (time_ms() > startupMs + 500) {
+                baselineRxNoise = rxAnalyzer.getRMS();
+                log.info("Baseline RX noise (Vrms) %d", baselineRxNoise);
+                // Start the state machine
+                rm.start();
+                startupMode = 0;
+            }
+        }
 
         // ----- External Controls ------------------------------------------
 
-        bool rigCos = gpio_get(RIG_COS_PIN);
-        // Look for activity on the line (not debounced)
-        if (rigCos) {
-            lastRigCosDetection = time_ms();
+        // Raw carrier detect.  There are two ways supported:
+        // 1. Hard COS: explicit signal from rig (preferred)
+        // 2. Soft COS: thresholding noise level on receiver
+
+        bool rigCos = (useHardCos) ? 
+            gpio_get(RIG_COS_PIN) : (rxAnalyzer.getRMS() - baselineRxNoise) > (int16_t)rxNoiseThreshold;
+
+        // Produce a debounced cosState, whcih indicates the state of
+        // the carrier detect.
+        //
+        // Look for LOW->HI transition
+        if (rigCos && cosState == false) {
+            // Debounce.  The LOW->HI transition is taken very quickly,
+            // so long as we are not just finishing up a transmission.
+            if ((time_ms() - lastCosTransition) > LINGER_AFTER_TX_MS &&
+                !info.getSquelch() &&
+                info.getMsSinceLastSquelchClose() > LINGER_AFTER_TX_MS) {
+                cosState = true;
+            }
+        }
+        // Look for HI->LOW transition
+        else if (!rigCos && cosState == true) {
+            // The HI->LO transition is fully debounced and is less
+            // agressive.
+            if ((time_ms() - lastCosOn) > COS_DEBOUNCE_OFF_MS) {
+                cosState = false;
+            }
+        }
+
+        if (rigCos)
+            lastCosOn = time_ms();
+
+        // Use the debounced cosState to adjust the state of the node
+        if (cosState)
             rm.radioCarrierDetect();
+        if (cosState != lastCosState) {
+            if (cosState) 
+                info.setStatus("Rig COS on");
+            else
+                info.setStatus("Rig COS off");
+            if (rm.isInQSO()) 
+                rxMonitor.setForward(cosState);
+            lastCosState = cosState;
+            lastCosTransition = time_ms();
         }
 
-        // If the carrier is currently not detected
-        if (rigCosState == false) {
-            // The LO->HI transition is taken immediately
-            if (rigCos) {
-                if (info.getSquelch() || 
-                    info.getMsSinceLastSquelchClose() < 500) {
-                } 
-                else {
-                    info.setStatus("Rig COS on");
-                    rigCosState = true;
-                    if (rm.isInQSO()) {
-                        rxMonitor.setForward(rigCosState);
-                    }
-                }
-            }
-        } 
-        // If the carrier is currently active
-        else {
-            // The HI->LO transition is fully debounced
-            if (!rigCos && 
-                (time_ms() - lastRigCosDetection) > RIG_COS_DEBOUNCE_INTERVAL_MS) {
-                if (!rigCos) {
-                    info.setStatus("Rig COS off");
-                }
-                rigCosState = false;
-                rxMonitor.setForward(rigCosState);
-            }
-        }
-
-        // ----- Indicator Lights --------------------------------------------
+        // Indicator Lights
 
         if (rxMonitor.getForward() || 
             (info.getSquelch() && (time_ms() % 1024) > 512)) {
@@ -473,8 +525,9 @@ int main(int, const char**) {
 
         gpio_put(QSO_LED_PIN, rm.isInQSO() ? 1 : 0);
 
-        // ----- Rig Key Management -----------------------------------------
-        // Rig key when audio is coming in, but enforce limits to prevent
+        // Rig Key Management
+        //
+        // Key rig when audio is coming in, but enforce limits to prevent
         // the key from being stuck open for long periods.
 
         if (!rigKeyState) {
@@ -540,7 +593,6 @@ int main(int, const char**) {
                 cout << endl;
                 cout << "Diagnostics" << endl;
                 cout << "Audio In Overflow : " << audioInContext.getOverflowCount() << endl;
-                cout << "Audio Gain        : " << audioInContext.getGain() << endl;
                 cout << "Max Skew (us)     : " << audioInContext.getMaxSkew() << endl;
                 cout << "Max Len (us)      : " << audioInContext.getMaxLen() << endl;
                 cout << "Audio Out FIFO OF : " << audioOutContext.getTxFifoFull() << endl;
@@ -555,14 +607,6 @@ int main(int, const char**) {
                     cout << "Task " << t << " max " << maxTaskTime[t] << endl;
                 }
             } 
-            else if (c == '=') {
-                audioInContext.setGain(audioInContext.getGain() + 1);
-                cout << "Gain is " << audioInContext.getGain() << endl;
-            }
-            else if (c == '-') {
-                audioInContext.setGain(audioInContext.getGain() - 1);
-                cout << "Gain is " << audioInContext.getGain() << endl;
-            }
             else if (c == 'c') {
                 for (uint32_t t = 0; t < taskCount; t++) {
                     maxTaskTime[t] = 0;
@@ -596,41 +640,41 @@ int main(int, const char**) {
             bool dtmf_1336 = rxAnalyzer.getTonePower(1336) > powerThreshold; 
             bool dtmf_697 = rxAnalyzer.getTonePower(697) > powerThreshold; 
 
+            if (dtmf_1209 || dtmf_1336 || dtmf_697) {
+                log.info("==== DTMF %d %d %d", dtmf_1209, dtmf_1336, dtmf_697);
+            }
+
             bool oneActive = dtmf_1209 && dtmf_697;
             bool twoActive = dtmf_1336 && dtmf_697;
 
             if (oneActive) {
+                log.info("ONE");
+                /*
                 if (time_ms() - lastConnectRequestMs > 2000) {
                     bool b = rm.connectToStation(CallSign("*ECHOTEST*"));
                     if (!b) {
                         lastConnectRequestMs = time_ms();
                     }
                 }
+                */
             } else if (twoActive) {
+                log.info("TWO");
+                /*
                 if (rm.isInQSO() && time_ms() - lastStopRequestMs > 2000) {
                     rm.requestCleanStop();  
                     lastStopRequestMs = time_ms();
                 }
+                */
             }
         }
 
-        // Periodically do some analysis of the audio to find tones, etc.
+        // Provided a live-updating dashboard of system status/audio/etc.
         if (statusPage) {
             if (renderTimer.poll()) {
                 renderTimer.reset();
-                renderStatus(&rm, &audioInContext, &rxAnalyzer, &txAnalyzer, cout);
+                renderStatus(&rm, &audioInContext, &rxAnalyzer, &txAnalyzer, 
+                    baselineRxNoise, rxNoiseThreshold, cosState, cout);
             }
-        }
-
-        // Deal with evreything that should be started once we are actually 
-        // in the event loop.
-        if (firstLoop) {
-            audioInContext.setADCEnabled(true);
-            audioInContext.resetMax();
-            audioInContext.resetOverflowCount();
-            // Start the state machine
-            rm.start();
-            firstLoop = false;
         }
 
         uint32_t ela = cycleTimer.elapsedUs();
@@ -646,12 +690,16 @@ int main(int, const char**) {
     cout << "Left event loop" << endl;
 
     while (true) {        
+        // Keep things alive
+        watchdog_update();
     }
 }
 
 static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
-    AudioAnalyzer* txAnalyzer, ostream& str) {
+    AudioAnalyzer* txAnalyzer, int16_t baselineRxNoise, 
+    uint32_t rxNoiseThreshold, bool cosState, ostream& str) {
+
     // [K - Erase line
     // [2J - Clear screen
     // [H - Home
@@ -669,11 +717,17 @@ static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
     str << endl << ESC << "[K";
     str << "        Accepting? : " << (rm->isAccepting() ? "Yes" : "No");
     str << endl << ESC << "[K";
-    str << "    RX Audio Power : " << (int)rxAnalyzer->getRMS();
+    str << "               COS : " << (cosState ? "Yes" : "No");
+    str << endl << ESC << "[K";
+    str << "          RX Level : " << (int)rxAnalyzer->getRMS();
+    str << endl << ESC << "[K";
+    str << "   RX Level Excess : " << rxAnalyzer->getRMS() - baselineRxNoise;
+    str << endl << ESC << "[K";
+    str << "RX Noise Threshold : " << rxNoiseThreshold;
     str << endl << ESC << "[K";
     str << "    RX Audio Peak% : " << rxAnalyzer->getPeakPercent();
     str << endl << ESC << "[K";
-    str << "      RX Audio Avg : " << rxAnalyzer->getAverage();
+    str << "      RX Audio Avg : " << rxAnalyzer->getAvg();
     str << endl << ESC << "[K";
     str.setf(ios::fixed,ios::floatfield);
     str.precision(1);    
@@ -684,7 +738,7 @@ static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
     str << endl << ESC << "[K";
     str << "   TX Audio Peak%  : " << txAnalyzer->getPeakPercent();
     str << endl << ESC << "[K";
-    str << "      TX Audio Avg : " << txAnalyzer->getAverage();
+    str << "      TX Audio Avg : " << txAnalyzer->getAvg();
     str << endl << ESC << "[K";
     str.setf(ios::fixed,ios::floatfield);
     str.precision(1);    
@@ -692,8 +746,6 @@ static void renderStatus(LinkRootMachine* rm, PicoAudioInputContext* inCtx,
     str.flags(f);
     str << endl << ESC << "[K";
     str << " Audio In Overflow : " << inCtx->getOverflowCount();
-    str << endl << ESC << "[K";
-    str << "        Audio Gain : " << inCtx->getGain();
     str << endl << ESC << "[K";
     str << "     Max Skew (us) : " << inCtx->getMaxSkew();
     str << endl << ESC << "[K";

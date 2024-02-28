@@ -85,7 +85,7 @@ void LinkRootMachine::processEvent(const Event* ev) {
     else if (_state == State::IN_RESET) {
         if (ev->getType() == StatusEvent::TYPE) {
             // TODO: ADD SOMETHING TO OPEN THE UDP CHANNELS
-            _state = LOGON;
+            _state = State::LOGON;
             // Start the login process
             _logonMachine.start();
         }

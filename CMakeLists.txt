@@ -63,6 +63,7 @@ add_executable(link-main
   src/machines/LookupMachine2.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/AudioAnalyzer.cpp
+  kc1fsz-tools-cpp/src/DTMFDetector.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
@@ -368,3 +369,16 @@ target_include_directories(audio-test-3 PRIVATE src)
 target_include_directories(audio-test-3 PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(audio-test-3 PRIVATE gsm-0610-codec/include)
 target_link_libraries(audio-test-3 winmm)
+
+# ------ dtmf-test-1 -------------------------------------------------------
+# Target: Host
+
+add_executable(dtmf-test-1
+  tests/dtmf-test-1.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  gsm-0610-codec/src/fixed_math.cpp
+)
+
+target_include_directories(dtmf-test-1 PRIVATE src)
+target_include_directories(dtmf-test-1 PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(dtmf-test-1 PRIVATE gsm-0610-codec/include)
