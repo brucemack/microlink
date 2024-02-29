@@ -1451,6 +1451,11 @@
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 06b8129c-9c3a-4534-bcd2-6b5b9c60fe92)
   )
+  (text "BE CAREFUL WHEN ORDERING: There are \ndifferent part numbers for different \nI2C addresses. We are using the 0 part."
+    (at 67.31 105.41 0)
+    (effects (font (size 1.27 1.27) (color 255 12 8 1)) (justify left bottom))
+    (uuid 715feb9e-34d1-44d3-8d78-50aca6f63c21)
+  )
   (text "Attenuate line output\nto microphone level." (at 224.79 83.82 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid a550ad1e-1af6-432e-8526-ade03b8aad4f)
