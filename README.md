@@ -417,6 +417,7 @@ where the MCP4725 has don't-cares.  These will be set to zero.
   - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
   - Very interesting audio processing stuff: https://www.repeater-builder.com/tech-info/audio-processing.html
   - [A TI Application Note on DTMF detection](https://www.ti.com/lit/an/spra096a/spra096a.pdf?ts=1709132288428&ref_url=https%253A%252F%252Fwww.google.com%252F)  
+  - [DSP Text Book](https://brianmcfee.net/dstbook-site/content/intro.html)
   
   
 
