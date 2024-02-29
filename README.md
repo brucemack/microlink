@@ -372,6 +372,57 @@ register (i.e. data bits [10-0]).  Bits [31-11] are not used and
 will be set to zero.  The x's in the illustration above show 
 where the MCP4725 has don't-cares.  These will be set to zero.
 
+## Notes on DTMF Detection
+
+The rules for DTMF are standardize by the International Telecommunications Union (ITU). The relevant 
+standards documents are located here:
+* [ITU Q.23](https://www.itu.int/rec/dologin_pub.asp?id=T-REC-Q.23-198811-I!!PDF-E&lang=e&type=items)
+* [ITU Q.24](https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-Q.24-198811-I!!PDF-E&type=items)
+
+The most important details from the standards document:
+
+* There are a total of 16 possible symbols.  Each symbol is made up of two tones: one from the "low group"
+and one from the "high group."
+* The "low group" frequencies are: 697, 770, 852, 941 Hz.  These are on the rows of the keypad.
+* The "high group" frequencies are: 1209, 1336, 1477, 1633 Hz.  These are on the columns of the keypad.
+* Even though the phone/radio keypad only has 3 columns, there is a an "extra" column in the spec
+for A/B/C/D.
+* Transmission must be within 1.8% of frequency standard to be recognized.  This means that the received 
+frequency can be +/- 1.8% from expectation, or 3.6% wide.  
+* If we apply the 3.6% rule to the highest frequency, we get a resolution bandwidth of 58.788 Hz (1633 * 0.036).
+* Distortion products (e.g. harmonics) must be -20dB below the fundamental.
+* There are rules around the relative powers of the two tones that make up the symbol. In the US, 
+the high group frequency power level may be up to 4 dB more or 8 dB less than the low group frequency 
+power level for the symbol to be considered valid.  In the TELCO lingo, this difference is known as
+"twist" and it is expressed in dB.  Positive twist means that the higher frequency is louder.
+* Timing requirements are as follows.
+  - A symbol must be transmitted for at least 40ms.  Symbols shorter than 23ms must be rejected.
+  - The gap between symbols must be at least 40ms.
+
+### Implementation Notes
+
+* 23ms is 184 samples at a sampling rate of 8 kHz.  We will round this to 20ms (160 samples) since it 
+is conveniently the same size as a GSM frame.
+* 40ms is 320 samples at a sampling rate of 8 kHz
+* A block of 136 samples is required to achieve 58.788 Hz resolution at a sampling rate of 8 kHz.  If
+we use more than 136 samples then the resolution will become finer than 58 Hz and we'll need to compute
+the power in more than one bucket - so we don't want to do that.
+* So for each 160 sample frame we will use the latest 136 samples and ignore the other 24.  Close
+enough.
+* We will look for symbols that last more than two 160 sample frames.
+* We will look for noise periods that last more than two 160 sample frames to consider the symbol valid
+(i.e. the pause).
+* Algorithm notes:
+  - For each 160 samples.
+  - Evaluate power at all 8 frequencies.
+  - Compare the power of all 16 pairs by summing powers at each intersection.
+  - Look to see if any pairs stand out by at least +20dB.  If so, that is the candidate pair.
+  - Check the twist on the candidate pair to make sure it falls within the +4dB -> -8dB standard.
+  - Compute the harmonic power for both frequencies in the pair and make sure it falls below the -20dB standard.
+  - If all tests pass, then do the 40ms duration checks.
+* The +4dB level is equivalent to x ~1.58 linear.  Testing a/b > ~1.58 is the same as testing 4a/b > ~6.
+* The +8dB level is equivalent to x ~2.5 linear.  Testing a/b > ~2.5 is the same as testing 4a/b > ~10.
+
 # References
 
 * Official EchoLink Site: https://www.echolink.org/
@@ -407,6 +458,11 @@ where the MCP4725 has don't-cares.  These will be set to zero.
   - [A useful article on implementing the Goertzel Algorithm in fixed point](https://remcycles.net/blog/goertzel.html)
   - [Very good article on Fixed Point Math by Randy Yates](http://www.digitalsignallabs.com/downloads/fp.pdf)
   - [Another Randy Yates paper on fixed point FIR](http://www.digitalsignallabs.com/downloads/fir.pdf)
+  - [DSP Text Book](https://brianmcfee.net/dstbook-site/content/intro.html)
+* DTMF Related
+  - [Official ITU Q.23 Standard](https://www.itu.int/rec/dologin_pub.asp?id=T-REC-Q.23-198811-I!!PDF-E&lang=e&type=items)
+  - [Official ITU Q.24 Standard](https://www.itu.int/rec/dologin_pub.asp?lang=e&id=T-REC-Q.24-198811-I!!PDF-E&type=items)
+  - [A TI application note on DTMF detection](https://www.ti.com/lit/an/spra096a/spra096a.pdf?ts=1709132288428&ref_url=https%253A%252F%252Fwww.google.com%252F)  
 * Other
   - [Analog Devices Filter Wizard](https://tools.analog.com/en/filterwizard/)
   - https://www.purevpn.com/what-is-vpn/protocols/openvpn
@@ -416,8 +472,4 @@ where the MCP4725 has don't-cares.  These will be set to zero.
   - MD5 Implementation: https://www.cs.cmu.edu/~jcl/linux/seal/md5.c
   - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
   - Very interesting audio processing stuff: https://www.repeater-builder.com/tech-info/audio-processing.html
-  - [A TI Application Note on DTMF detection](https://www.ti.com/lit/an/spra096a/spra096a.pdf?ts=1709132288428&ref_url=https%253A%252F%252Fwww.google.com%252F)  
-  - [DSP Text Book](https://brianmcfee.net/dstbook-site/content/intro.html)
   
-  
-

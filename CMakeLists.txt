@@ -375,6 +375,7 @@ target_link_libraries(audio-test-3 winmm)
 
 add_executable(dtmf-test-1
   tests/dtmf-test-1.cpp
+  kc1fsz-tools-cpp/src/DTMFDetector.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   gsm-0610-codec/src/fixed_math.cpp
 )
