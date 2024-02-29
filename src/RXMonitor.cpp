@@ -29,6 +29,11 @@ RXMonitor::RXMonitor()
 }
 
 bool RXMonitor::play(const int16_t* frame, uint32_t frameLen) {
+
+    if (_dtmfDet) {
+        _dtmfDet->play(frame, frameLen);
+    }
+
     if (_keyed) {
         if (_sink) {
             return _sink->play(frame, frameLen);

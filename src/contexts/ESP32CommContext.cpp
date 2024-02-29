@@ -24,7 +24,7 @@
 
 #include "pico/time.h"
 #include "hardware/gpio.h"
-
+                                 
 #include "kc1fsz-tools/Log.h"
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/EventProcessor.h"
@@ -370,7 +370,15 @@ void ESP32CommContext::error() {
         _state = State::NONE;
         TCPConnectEvent ev(_lastChannel, false);
         _eventProc->processEvent(&ev);
-    } else {
+    }
+    else if (_state == State::IN_SEND_WAIT) {
+        _log->error("ESP32CommContext: ERROR (IN_SEND_WAIT)");
+        _state = State::NONE;
+        // Send back a bad confirmation of the send 
+        SendEvent ev(_lastChannel, false);
+        _eventProc->processEvent(&ev);
+    } 
+    else {
         _log->error("ESP32CommContext: ERROR %d", _state);
     }
 }
@@ -503,6 +511,10 @@ void ESP32CommContext::notification(const char* msg) {
 void ESP32CommContext::confused(const uint8_t* data, uint32_t len) {
     _log->error("ESP32CommContext: Confused");
     prettyHexDump(data, len, std::cout);
+}
+
+void ESP32CommContext::ip() {
+    _log->info("ESP32CommContext: got the +IP message");
 }
 
 }

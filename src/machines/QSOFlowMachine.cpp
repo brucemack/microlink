@@ -284,7 +284,7 @@ void QSOFlowMachine::processEvent(const Event* ev) {
             _state = State::OPEN_TX;
         }
         // Do a general check for failure on the other station
-        else if (time_ms() > _lastRecvMs + (3 * KEEP_ALIVE_INTERVAL_MS)) {
+        else if (time_ms() > _lastRecvMs + (6 * KEEP_ALIVE_INTERVAL_MS)) {
             _userInfo->setStatus("Remote station not responding");
             _state = State::FAILED;
         }

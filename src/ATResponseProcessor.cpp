@@ -74,6 +74,12 @@ ATResponseProcessor::Matcher ATResponseProcessor::_matchers[] = {
             p._reset();
         }
     } ,
+    { MatchType::SIMPLE, false, "\r\n+IP\r\n",
+        [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
+            p._sink->ip();
+            p._reset();
+        }
+    } ,
     { MatchType::SIMPLE, false, "\r\n>",
         [](ATResponseProcessor& p, const ATResponseProcessor::Matcher& m) { 
             p._sink->sendPrompt();

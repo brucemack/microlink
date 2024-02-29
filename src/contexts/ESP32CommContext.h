@@ -115,6 +115,7 @@ public:
         const uint8_t* data, uint32_t len, const char* addr);
     virtual void notification(const char* msg);
     virtual void confused(const uint8_t* data, uint32_t len);
+    virtual void ip();
 
 private:
 

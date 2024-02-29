@@ -67,6 +67,7 @@ public:
         virtual void connected(uint32_t channel)  { }
         virtual void closed(uint32_t channel)  { }
         virtual void notification(const char* msg);
+        virtual void ip() = 0;
         virtual void confused(const uint8_t* data, uint32_t len) = 0;
     };
 

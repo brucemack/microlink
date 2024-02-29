@@ -55,6 +55,7 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
+#include "kc1fsz-tools/DTMFDetector.h"
 #include "kc1fsz-tools/events/TickEvent.h"
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
@@ -376,12 +377,16 @@ int main(int, const char**) {
 
     RXMonitor rxMonitor;
 
+    int16_t dtmfDetectorHistory[400];
+    DTMFDetector dtmfDetector(dtmfDetectorHistory, 400, sampleRate);
+
     // Cross-connects
     info.setAudioOut(&audioOutContext);
     audioInContext.setSink(&rxMonitor);
     ctx.setEventProcessor(&rm);
     rxMonitor.setSink(&rm);
     rxMonitor.setInfo(&info);
+    rxMonitor.setDTMFDetector(&dtmfDetector);
 
     rm.setServerName(addressingServerHost);
     rm.setServerPort(addressingServerPort);
@@ -629,43 +634,32 @@ int main(int, const char**) {
             maxTaskTime[t] = std::max(maxTaskTime[t], taskTimer.elapsedUs());
         }
 
-        const float powerThreshold = 1e11;
-
         // Periodically do some analysis of the audio to find tones, etc.
         if (analyzerTimer.poll()) {
 
             analyzerTimer.reset();
 
-            bool dtmf_1209 = rxAnalyzer.getTonePower(1209) > powerThreshold; 
-            bool dtmf_1336 = rxAnalyzer.getTonePower(1336) > powerThreshold; 
-            bool dtmf_697 = rxAnalyzer.getTonePower(697) > powerThreshold; 
-
-            if (dtmf_1209 || dtmf_1336 || dtmf_697) {
-                //log.info("==== DTMF %d %d %d", dtmf_1209, dtmf_1336, dtmf_697);
+            if (dtmfDetector.resultAvailable()) {
+                log.info("DTMF: %c", dtmfDetector.getResult());
             }
 
-            bool oneActive = dtmf_1209 && dtmf_697;
-            bool twoActive = dtmf_1336 && dtmf_697;
-
+            /*
             if (oneActive) {
                 //log.info("ONE");
-                /*
                 if (time_ms() - lastConnectRequestMs > 2000) {
                     bool b = rm.connectToStation(CallSign("*ECHOTEST*"));
                     if (!b) {
                         lastConnectRequestMs = time_ms();
                     }
                 }
-                */
             } else if (twoActive) {
                 //log.info("TWO");
-                /*
                 if (rm.isInQSO() && time_ms() - lastStopRequestMs > 2000) {
                     rm.requestCleanStop();  
                     lastStopRequestMs = time_ms();
                 }
-                */
             }
+            */
         }
 
         // Provided a live-updating dashboard of system status/audio/etc.

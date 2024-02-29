@@ -39,6 +39,8 @@ public:
 
     void setInfo(UserInfo* info) { _info = info; }
 
+    void setDTMFDetector(AudioProcessor* sink) { _dtmfDet = sink; }
+
     /**
      * Controls whether the monitor should forward audio to the sink.
      */
@@ -65,6 +67,7 @@ private:
     bool _keyed = false;
     AudioProcessor* _sink = 0;
     UserInfo* _info = 0;
+    AudioProcessor* _dtmfDet = 0;
 };
 
 }
