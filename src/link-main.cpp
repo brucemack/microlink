@@ -294,7 +294,7 @@ int main(int, const char**) {
     FixedString ourFullName;
     FixedString ourLocation;
     uint32_t rxNoiseThreshold = 50;
-    bool useHardCos = false;
+    bool useHardCos = true;
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
     // remembering to include the offset for RAM
@@ -641,14 +641,14 @@ int main(int, const char**) {
             bool dtmf_697 = rxAnalyzer.getTonePower(697) > powerThreshold; 
 
             if (dtmf_1209 || dtmf_1336 || dtmf_697) {
-                log.info("==== DTMF %d %d %d", dtmf_1209, dtmf_1336, dtmf_697);
+                //log.info("==== DTMF %d %d %d", dtmf_1209, dtmf_1336, dtmf_697);
             }
 
             bool oneActive = dtmf_1209 && dtmf_697;
             bool twoActive = dtmf_1336 && dtmf_697;
 
             if (oneActive) {
-                log.info("ONE");
+                //log.info("ONE");
                 /*
                 if (time_ms() - lastConnectRequestMs > 2000) {
                     bool b = rm.connectToStation(CallSign("*ECHOTEST*"));
@@ -658,7 +658,7 @@ int main(int, const char**) {
                 }
                 */
             } else if (twoActive) {
-                log.info("TWO");
+                //log.info("TWO");
                 /*
                 if (rm.isInQSO() && time_ms() - lastStopRequestMs > 2000) {
                     rm.requestCleanStop();  

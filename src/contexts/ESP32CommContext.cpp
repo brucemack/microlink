@@ -354,7 +354,7 @@ void ESP32CommContext::ok() {
         _eventProc->processEvent(&ev);
     }
     else if (_state == State::IN_SEND_WAIT) {
-        if (traceLevel > 0) {
+        if (traceLevel > 1) {
             _log->info("OK (Send)");
         }
         _state = State::IN_SEND_PROMPT_WAIT;
@@ -377,7 +377,7 @@ void ESP32CommContext::error() {
 
 void ESP32CommContext::sendPrompt() {
     if (_state == State::IN_SEND_PROMPT_WAIT) {
-        if (traceLevel > 0) {
+        if (traceLevel > 1) {
             _log->info("SEND PROMPT");
         }
         _state = State::IN_SEND_OK_WAIT;
@@ -390,7 +390,7 @@ void ESP32CommContext::sendPrompt() {
 
 void ESP32CommContext::sendOk() {
     if (_state == State::IN_SEND_OK_WAIT) {
-        if (traceLevel > 0) {
+        if (traceLevel > 1) {
             _log->info("SEND OK");
         }
         _state = State::NONE;
