@@ -49,7 +49,8 @@ add_executable(link-main
   src/Synth.cpp
   src/RXMonitor.cpp
   src/LinkUserInfo.cpp
-  src/contexts/ESP32CommContext.cpp
+#  src/contexts/ESP32CommContext.cpp
+  src/contexts/PicoWCommContext.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
   src/machines/LinkRootMachine.cpp
@@ -66,7 +67,7 @@ add_executable(link-main
   kc1fsz-tools-cpp/src/DTMFDetector.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+#  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
   kc1fsz-tools-cpp/src/md5/md5c.c
   gsm-0610-codec/src/fixed_math.cpp
   gsm-0610-codec/src/wav_util.cpp
@@ -79,14 +80,17 @@ if(DEFINED ENV{PICO_BUILD})
 pico_enable_stdio_usb(link-main 1)
 # Watch out!  Don't let the STDIO get sent to the UART
 pico_enable_stdio_uart(link-main 0)
+# ADDED FOR PICO W
+pico_add_extra_outputs(link-main)
 target_compile_definitions(link-main PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
 target_compile_definitions(link-main PRIVATE PICO_BUILD=1)
-target_link_libraries(link-main pico_stdlib hardware_i2c hardware_adc pico_multicore)
+target_link_libraries(link-main pico_stdlib hardware_i2c hardware_adc pico_cyw43_arch_lwip_poll)
 endif()
 
 target_include_directories(link-main PRIVATE src)
 target_include_directories(link-main PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(link-main PRIVATE gsm-0610-codec/include)
+target_include_directories(link-main PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # TEMPORARY!
 #target_include_directories(link-test-1p PRIVATE ../mock-pico-sdk)

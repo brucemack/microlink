@@ -433,6 +433,12 @@ enough.
   - [Analysis of Pico ADC](https://pico-adc.markomo.me/)
   - Timers: https://vanhunteradams.com/Pico/TimerIRQ/SPI_DDS.html
   - Flash Write: https://github.com/raspberrypi/pico-examples/blob/master/flash/program/flash_program.c
+* Pi PICO W Stuff
+  - [Pi Pico W Datasheet](https://datasheets.raspberrypi.com/picow/pico-w-datasheet.pdf?_gl=1*szg9*_ga*MTA2NTQyMTI1OC4xNjg3MjAzNjgy*_ga_22FD70LWDS*MTcwOTU1NTA2OC4yMi4xLjE3MDk1NTUzODEuMC4wLjA.)
+  - [Connecting to the Internet with the Pico W](https://datasheets.raspberrypi.com/picow/connecting-to-the-internet-with-pico-w.pdf)
+  - [Pi Pico CYW43 Driver Docs](https://cec-code-lab.aps.edu/robotics/resources/pico-c-api/group__cyw43__driver.html#ga71e656d02aabca214ae344f29ae1d033)
+  - [Light Weight IP - LwIP API Documentation](https://www.nongnu.org/lwip/2_1_x/index.html)
+
 * ESP-32 
   - [AT Command Reference](https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html)
 * SIM7600 Cellular

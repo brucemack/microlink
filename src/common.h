@@ -97,7 +97,9 @@ struct StationConfig {
     char password[32];
     char fullName[32];
     char location[32];
-    char padding[256 - (4 + 32 + 4 + 32 + 32 + 32 + 32)];
+    char wifiSsid[64];
+    char wifiPassword[16];
+    char padding[256 - (4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 16)];
 };
 
 #endif

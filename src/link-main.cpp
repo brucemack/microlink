@@ -25,12 +25,19 @@
  * 
  * This test runs on the RP2040 hardware and provides a fairly comprehensive test
  * of connection, logon, and receipt of audio packets from the *ECHOTEST* station.
- */
+*/
 
 /*
+Build commands:
+
+    cd build
+    cmake -DPICO_BOARD=pico_w ..
+    make link-main
+
 Launch command:
-openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main.elf verify reset exit"
+    openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main.elf verify reset exit"
 */
+
 #include <ios>
 #include <iostream>
 #include <fstream>
@@ -44,7 +51,6 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 
 #include "pico/stdlib.h"
 #include "pico/time.h"
-#include "pico/multicore.h"
 #include "hardware/gpio.h"
 #include "hardware/i2c.h"
 #include "hardware/uart.h"
@@ -53,15 +59,25 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "hardware/watchdog.h"
 #include "hardware/flash.h"
 
+/*
+// ====== Internet Connectivity ===============================================
+#include "kc1fsz-tools/rp2040/PicoUartChannel.h"
+#include "contexts/ESP32CommContext.h"
+// ====== Internet Connectivity ===============================================
+*/
+
+// ====== Internet Connectivity ===============================================
+#include "pico/cyw43_arch.h"
+#include "contexts/PicoWCommContext.h"
+// ====== Internet Connectivity ===============================================
+
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/DTMFDetector.h"
 #include "kc1fsz-tools/events/TickEvent.h"
-#include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 #include "kc1fsz-tools/rp2040/PicoPerfTimer.h"
 
-#include "contexts/ESP32CommContext.h"
 #include "contexts/I2CAudioOutputContext.h"
 #include "contexts/PicoAudioInputContext.h"
 
@@ -73,7 +89,6 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 #include "machines/QSOConnectMachine.h"
 
 #include "LinkUserInfo.h"
-
 #include "Synth.h"
 #include "RXMonitor.h"
 
@@ -81,28 +96,31 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 // LEFT SIDE PINS 
 // ===============
 
-// Serial connection to ESP32
-#define UART0_TX_PIN 0
-#define UART0_RX_PIN 1
+// Physical pin 1 - Serial connection to ESP32 (RX2 on DEVKITV1)
+//#define UART0_TX_PIN (0)
+// Physical pin 2 - Serial connection to ESP32 (TX2 on DEVKITV1)
+//#define UART0_RX_PIN (1)
 
-// Physical pin 9.  Input from physical PTT button.
+// Physical pin 3 - GROUND
+
+// Physical pin 9. Input from physical PTT button.
 #define PTT_PIN (6)
 // Physical pin 10. Output to drive an LED indicating keyed status
 #define KEY_LED_PIN (7)
 
-// Physical pins 11/12
+// Physical pin 11 - Serial data logger
 #define UART1_TX_PIN (8)
+// Physical pin 12 - Serial data logger
 #define UART1_RX_PIN (9)
+
 // NOTE: Physical 13 is GND
 
 // Physical pin 15. This is an output to drive an LED indicating
 // that we are in a QSO. 
 #define QSO_LED_PIN (11)
 
-// WAS PHYSICAL 11 GPIO8!
-// Physical pin 16. Ouptut to hard reset on ESP32.
-// (Can be on left)
-#define ESP_EN_PIN (12)
+// Physical pin 16. Ouptut to hard reset on ESP32 (EN on DEVKITV1)
+//#define ESP_EN_PIN (12)
 
 // Physical pin 20.  Used for diagnostics/timing checks
 #define DIAG_PIN (15)
@@ -111,13 +129,12 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 // RIGHT SIDE PINS 
 // ===============
 
-#define LED_PIN (25)
-// Input from analog section
-#define ADC0_PIN (26)
+// Phy Pin 21: I2C channel 0 - DAC data
+#define I2C0_SDA (16) 
+// Phy Pin 22: I2C channel 0 - DAC clock
+#define I2C0_SCL (17) 
 
-// I2C -> DAC
-#define I2C0_SDA (16) // Phy Pin 21: I2C channel 0 - data
-#define I2C0_SCL (17) // Phy Pin 22: I2C channel 0 - clock
+// Physical pin 23 - GROUND
 
 // Physical pin 24.  This is an output (active high) used to key 
 // the rig's transmitter. Typically drives an optocoupler to
@@ -126,6 +143,14 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 // Physical pin 25. This is an input (active high) used to detect
 // receive carrier from the rig. 
 #define RIG_COS_PIN (19)
+
+// No physical pin on board
+//#define LED_PIN (25)
+
+// Physical pin 31 - ADC input from analog section
+#define ADC0_PIN (26)
+
+// Physical pin 33 - Analog Ground
 
 #define UART_ID uart0
 #define U_BAUD_RATE 115200
@@ -149,10 +174,12 @@ openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-m
 // The time the COS is ignore immediate after a TX cycle (to avoid 
 // having the transmitter interfering with the receiver
 #define LINGER_AFTER_TX_MS 500
-
+// How long we wait in silence before flushing any accumualted DTMF
+// tones.
+#define DMTF_ACCUMULATOR_TIMEOUT_MS (10 * 1000)
 // The version of the configuration version that we expect 
 // to find (must be at least this version)
-#define CONFIG_VERSION (0xbab0)
+#define CONFIG_VERSION (0xbab1)
 
 using namespace std;
 using namespace kc1fsz;
@@ -179,8 +206,8 @@ int main(int, const char**) {
     stdio_init_all();
 
     // On-board LED
-    gpio_init(LED_PIN);
-    gpio_set_dir(LED_PIN, GPIO_OUT);
+    //gpio_init(LED_PIN);
+    //gpio_set_dir(LED_PIN, GPIO_OUT);
 
     // PTT switch
     gpio_init(PTT_PIN);
@@ -201,11 +228,6 @@ int main(int, const char**) {
     gpio_set_dir(QSO_LED_PIN, GPIO_OUT);
     gpio_put(QSO_LED_PIN, 0);
 
-    // ESP EN
-    gpio_init(ESP_EN_PIN);
-    gpio_set_dir(ESP_EN_PIN, GPIO_OUT);
-    gpio_put(ESP_EN_PIN, 1);
-
     // Rig key
     gpio_init(RIG_KEY_PIN);
     gpio_set_dir(RIG_KEY_PIN, GPIO_OUT);
@@ -216,15 +238,6 @@ int main(int, const char**) {
     gpio_set_dir(DIAG_PIN, GPIO_OUT);
     gpio_put(DIAG_PIN, 0);
        
-    // UART0 setup
-    uart_init(UART_ID, U_BAUD_RATE);
-    gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART0_RX_PIN, GPIO_FUNC_UART);
-    uart_set_hw_flow(UART_ID, false, false);
-    uart_set_format(UART_ID, U_DATA_BITS, U_STOP_BITS, U_PARITY);
-    uart_set_fifo_enabled(UART_ID, true);
-    uart_set_translate_crlf(UART_ID, false);
-
     // UART1 setup (logging)
     uart_init(uart1, U_BAUD_RATE);
     gpio_set_function(UART1_TX_PIN, GPIO_FUNC_UART);
@@ -244,12 +257,12 @@ int main(int, const char**) {
     i2c_set_baudrate(i2c_default, 800000);
 
     // Hello indicator
-    for (int i = 0; i < 4; i++) {
-        gpio_put(LED_PIN, 1);
-        sleep_ms(250);
-        gpio_put(LED_PIN, 0);
-        sleep_ms(250);
-    }
+    //for (int i = 0; i < 4; i++) {
+    //    gpio_put(LED_PIN, 1);
+    //    sleep_ms(250);
+    //    gpio_put(LED_PIN, 0);
+    //    sleep_ms(250);
+    //}
 
     SerialLog log(uart1);
     log.setStdout(true);
@@ -270,13 +283,15 @@ int main(int, const char**) {
     {
         // Write flash
         StationConfig config;
-        config.version = 0xbab0;
+        config.version = CONFIG_VERSION;
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
         strncpy(config.callSign, "W1TKZ-L", 32);
         strncpy(config.password, "xxx", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA FN42", 32);
+        strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
+        strncpy(config.wifiPassword, "xxx", 16);
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
         flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
@@ -284,7 +299,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 256);
         restore_interrupts(ints);
     } 
-    */   
+    */
 
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
@@ -322,9 +337,6 @@ int main(int, const char**) {
     // ADC/audio in setup
     PicoAudioInputContext::setup();
 
-    PicoUartChannel::traceLevel = 0;
-    ESP32CommContext::traceLevel = 1;
-
     LinkRootMachine::traceLevel = 0;
     LogonMachine::traceLevel = 0;
     QSOAcceptMachine::traceLevel = 0;
@@ -335,23 +347,46 @@ int main(int, const char**) {
     LookupMachine2::traceLevel = 0;
     QSOConnectMachine::traceLevel = 0;
 
+    /*    
+    // ====== Internet Connectivity Stuff =====================================
+    // ESP EN
+    gpio_init(ESP_EN_PIN);
+    gpio_set_dir(ESP_EN_PIN, GPIO_OUT);
+    gpio_put(ESP_EN_PIN, 1);
+    // UART0 setup (Internet)
+    uart_init(UART_ID, U_BAUD_RATE);
+    gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART0_RX_PIN, GPIO_FUNC_UART);
+    uart_set_hw_flow(UART_ID, false, false);
+    uart_set_format(UART_ID, U_DATA_BITS, U_STOP_BITS, U_PARITY);
+    uart_set_fifo_enabled(UART_ID, true);
+    uart_set_translate_crlf(UART_ID, false);
+
+    PicoUartChannel::traceLevel = 0;
+    ESP32CommContext::traceLevel = 1;
     // Sertup UART and timer
     const uint32_t readBufferSize = 256;
     uint8_t readBuffer[readBufferSize];
     const uint32_t writeBufferSize = 256;
     uint8_t writeBuffer[writeBufferSize];
-
     PicoUartChannel channel(UART_ID, 
         readBuffer, readBufferSize, writeBuffer, writeBufferSize);
-
-    PicoPollTimer timer;
-    timer.setIntervalUs(1000 * 5000);
-
     ESP32CommContext ctx(&log, &channel, ESP_EN_PIN);
-
     // Do a flush of any garbage on the serial line before we start 
     // protocol processing.
     ctx.flush(250);
+    // ====== Internet Connectivity Stuff =====================================
+    */
+
+    // ====== Internet Connectivity Stuff =====================================
+    if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
+        log.error("Failed to initialize WIFI");
+    } else {
+        cyw43_arch_enable_sta_mode();
+        cyw43_arch_wifi_connect_async(p->wifiSsid, p->wifiPassword, CYW43_AUTH_WPA2_AES_PSK);
+    }
+    PicoWCommContext ctx(&log);
+    // ====== Internet Connectivity Stuff =====================================
 
     LinkUserInfo info;
     info.setLog(&log);
@@ -429,12 +464,16 @@ int main(int, const char**) {
     int16_t baselineRxNoise = 0;
 
     uint32_t lastConnectRequestMs = 0;
-    uint32_t lastStopRequestMs = 0;
 
     audioInContext.setADCEnabled(true);
 
+    const uint32_t dtmfAccumulatorSize = 16;
+    char dtmfAccumulator[dtmfAccumulatorSize];
+    uint32_t dtmfAccumulatorLen = 0;
+    uint32_t lastDtmfActivity = 0;
+
     // Last thing before going into the event loop
-	watchdog_enable(WATCHDOG_DELAY_MS, true);
+	//watchdog_enable(WATCHDOG_DELAY_MS, true);
 
     log.info("Entering event loop");
 
@@ -601,9 +640,9 @@ int main(int, const char**) {
                 cout << "Max Skew (us)     : " << audioInContext.getMaxSkew() << endl;
                 cout << "Max Len (us)      : " << audioInContext.getMaxLen() << endl;
                 cout << "Audio Out FIFO OF : " << audioOutContext.getTxFifoFull() << endl;
-                cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
-                cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
-                cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
+                //cout << "UART RX COUNT     : " << channel.getBytesReceived() << endl;
+                //cout << "UART RX LOST      : " << channel.getReadBytesLost() << endl;
+                //cout << "UART TX COUNT     : " << channel.getBytesSent() << endl;
                 cout << "Longest Cycle (us): " << longestCycleUs << endl;
                 cout << "Long Cycles       : " << longCycleCounter << endl;
                 cout << "TX lockout count  : " << rigKeyLockoutCount << endl;
@@ -634,32 +673,53 @@ int main(int, const char**) {
             maxTaskTime[t] = std::max(maxTaskTime[t], taskTimer.elapsedUs());
         }
 
-        // Periodically do some analysis of the audio to find tones, etc.
-        if (analyzerTimer.poll()) {
+        // ----- Deal with Inbound DTMF Requests ---------------------------------
 
-            analyzerTimer.reset();
+        if (dtmfAccumulatorLen > 0 &&
+            time_ms() - lastDtmfActivity > DMTF_ACCUMULATOR_TIMEOUT_MS) {
+            dtmfAccumulatorLen = 0;
+            log.info("Discarding DTMF activity");
+        }
 
-            if (dtmfDetector.resultAvailable()) {
-                log.info("DTMF: %c", dtmfDetector.getResult());
-            }
+        while (dtmfDetector.resultAvailable()) {
+            char c = dtmfDetector.getResult();
+            log.info("DTMF: %c", c);
+            if (dtmfAccumulatorLen < dtmfAccumulatorSize)
+                dtmfAccumulator[dtmfAccumulatorLen++] = c;
+            lastDtmfActivity = time_ms();
+        }
 
-            /*
-            if (oneActive) {
-                //log.info("ONE");
-                if (time_ms() - lastConnectRequestMs > 2000) {
-                    bool b = rm.connectToStation(CallSign("*ECHOTEST*"));
-                    if (!b) {
-                        lastConnectRequestMs = time_ms();
+        if (dtmfAccumulatorLen >= 2) {
+            if (dtmfAccumulator[0] == '1' and dtmfAccumulator[1] == '4') {
+                log.info("Connect to *ECHOTEST* requested");
+                dtmfAccumulatorLen = 0;
+                if (rm.isAccepting()) {
+                    if (time_ms() - lastConnectRequestMs > 2000) {
+                        bool b = rm.connectToStation(CallSign("*ECHOTEST*"));
+                        if (!b) {
+                            lastConnectRequestMs = time_ms();
+                        }
+                        else {
+                            log.info("Not in a state that allows connection");
+                        }
+                    }
+                    else {
+                        log.info("Ignored duplicate request");
                     }
                 }
-            } else if (twoActive) {
-                //log.info("TWO");
-                if (rm.isInQSO() && time_ms() - lastStopRequestMs > 2000) {
-                    rm.requestCleanStop();  
-                    lastStopRequestMs = time_ms();
+                else {
+                    log.info("Not in a state that allows connection");
                 }
             }
-            */
+            else if (dtmfAccumulator[0] == '1' and dtmfAccumulator[1] == '7') {
+                log.info("Stop requested");
+                rm.requestCleanStop();  
+            }
+        }
+
+        // Periodically do some analysis of the audio to find tones, etc.
+        if (analyzerTimer.poll()) {
+            analyzerTimer.reset();
         }
 
         // Provided a live-updating dashboard of system status/audio/etc.
