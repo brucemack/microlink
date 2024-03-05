@@ -49,6 +49,8 @@ add_executable(link-main
   src/Synth.cpp
   src/RXMonitor.cpp
   src/LinkUserInfo.cpp
+  src/Conference.cpp
+  src/ConferenceBridge.cpp
 #  src/contexts/ESP32CommContext.cpp
   src/contexts/LwIPCommContext.cpp
   src/contexts/I2CAudioOutputContext.cpp
