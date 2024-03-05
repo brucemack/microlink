@@ -84,6 +84,8 @@ void QSOFlowMachine::start() {
 }
 
 void QSOFlowMachine::cleanup() {
+    _ctx->closeUDPChannel(_rtcpChannel);
+    _ctx->closeUDPChannel(_rtpChannel);
     _peerAddr = IPAddress();
 }
 
@@ -98,6 +100,7 @@ void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
 
         // Check for BYE
         if (isRTCPByePacket(evt->getData(), evt->getDataLen())) {
+            _userInfo->setStatus("BYE received");
             _byeReceived = true;
         }
     }
@@ -163,6 +166,9 @@ void QSOFlowMachine::_processRXReceive(const UDPReceiveEvent* evt) {
             }
             _processONDATA(evt->getData(), evt->getDataLen());
         }
+    }
+    else {
+        //cout << "Invalid channel " << evt->getChannel().getId() << " " << evt->getChannel().isGood() << endl;
     }
 
     _lastRecvMs = time_ms();

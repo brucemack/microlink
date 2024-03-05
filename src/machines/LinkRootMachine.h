@@ -153,6 +153,8 @@ private:
     uint32_t _lastRadioCarrierDetect = 0;
     CallSign _lastRemoteCallSign;
     IPAddress _lastRemoteAddress;
+
+    uint32_t _tryCount = 4;
 };
 
 }

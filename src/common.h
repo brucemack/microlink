@@ -37,9 +37,12 @@ uint32_t parseIP4Address(const char* dottedAddr);
 /**
  * Puts the address into a string in decimal-dotted format.
  *
- * @param addrNetworkOrder IP4 address
+ * @param addr IP4 address expressed as a 32-bit integer.  The
+ * assumption is that the endian thing has been sorted out 
+ * before this point and the most-significant bits of the integer
+ * are the left-most parts of the dotted address display.
  */
-void formatIP4Address(uint32_t addrNetworkOrder, char* dottedAddr, uint32_t dottedAddrSize);
+void formatIP4Address(uint32_t addr, char* dottedAddr, uint32_t dottedAddrSize);
 
 // trim from start (in place)
 void ltrim(std::string &s);

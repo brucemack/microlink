@@ -39,7 +39,7 @@ using namespace std;
 namespace kc1fsz {
 
 static const uint32_t DNS_TIMEOUT_MS = 10000;
-static const uint32_t CONNECT_TIMEOUT_MS = 2000;
+static const uint32_t CONNECT_TIMEOUT_MS = 5000;
 
 int LogonMachine::traceLevel = 0;
 
@@ -61,7 +61,10 @@ void LogonMachine::start() {
 }
 
 void LogonMachine::cleanup() {
-    _ctx->closeTCPChannel(_channel);
+    if (_channel.isGood()) {
+        _ctx->closeTCPChannel(_channel);
+        _channel = Channel(0, false);
+    }
 }
 
 void LogonMachine::processEvent(const Event* ev) {
@@ -82,23 +85,23 @@ void LogonMachine::processEvent(const Event* ev) {
 
             // Start the process of opening the TCP connection
             _channel = _ctx->createTCPChannel();
+
             if (!_channel.isGood()) {
-                _state = FAILED;
+                _state = State::FAILED;
             } else {
                 _ctx->connectTCPChannel(_channel, evt->getAddr(), _serverPort);
                 // We give the connect some time to complete before
                 // giving up
-                _setTimeoutMs(time_ms() + CONNECT_TIMEOUT_MS);
-                _state = CONNECTING;
+                _setState(State::CONNECTING, CONNECT_TIMEOUT_MS);
             }
         }
         else if (_isTimedOut()) {
             _userInfo->setStatus("DNS timed out");
             // TODO: MESSAGE
-            _state = FAILED;
+            _state = State::FAILED;
         }
     }
-    else if (_state == CONNECTING) {
+    else if (_state == State::CONNECTING) {
         if (ev->getType() == TCPConnectEvent::TYPE) {
             auto evt = static_cast<const TCPConnectEvent*>(ev);
             if (evt->getChannel().isGood() && evt->isGood()) {
@@ -125,7 +128,7 @@ void LogonMachine::processEvent(const Event* ev) {
             }            
         } 
         else if (_isTimedOut()) {
-            // TODO: MESSAGE
+            _userInfo->setStatus("Connect timed out");
             _state = FAILED;
         }
     }

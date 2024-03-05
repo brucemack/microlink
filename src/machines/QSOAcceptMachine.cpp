@@ -127,7 +127,6 @@ void QSOAcceptMachine::processEvent(const Event* ev) {
 
             const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
 
-
             if (evt->getChannel() == _rtcpChannel) {
 
                 if (traceLevel > 0) {

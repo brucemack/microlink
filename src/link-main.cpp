@@ -68,7 +68,7 @@ Launch command:
 
 // ====== Internet Connectivity ===============================================
 #include "pico/cyw43_arch.h"
-#include "contexts/PicoWCommContext.h"
+#include "contexts/LwIPCommContext.h"
 // ====== Internet Connectivity ===============================================
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
@@ -257,12 +257,12 @@ int main(int, const char**) {
     i2c_set_baudrate(i2c_default, 800000);
 
     // Hello indicator
-    //for (int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
     //    gpio_put(LED_PIN, 1);
-    //    sleep_ms(250);
+        sleep_ms(250);
     //    gpio_put(LED_PIN, 0);
-    //    sleep_ms(250);
-    //}
+        sleep_ms(250);
+    }
 
     SerialLog log(uart1);
     log.setStdout(true);
@@ -379,13 +379,14 @@ int main(int, const char**) {
     */
 
     // ====== Internet Connectivity Stuff =====================================
+    LwIPCommContext::traceLevel = 1;
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
         log.error("Failed to initialize WIFI");
     } else {
         cyw43_arch_enable_sta_mode();
         cyw43_arch_wifi_connect_async(p->wifiSsid, p->wifiPassword, CYW43_AUTH_WPA2_AES_PSK);
     }
-    PicoWCommContext ctx(&log);
+    LwIPCommContext ctx(&log);
     // ====== Internet Connectivity Stuff =====================================
 
     LinkUserInfo info;
@@ -483,6 +484,10 @@ int main(int, const char**) {
 
         // Keep things alive
         watchdog_update();
+
+        // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
+        // main loop (not from a timer) to check for Wi-Fi driver or lwIP work that needs to be done.
+        cyw43_arch_poll();
 
         // At startup we wait some time to adjust a few parameters before 
         // opening the state machines for connections.

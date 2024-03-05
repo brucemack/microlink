@@ -21,6 +21,8 @@
 #ifndef _QSOFlowMachine_h
 #define _QSOFlowMachine_h
 
+#include <iostream>
+
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"

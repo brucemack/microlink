@@ -38,7 +38,8 @@ int LinkRootMachine::traceLevel = 0;
 // back through the login cycle.  This must be < the 7 minute period
 // that EchoLink keeps the "ONLINE" status posted.
 
-static const uint32_t ACCEPT_TIMEOUT_MS = 5 * 60 * 1000;
+//static const uint32_t ACCEPT_TIMEOUT_MS = 5 * 60 * 1000;
+static const uint32_t ACCEPT_TIMEOUT_MS = 30 * 1000;
 
 // This is how long the radio needs to be silent before we will start
 // using the welcome message.
@@ -129,11 +130,18 @@ void LinkRootMachine::processEvent(const Event* ev) {
                 _state = State::IN_VALIDATION;
             } else {
                 _userInfo->setStatus("Accept failed");
+                // Close channels used for accepting
+                _ctx->closeUDPChannel(_acceptMachine.getRTCPChannel());
+                _ctx->closeUDPChannel(_acceptMachine.getRTPChannel());
                 // Back to square 1
                 _state = State::IDLE;
             }
         }
         else if (_isTimedOut()) {
+            _userInfo->setStatus("Refreshing login");
+            // Close channels used for accepting
+            _ctx->closeUDPChannel(_acceptMachine.getRTCPChannel());
+            _ctx->closeUDPChannel(_acceptMachine.getRTPChannel());
             // Back to square 1
             _state = State::IDLE;
         }
@@ -152,6 +160,9 @@ void LinkRootMachine::processEvent(const Event* ev) {
                 }
             } 
             else {
+                // Close channels used for accepting
+                _ctx->closeUDPChannel(_acceptMachine.getRTCPChannel());
+                _ctx->closeUDPChannel(_acceptMachine.getRTPChannel());
                 // Back to square 1
                 _state = State::IDLE;
             }
@@ -161,9 +172,12 @@ void LinkRootMachine::processEvent(const Event* ev) {
         if (isDoneAfterEvent(_welcomeMachine, ev)) {
             if (_welcomeMachine.isGood()) {
                 _qsoMachine.start();
-                _state = QSO;
+                _state = State::QSO;
             } 
             else {
+                // Close channels used for accepting
+                _ctx->closeUDPChannel(_acceptMachine.getRTCPChannel());
+                _ctx->closeUDPChannel(_acceptMachine.getRTPChannel());
                 // Back to square 1
                 _state = State::IDLE;
             }
@@ -220,6 +234,8 @@ void LinkRootMachine::processEvent(const Event* ev) {
                     _state = State::CONNECT_RETRY_WAIT;
                 } else {
                     _userInfo->setStatus("Connect failed");
+                    _ctx->closeUDPChannel(_connectMachine.getRTCPChannel());
+                    _ctx->closeUDPChannel(_connectMachine.getRTPChannel());
                     // If the lookup fails we go reset and go back 
                     // to square one.
                     _state = State::IDLE;

@@ -18,8 +18,10 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _PicoWCommContext_h
-#define _PicoWCommContext_h
+#ifndef _LwIPCommContext_h
+#define _LwIPCommContext_h
+
+#include "lwip/tcp.h"
 
 #include "kc1fsz-tools/Runnable.h"
 #include "kc1fsz-tools/Channel.h"
@@ -37,12 +39,12 @@ class EventProcessor;
  * IMPORTANT: We are assuming that this runs on an embedded processor
  * we so limit the use of C++ features.
  */
-class PicoWCommContext : public CommContext, public Runnable {
+class LwIPCommContext : public CommContext, public Runnable {
 public:
 
     static int traceLevel;
 
-    PicoWCommContext(Log* log);
+    LwIPCommContext(Log* log);
 
     /**
      * Indicates where the Event objects should be forwarded to
@@ -101,7 +103,7 @@ private:
 
     enum State { 
         NONE, 
-        IN_INIT,
+        IN_RESET,
         IN_DNS, 
         IN_TCP_CONNECT, 
         IN_UDP_SETUP, 
@@ -116,16 +118,64 @@ private:
 
     Log* _log;
     EventProcessor* _eventProc;
-
     State _state;
+    bool _inCallback = false;
 
+    bool _dnsRespPending = false;
     HostName _lastHostNameReq;
     IPAddress _lastAddrResp;
     Channel _lastChannel;
 
+    bool _setupRespPending = false;
+    bool _sendRespPending = false;
+
     static const uint32_t _sendHoldSize = 256;
     uint8_t _sendHold[_sendHoldSize];
     uint32_t _sendHoldLen;
+
+    struct Tracker {
+
+        bool inUse = false;
+        bool error = false;
+
+        enum Type {
+            NONE, 
+            TCP,
+            UDP
+        } type = Type::NONE;
+
+        enum State {
+            IDLE,
+            IN_CONNECT
+        } state = State::IDLE;
+
+        void* pcb = 0;
+    };
+
+    static const uint32_t _trackersSize = 6;
+    Tracker _trackers[_trackersSize];
+   
+
+    void _validateChannel(Channel c, Tracker::Type t) const;
+    Tracker* _findTracker(void* tpcb);
+    int _findTracker2(void* tpcb);
+
+    static err_t _tcpRecvCb(void *arg, tcp_pcb *tpcb, pbuf *p, err_t err);
+    err_t _tcpRecv(tcp_pcb *tpcb, pbuf *p, err_t err);
+
+    static err_t _tcpSentCb(void *arg, tcp_pcb *tpcb, u16_t len);
+
+    static err_t _tcpConnectCb(void *arg, tcp_pcb *tpcb, err_t err);
+    err_t _tcpConnect(tcp_pcb *tpcb, err_t err);
+
+    static void _udpRecvCb(void *arg, udp_pcb *upcb, pbuf *p, const ip_addr_t *addr, u16_t port);
+    void _udpRecv(udp_pcb *upcb, pbuf *p, const ip_addr_t *addr, u16_t port);
+
+    static void _errCb(void *arg, err_t err);
+
+    static void _dnsCb(const char* name, const ip_addr_t* ipaddr, void *callback_arg);
+
+    void _dumpChannels() const;
 };
 
 }

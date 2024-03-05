@@ -349,6 +349,7 @@ void ESP32CommContext::ok() {
     }
     // TODO: GENERALIZE FOR TCP
     else if (_state == State::IN_UDP_SETUP) {
+        // TODO: WHAT STATE TO GO INTO?
         // Create an event and forward
         ChannelSetupEvent ev(_lastChannel, true);
         _eventProc->processEvent(&ev);

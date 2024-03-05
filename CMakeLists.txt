@@ -50,7 +50,7 @@ add_executable(link-main
   src/RXMonitor.cpp
   src/LinkUserInfo.cpp
 #  src/contexts/ESP32CommContext.cpp
-  src/contexts/PicoWCommContext.cpp
+  src/contexts/LwIPCommContext.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
   src/machines/LinkRootMachine.cpp
