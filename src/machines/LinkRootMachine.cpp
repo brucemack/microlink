@@ -38,8 +38,7 @@ int LinkRootMachine::traceLevel = 0;
 // back through the login cycle.  This must be < the 7 minute period
 // that EchoLink keeps the "ONLINE" status posted.
 
-//static const uint32_t ACCEPT_TIMEOUT_MS = 5 * 60 * 1000;
-static const uint32_t ACCEPT_TIMEOUT_MS = 30 * 1000;
+static const uint32_t ACCEPT_TIMEOUT_MS = 5 * 60 * 1000;
 
 // This is how long the radio needs to be silent before we will start
 // using the welcome message.

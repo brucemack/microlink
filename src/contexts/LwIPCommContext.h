@@ -104,16 +104,6 @@ private:
     enum State { 
         NONE, 
         IN_RESET,
-        IN_DNS, 
-        IN_TCP_CONNECT, 
-        IN_UDP_SETUP, 
-        // State 5: 
-        IN_SEND_PROMPT_WAIT,
-        // State 6:
-        IN_SEND_OK_WAIT,
-        // State 7: This is the state right after we have requested
-        // a send and are waiting for the initial OK response.
-        IN_SEND_WAIT 
     };
 
     Log* _log;
@@ -174,6 +164,7 @@ private:
     static void _errCb(void *arg, err_t err);
 
     static void _dnsCb(const char* name, const ip_addr_t* ipaddr, void *callback_arg);
+    void _dns(const char* name, const ip_addr_t* ipaddr);
 
     void _dumpChannels() const;
 };

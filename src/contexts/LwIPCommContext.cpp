@@ -44,6 +44,7 @@
 #include "kc1fsz-tools/events/StatusEvent.h"
 
 #include "../common.h"
+#include "../BooleanHolder.h"
 
 #include "LwIPCommContext.h"
 
@@ -141,20 +142,25 @@ void LwIPCommContext::startDNSLookup(HostName hostName) {
 }
 
 void LwIPCommContext::_dnsCb(const char* name, const ip_addr_t* ipaddr, void* arg) {   
+    static_cast<LwIPCommContext*>(arg)->_dns(name, ipaddr);
+}
 
-    auto obj = static_cast<LwIPCommContext*>(arg);
+void LwIPCommContext::_dns(const char* name, const ip_addr_t* ipaddr) {   
+
+    BooleanHolder h(&_inCallback);
+
     uint32_t addr = ntohl(ipaddr->addr);
 
-    char addrStr[20];
-    formatIP4Address(addr, addrStr, 20);
-
-    if (obj->traceLevel > 0)
-        obj->_log->info("Address %s", addrStr);
+    if (traceLevel > 0) {
+        char addrStr[20];
+        formatIP4Address(addr, addrStr, 20);
+        _log->info("DNS Result %s", addrStr);
+    }
 
     HostName hn(name);
     IPAddress ad(addr);
     DNSLookupEvent ev(hn, ad);
-    obj->_eventProc->processEvent(&ev);
+    _eventProc->processEvent(&ev);
 }
 
 err_t LwIPCommContext::_tcpRecvCb(void *arg, tcp_pcb *tpcb, pbuf *p, err_t err) {
@@ -162,6 +168,9 @@ err_t LwIPCommContext::_tcpRecvCb(void *arg, tcp_pcb *tpcb, pbuf *p, err_t err) 
 }
 
 err_t LwIPCommContext::_tcpRecv(tcp_pcb *tpcb, pbuf *p, err_t err) {
+
+    BooleanHolder h(&_inCallback);
+
     const int i = _findTracker2(tpcb);
     // Look for disconnect
     if (p == 0) {
@@ -172,8 +181,12 @@ err_t LwIPCommContext::_tcpRecv(tcp_pcb *tpcb, pbuf *p, err_t err) {
             _log->error("Socket not found");
         }
     } else {
-        TCPReceiveEvent ev(Channel(i, true), (const uint8_t*)p->payload, p->len);
-        _eventProc->processEvent(&ev);
+        if (i != -1) {
+            TCPReceiveEvent ev(Channel(i, true), (const uint8_t*)p->payload, p->len);
+            _eventProc->processEvent(&ev);
+        } else {
+            _log->error("Socket not found");
+        }
         pbuf_free(p);
     }
     return ERR_OK;
@@ -184,7 +197,7 @@ err_t LwIPCommContext::_tcpSentCb(void *arg, tcp_pcb *tpcb, u16_t len) {
 }
 
 void LwIPCommContext::_errCb(void *arg, err_t err) {
-    cout << "_errCb" << endl;
+    //_log->error("_errCb");
 }
 
 err_t LwIPCommContext::_tcpConnectCb(void *arg, tcp_pcb* pcb, err_t err) {
@@ -192,6 +205,9 @@ err_t LwIPCommContext::_tcpConnectCb(void *arg, tcp_pcb* pcb, err_t err) {
 }
 
 err_t LwIPCommContext::_tcpConnect(tcp_pcb* pcb, err_t err) {
+
+    BooleanHolder h(&_inCallback);
+
     for (uint32_t i = 0; i < _trackersSize; i++) {
         if (_trackers[i].inUse == true &&
             _trackers[i].state == Tracker::State::IN_CONNECT &&
@@ -362,7 +378,8 @@ void LwIPCommContext::closeUDPChannel(Channel c) {
 void LwIPCommContext::setupUDPChannel(Channel c, uint32_t localPort, 
     IPAddress remoteIpAddr, uint32_t remotePort) {
 
-    _log->info("Binding channel %d to port %d", c.getId(), localPort);
+    if (traceLevel > 0)
+        _log->info("Binding channel %d to port %d", c.getId(), localPort);
 
     _validateChannel(c, Tracker::Type::UDP);
 
