@@ -335,7 +335,12 @@ int main(int, const char**) {
             } 
             else if (c == 'd') {
                 conf.dropAll();
-            } 
+            } else if (c == 'a') {
+                CallSign cs("*ECHOTEST*");
+                IPAddress addr(0);
+                StationID sid(addr, cs);
+                lookup.validate(sid);
+            }
         }
     }    
 

@@ -38,6 +38,21 @@ void Conference::authorize(StationID id) {
     for (Station& s : _stations) {
         if (s.active && s.id == id) {
             s.authorized = true;
+            return;
+        }
+    }
+
+    _log->info("Manually adding conference participant");
+
+    for (Station& s : _stations) {
+        if (!s.active) {
+            s.reset();
+            s.active = true;
+            s.id = id;
+            s.authorized = true;
+            s.lastRxStamp = time_ms();
+            s.connectStamp = time_ms();
+            s.lastTxStamp = 0;
             break;
         }
     }
@@ -101,7 +116,7 @@ void Conference::processAudio(IPAddress sourceIp,
             s.talker = false;
             if (s.authorized) {                
                 s.lastTxStamp = time_ms();
-                _output->sendAudio(s.id, ssrc, frame, frameLen, fmt);
+                _output->sendAudio(s.id, ssrc, s.seq++, frame, frameLen, fmt);
             }
         }
     }
@@ -149,8 +164,8 @@ void Conference::processText(IPAddress source,
     if (!active) {
         for (Station& s : _stations) {
             if (!s.active) {
+                s.reset();
                 s.active = true;
-                s.authorized = false;
                 s.id = sourceStationId;
                 s.connectStamp = time_ms();
                 // We do this to avoid an immediate timeout
@@ -246,6 +261,8 @@ bool Conference::run() {
 
 void Conference::_sendPing(StationID id) {
 
+    _log->info("Ping to %s", id.getCall().c_str());
+
     // Make the SDES message and send
     {
         uint32_t ssrc = 0;
@@ -276,7 +293,7 @@ void Conference::_sendPing(StationID id) {
         strcatLimited(buffer, "\r", bufferSize);
         uint32_t packetLen = formatOnDataPacket(buffer, 0, packet, packetSize);
         
-        _output->sendAudio(id, 0, packet, packetLen, AudioFormat::TEXT);
+        _output->sendAudio(id, 0, 0, packet, packetLen, AudioFormat::TEXT);
     }
 }
 

@@ -58,7 +58,7 @@ private:
 
 class ConferenceOutput {
 public:
-    virtual void sendAudio(StationID dest, uint32_t ssrc,
+    virtual void sendAudio(StationID dest, uint32_t ssrc, uint16_t seq,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) = 0;
     virtual void sendText(StationID dest,
         const uint8_t* frame, uint32_t frameLen) = 0;
@@ -120,6 +120,7 @@ private:
         uint32_t dataLen);
 
     struct Station {
+        
         bool active = false;
         StationID id;
         bool authorized = false;
@@ -130,6 +131,18 @@ private:
         // A unique number that identifies traffic from this 
         // station.
         uint32_t ssrc = 0;
+        uint16_t seq = 0;
+
+        void reset() {
+            active = false;
+            authorized = false;
+            connectStamp = 0;
+            lastRxStamp = 0;
+            lastTxStamp = 0;
+            talker = false;
+            ssrc = 0;
+            seq = 0;
+        }
     };
 
     static const uint32_t _maxStations = 4;

@@ -135,6 +135,10 @@ void LookupMachine3::disc(Channel ch) {
                     _userInfo->setStatus(SUCCESSFUL_MSG);
                     _conf->authorize(StationID(_targetAddr, _targetCallSign));
                     _setState(State::SUCCEEDED);
+                } else if (_targetAddr == IPAddress(0)) {
+                    _log->info("Zero address");
+                    _conf->authorize(StationID(authAddr, _targetCallSign));
+                    _setState(State::SUCCEEDED);
                 } else {
                     _userInfo->setStatus(UNSUCCESSFUL_MSG);                        
                     _conf->deAuthorize(StationID(_targetAddr, _targetCallSign));

@@ -19,6 +19,7 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include <iostream>
+#include "pico/platform.h"
 
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/CallSign.h"
@@ -88,7 +89,7 @@ void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
         else if (ch == _rtpChannel) {
 
             if (traceLevel > 0) {
-                _log->info("ConferenceBridge: GOT RTP DATA");
+                //_log->info("ConferenceBridge: GOT RTP DATA");
                 //prettyHexDump(data, dataLen, cout);
             }
 
@@ -114,14 +115,28 @@ void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
     }
 }
 
-void ConferenceBridge::sendAudio(StationID dest, uint32_t ssrc,
+void ConferenceBridge::sendAudio(StationID dest, uint32_t ssrc, uint16_t seq,
     const uint8_t* data, uint32_t dataLen, AudioFormat fmt) {
-    
     if (fmt == AudioFormat::TEXT) {
         _ctx->sendUDPChannel(_rtpChannel, dest.getAddr(), RTP_PORT, 
             data, dataLen);
+    } else if (fmt == AudioFormat::GSMFR4X && dataLen == (4 * 33)) {
+
+        // TODO: CLEAN UP
+        uint8_t gsmFrames[4][33];
+        const uint8_t* s = data;
+        for (uint32_t f = 0; f < 4; f++) {
+            for (uint32_t p = 0; p < 33; p++) {
+                gsmFrames[f][p] = *s;
+                s++;
+            }        
+        }
+
+        uint8_t packet[144];
+        uint32_t packetLen = formatRTPPacket(seq, ssrc, gsmFrames, packet, 144);
+        _ctx->sendUDPChannel(_rtpChannel, dest.getAddr(), RTP_PORT, packet, packetLen);
     } else {
-        cout << "MISSING"<< endl;
+        panic_unsupported();
     }
 }
 
