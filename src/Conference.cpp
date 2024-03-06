@@ -30,6 +30,26 @@ static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
 static const uint32_t TALKER_INTERVAL_MS = 1000;
 
 uint32_t Conference::_ssrcGenerator = 0xa000;
+int Conference::_traceLevel = 0;
+
+void Conference::addRadio(CallSign cs, IPAddress addr) {
+
+    _log->info("Adding radio %s", cs.c_str());
+
+    for (Station& s : _stations) {
+        if (!s.active) {
+            s.reset();
+            s.active = true;
+            s.locked = true;
+            s.id = StationID(addr, cs);
+            s.authorized = true;
+            s.lastRxStamp = time_ms();
+            s.connectStamp = time_ms();
+            s.lastTxStamp = 0;
+            break;
+        }
+    }
+}
 
 void Conference::authorize(StationID id) {
 
@@ -226,7 +246,7 @@ StationID Conference::_extractStationID(IPAddress source, const uint8_t* data,
 
 void Conference::dropAll() {
     for (Station& s : _stations) {
-        if (s.active) {
+        if (s.active && !s.locked) {
             _log->info("Dropping station %s", s.id.getCall().c_str());
             _sendBye(s.id);
             s.active = false;
@@ -243,7 +263,8 @@ bool Conference::run() {
                 s.lastTxStamp = time_ms();
             }
             // Look for timeouts
-            if (time_ms() - s.lastRxStamp > (KEEP_ALIVE_INTERVAL_MS * 6)) {
+            if (!s.locked && 
+                time_ms() - s.lastRxStamp > (KEEP_ALIVE_INTERVAL_MS * 6)) {
                 _log->info("Timing out station %s", s.id.getCall().c_str());
                 _sendBye(s.id);
                 s.active = false;
@@ -261,7 +282,8 @@ bool Conference::run() {
 
 void Conference::_sendPing(StationID id) {
 
-    _log->info("Ping to %s", id.getCall().c_str());
+    if (_traceLevel > 0)
+        _log->info("Ping to %s", id.getCall().c_str());
 
     // Make the SDES message and send
     {

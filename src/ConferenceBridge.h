@@ -28,12 +28,16 @@
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/IPLib.h"
 
+#include "gsm-0610-codec/Decoder.h"
+#include "gsm-0610-codec/Encoder.h"
+
 #include "StateMachine2.h"
 
 namespace kc1fsz {
 
 class UserInfo;
 class Conference;
+class AudioOutputContext;
 
 class ConferenceBridge : public StateMachine2, public IPLibEvents, public ConferenceOutput {
 public:
@@ -49,7 +53,7 @@ public:
         uint32_t ssrc2,
         uint8_t* packet, uint32_t packetSize);      
 
-    ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log);
+    ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log, AudioOutputContext* radio0);
 
     void setConference(Conference* conf) { _conf = conf; }
 
@@ -103,9 +107,14 @@ private:
     Log* _log;
     Channel _rtpChannel;
     Channel _rtcpChannel;
+
+    AudioOutputContext* _radio0;
+    // Hard-coded address for the radio
+    IPAddress _radio0Addr;
+    Decoder _gsmDecoder0;
+    Encoder _gsmEncoder0;
 };
 
 }
 
 #endif
-

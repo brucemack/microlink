@@ -56,6 +56,8 @@ public:
 
     uint32_t getTxFifoFull() const { return _txFifoFull; }
 
+    bool getSquelch() const { return _squelchOpen; }
+
     // ----- From AudioOutputContext ------------------------------------------
 
     virtual void reset();

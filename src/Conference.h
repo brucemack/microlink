@@ -104,11 +104,15 @@ public:
 
     void dropAll();
 
+    void addRadio(CallSign cs, IPAddress addr);
+
     // ----- From Runnable ------------------------------------------------
 
     bool run();
 
 private:
+
+    static int _traceLevel;
 
     static uint32_t _ssrcGenerator;
 
@@ -132,6 +136,7 @@ private:
         // station.
         uint32_t ssrc = 0;
         uint16_t seq = 0;
+        bool locked = false;
 
         void reset() {
             active = false;
@@ -142,6 +147,7 @@ private:
             talker = false;
             ssrc = 0;
             seq = 0;
+            locked = false;
         }
     };
 

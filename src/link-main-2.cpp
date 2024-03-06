@@ -62,9 +62,13 @@ Launch command:
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 
+#include "contexts/I2CAudioOutputContext.h"
+#include "contexts/PicoAudioInputContext.h"
 #include "contexts/LwIPLib.h"
+
 #include "machines/LogonMachine2.h"
 #include "machines/LookupMachine3.h"
+
 #include "Conference.h"
 #include "ConferenceBridge.h"
 // TEMP
@@ -155,11 +159,23 @@ Launch command:
 using namespace std;
 using namespace kc1fsz;
 
+// Audio rate
+static const uint32_t sampleRate = 8000;
+// The size of one EchoLink audio frame (after decoding)
+static const int audioFrameSize = 160;
+// The number of audio frames packed into an RTP packet
+static const uint32_t audioFrameBlockFactor = 4;
+
+// Provide buffer for about a second of audio.  We round up to 16 frames worth.
+static const uint32_t audioBufDepth = 16;
+static const uint32_t audioBufDepthLog2 = 4;
+static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
+
 int main(int, const char**) {
 
     LogonMachine2::traceLevel = 0;
     LwIPLib::traceLevel = 1;
-    ConferenceBridge::traceLevel = 1;
+    ConferenceBridge::traceLevel = 0;
     //Conference::traceLevel = 1;
 
     // Seup PICO
@@ -283,6 +299,16 @@ int main(int, const char**) {
 
     TestUserInfo info;
 
+    // NOTE: Audio is encoded and decoded in 4-frame chunks.
+    I2CAudioOutputContext radio0Out(audioFrameSize * 4, sampleRate, 
+        audioBufDepthLog2, audioBuf, &info);
+
+    // ADC/audio in setup
+    PicoAudioInputContext::setup();
+    PicoAudioInputContext radio0In;
+    // Connect the input (ADC) timer to the output (DAC)
+    radio0In.setSampleCb(I2CAudioOutputContext::tickISR, &radio0Out);
+
     LogonMachine2 lm(&ctx, &info, &log);
     lm.setServerName(addressingServerHost);
     lm.setServerPort(addressingServerPort);
@@ -294,7 +320,7 @@ int main(int, const char**) {
     lookup.setServerName(addressingServerHost);
     lookup.setServerPort(addressingServerPort);
 
-    ConferenceBridge confBridge(&ctx, &info, &log);
+    ConferenceBridge confBridge(&ctx, &info, &log, &radio0Out);
     Conference conf(&lookup, &confBridge, &log);
     conf.setCallSign(ourCallSign);
     conf.setFullName(ourFullName);
@@ -305,6 +331,15 @@ int main(int, const char**) {
     ctx.addEventSink(&lm);
     ctx.addEventSink(&lookup);
     ctx.addEventSink(&confBridge);
+
+    bool rigKeyState = false;
+    uint32_t lastRigKeyTransitionTime = 0;
+    uint32_t rigKeyLockoutTime = 0;
+    uint32_t rigKeyLockoutCount = 0;
+
+    // Register the physical radio into the conference
+    conf.addRadio(CallSign("RADIO0"), IPAddress(0xf000));
+    radio0In.setADCEnabled(true);
 
     // Last thing before going into the event loop
 	//watchdog_enable(WATCHDOG_DELAY_MS, true);
@@ -325,6 +360,7 @@ int main(int, const char**) {
         lookup.run();
         confBridge.run();
         conf.run();
+        radio0Out.run();
 
         // ----- Serial Commands ---------------------------------------------
         
@@ -342,6 +378,41 @@ int main(int, const char**) {
                 lookup.validate(sid);
             }
         }
+
+        // Rig Key Management
+        //
+        // Key rig when audio is coming in, but enforce limits to prevent
+        // the key from being stuck open for long periods.
+
+        if (!rigKeyState) {
+            if (radio0Out.getSquelch() && 
+                time_ms() > (rigKeyLockoutTime + TX_LOCKOUT_MS)) {
+                info.setStatus("Keying rig");
+                rigKeyState = true;
+                lastRigKeyTransitionTime = time_ms();
+            }
+        }
+        else {
+            // Check for normal unkey
+            if (!info.getSquelch()) {
+                info.setStatus("Unkeying rig");
+                rigKeyState = false;
+                lastRigKeyTransitionTime = time_ms();
+            }
+            // Look for timeout case
+            else if (time_ms() > lastRigKeyTransitionTime + TX_TIMEOUT_MS) {
+                info.setStatus("TX lockout triggered");
+                rigKeyState = false;
+                lastRigKeyTransitionTime = time_ms();
+                rigKeyLockoutTime = time_ms();
+                rigKeyLockoutCount++;
+            }
+        }
+
+        gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
+
+
+
     }    
 
     cout << "Out of loop" << endl;
