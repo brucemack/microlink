@@ -291,4 +291,150 @@ uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     return itemCount;
 }
 
+uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
+    CallSign callSign, 
+    FixedString fullName,
+    uint32_t ssrc2,
+    uint8_t* p, uint32_t packetSize) {
+
+    // These are the only variable length fields
+    const uint32_t callSignLen = callSign.len();
+    const uint32_t fullNameLen = fullName.len();
+    const uint32_t spacesLen = 9;
+    const uint32_t versionLen = strlen(VERSION_ID);
+
+    // Do the length calculation to make sure we have the 
+    // space we need.
+    //
+    // RTCP header = 8
+    // BYE = 4
+    // SSRC = 4
+    uint32_t unpaddedLength = 8 + 4 + 4;
+    // Token 1 = 2 + Len("CALLSIGN") = 10
+    unpaddedLength += 10;
+    // Token 2 = 2 + Len(callSign) + spaces + Len(fullName)
+    unpaddedLength += 2 + callSignLen + spacesLen + fullNameLen;
+    // Token 3 = 2 + Len("CALLSIGN") = 10
+    unpaddedLength += 2 + 8;
+    // Token 4 = 2 + 8
+    unpaddedLength += 2 + 8;
+    // Token 6 = 2 + Len(VERSION_ID) 
+    unpaddedLength += 2 + strlen(VERSION_ID);
+    // Token 8 = 2 + 6
+    unpaddedLength += 2 + 6;
+    // Token 8 = 2 + 3
+    unpaddedLength += 2 + 3;
+    // Now we deal with the extra padding required by SDES to bring
+    // the packet up to a 4-byte boundary.
+    uint32_t sdesPadSize = 4 - (unpaddedLength % 4);
+    unpaddedLength += sdesPadSize;
+    // Put in the pad now to make sure it fits
+    uint32_t padSize = addRTCPPad(unpaddedLength, p, packetSize);
+    // Calculate the special SDES length
+    uint32_t sdesLength = (unpaddedLength + padSize - 12) / 4;
+
+    // RTCP header
+    *(p++) = 0xc0;
+    *(p++) = 0xc9;
+    // Length
+    *(p++) = 0x00;
+    *(p++) = 0x01;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+
+    // Packet identifier
+    *(p++) = 0xe1;
+    *(p++) = 0xca;
+    // SDES length
+    *(p++) = (sdesLength >> 8) & 0xff;
+    *(p++) = (sdesLength     ) & 0xff;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+
+    // Token 1
+    *(p++) = 0x01;
+    *(p++) = 0x08;
+    memcpy(p, "CALLSIGN", 8);
+    p += 8;
+
+    // Token 2
+    *(p++) = 0x02;
+    *(p++) = (uint8_t)(callSignLen + spacesLen + fullNameLen);
+    memcpy(p, callSign.c_str(), callSignLen);
+    p += callSignLen;
+    for (uint32_t i = 0; i < spacesLen; i++)
+        *(p++) = ' ';
+    memcpy(p, fullName.c_str(), fullNameLen);
+    p += fullNameLen;
+
+    // Token 3
+    *(p++) = 0x03;
+    *(p++) = 0x08;
+    memcpy(p, "CALLSIGN", 8);
+    p += 8;
+
+    // Token 4
+    char buf[9];
+    snprintf(buf, 9, "%08X", (unsigned int)ssrc2);
+    *(p++) = 0x04;
+    *(p++) = 0x08;
+    memcpy(p, buf, 8);
+    p += 8;
+
+    // Token 6
+    *(p++) = 0x06;
+    *(p++) = versionLen;
+    memcpy(p, VERSION_ID, versionLen);
+    p += versionLen;
+
+    // Token 8a - PORT
+    *(p++) = 0x08;
+    *(p++) = 0x06;
+
+    *(p++) = 0x01;
+    *(p++) = 0x50;
+    *(p++) = 0x35;
+    *(p++) = 0x31;
+    *(p++) = 0x39;
+    *(p++) = 0x38;
+
+    // Token 8b - DTMF Support
+    *(p++) = 0x08;
+    *(p++) = 0x03;
+
+    *(p++) = 0x01;
+    // Sending D1 (enabled)
+    *(p++) = 0x44;
+    *(p++) = 0x31;
+
+    // SDES padding (as needed)
+    for (uint32_t i = 0; i < sdesPadSize; i++)
+        *(p++) = 0x00;
+
+    return unpaddedLength + padSize;
+}
+
+/**
+ * Writes a data packet.
+ */
+uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
+    uint8_t* packet, uint32_t packetSize) {
+    // Data + 0 +  32-bit ssrc
+    uint32_t len = strlen(msg) + 1 + 4;
+    if (len > packetSize) {
+        return 0;
+    }
+    uint32_t ptr = 0;
+    memcpy(packet + ptr,(const uint8_t*) msg, strlen(msg));
+    ptr += strlen(msg);
+    packet[ptr] = 0;
+    ptr++;
+    writeInt32(packet + ptr, ssrc);
+
+    return len;
+}
+
+
 }

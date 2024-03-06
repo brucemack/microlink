@@ -39,15 +39,6 @@ public:
 
     static int traceLevel;
 
-    static uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
-        uint8_t* packet, uint32_t packetSize);
-
-    static uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
-        CallSign callSign, 
-        FixedString fullName,
-        uint32_t ssrc2,
-        uint8_t* packet, uint32_t packetSize);      
-
     QSOConnectMachine(CommContext* ctx, UserInfo* userInfo);
 
     virtual void processEvent(const Event* ev);

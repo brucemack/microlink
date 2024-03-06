@@ -18,47 +18,47 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _ConferenceBridge_h
-#define _ConferenceBridge_h
+#ifndef _LookupMachine3_h
+#define _LookupMachine3_h
 
+#include "kc1fsz-tools/Channel.h"
 #include "kc1fsz-tools/Event.h"
 #include "kc1fsz-tools/IPAddress.h"
-#include "kc1fsz-tools/Channel.h"
-#include "kc1fsz-tools/FixedString.h"
+#include "kc1fsz-tools/HostName.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/IPLib.h"
 
-#include "StateMachine2.h"
+#include "../StateMachine2.h"
+#include "../Conference.h"
 
 namespace kc1fsz {
 
 class UserInfo;
-class Conference;
 
-class ConferenceBridge : public StateMachine2, public IPLibEvents, public ConferenceOutput {
+/**
+ * A state machine used for managing the EL directory lookup.
+*/
+class LookupMachine3 : public StateMachine2, public IPLibEvents, public Authority {
 public:
 
     static int traceLevel;
 
-    static uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
-        uint8_t* packet, uint32_t packetSize);
+    LookupMachine3(IPLib* ctx, UserInfo* userInfo, Log* log);
 
-    static uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
-        CallSign callSign, 
-        FixedString fullName,
-        uint32_t ssrc2,
-        uint8_t* packet, uint32_t packetSize);      
-
-    ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log);
-
+    void setServerName(HostName hn) { _serverHostName = hn; }
+    void setServerPort(uint32_t p) { _serverPort = p; }
     void setConference(Conference* conf) { _conf = conf; }
+
+    // ----- From Authority ---------------------------------------------------
+
+    virtual void validate(StationID id);
 
     // ----- From IPLibEvents -------------------------------------------------
 
-    virtual void dns(HostName name, IPAddress addr) { }
-    virtual void bind(Channel ch);
-    virtual void conn(Channel ch) { }
-    virtual void disc(Channel ch) { }
+    virtual void dns(HostName name, IPAddress addr);
+    virtual void bind(Channel ch) { }
+    virtual void conn(Channel ch);
+    virtual void disc(Channel ch);
     virtual void recv(Channel ch, const uint8_t* data, uint32_t dataLen, IPAddress fromAddr,
         uint16_t fromPort);
     virtual void err(Channel ch, int type) { }
@@ -69,40 +69,33 @@ protected:
 
     virtual void _process(int state, bool entry);
 
-    // ----- From ConferenceOutput ---------------------------------------------
-
-public:
-
-    virtual void sendAudio(StationID dest, uint32_t ssrc,
-        const uint8_t* frame, uint32_t frameLen, AudioFormat fmt);
-
-    virtual void sendText(StationID dest,
-        const uint8_t* frame, uint32_t frameLen);
-
 private:
 
     enum State { 
         IDLE, 
-        IN_SETUP_0, 
-        IN_SETUP_1, 
-        // STATE 3
-        IN_SETUP_2, 
-        // STATE 4:
-        IN_SETUP_3, 
-        // STATE 5:
-        WAITING,
-        // STATE 6:
-        SUCCEEDED, 
-        // STATE 7:
-        FAILED 
+        REQUEST,
+        DNS_WAIT, 
+        CONNECT_WAIT, 
+        DISCONNECT_WAIT, 
+        FAILED, 
+        SUCCEEDED 
     };
 
     IPLib* _ctx;
     UserInfo* _userInfo;
-    Conference* _conf;
     Log* _log;
-    Channel _rtpChannel;
-    Channel _rtcpChannel;
+    Conference* _conf;
+
+    HostName _serverHostName;
+    uint32_t _serverPort;
+    CallSign _targetCallSign;
+    IPAddress _targetAddr;
+    Channel _channel;
+    // A place to accumulate characters while trying to build a complete 
+    // directory entry.
+    static const uint32_t _saveAreaSize = 256;
+    uint8_t _saveArea[_saveAreaSize];
+    uint32_t _saveAreaUsed;
 };
 
 }

@@ -75,7 +75,11 @@ public:
 private:
 
     Log* _log;
-    IPLibEvents* _events;
+
+    static const uint32_t _maxEvents = 16;
+    IPLibEvents* _events[_maxEvents];
+    uint32_t _eventsLen = 0;
+    
     bool _inCallback = false;
 
     HostName _lastHostNameReq;

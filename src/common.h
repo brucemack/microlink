@@ -25,6 +25,9 @@
 #include <string>
 #include <iostream>
 
+#include "kc1fsz-tools/CallSign.h"
+#include "kc1fsz-tools/FixedString.h"
+
 namespace kc1fsz {
 
 extern const char* VERSION_ID;
@@ -89,8 +92,6 @@ uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     uint32_t* ssrc,
     SDESItem* items, uint32_t itemsSize);
 
-}
-
 // IMPORTANT: MUST BE EXACTLY 256 BYTES!!
 struct StationConfig {
     uint32_t version;
@@ -104,5 +105,17 @@ struct StationConfig {
     char wifiPassword[16];
     char padding[256 - (4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 16)];
 };
+
+uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
+    uint8_t* packet, uint32_t packetSize);
+
+uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
+    CallSign callSign, 
+    FixedString fullName,
+    uint32_t ssrc2,
+    uint8_t* packet, uint32_t packetSize);      
+
+}
+
 
 #endif

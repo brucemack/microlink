@@ -32,6 +32,9 @@ static const uint32_t TALKER_INTERVAL_MS = 1000;
 uint32_t Conference::_ssrcGenerator = 0xa000;
 
 void Conference::authorize(StationID id) {
+
+    _log->info("Station %s has been authorized", id.getCall().c_str());
+
     for (Station& s : _stations) {
         if (s.active && s.id == id) {
             s.authorized = true;
@@ -41,8 +44,12 @@ void Conference::authorize(StationID id) {
 }
 
 void Conference::deAuthorize(StationID id) {
+
+    _log->info("Station %s has not been authorized", id.getCall().c_str());
+
     for (Station& s : _stations) {
         if (s.active && s.id == id) {
+            _sendBye(s.id);
             s.active = false;
             s.authorized = false;
             break;
@@ -82,7 +89,8 @@ void Conference::processAudio(IPAddress sourceIp,
     for (Station& s : _stations) {
         if (s.id == source) {
             if (s.authorized) {
-                if (s.talker) {
+                // Look for the talking transition
+                if (!s.talker) {
                     _log->info("Station %s is talking", s.id.getCall().c_str());
                 }
                 s.talker = true;
@@ -100,11 +108,31 @@ void Conference::processAudio(IPAddress sourceIp,
 }
 
 void Conference::processText(IPAddress source, 
-    const uint8_t* frame, uint32_t frameLen) {
+    const uint8_t* data, uint32_t dataLen) {
+
+    // If this is a bye, shut down the station
+    if (isRTCPByePacket(data, dataLen)) {
+        for (Station& s : _stations) {
+            if (s.active) {
+                if (s.id.getAddr() == source) {
+                    _log->info("Station %s disconnected", s.id.getCall().c_str());
+                    s.active = false;
+                    break;
+                }
+            }
+        }
+        return;
+    }
+
+    if (!isRTCPPacket(data, dataLen)) {
+        return;
+    }    
 
     // Pull out the call sign from the RTCP message
-    CallSign cs;
-    StationID sourceStationId;
+    StationID sourceStationId = _extractStationID(source, data, dataLen);
+    if (sourceStationId.isNull()) {
+        return;
+    }
 
     // Check to see if this is a new station.
     bool active = false;
@@ -116,7 +144,8 @@ void Conference::processText(IPAddress source,
     }
 
     // If this is a new station then register it and launch an 
-    // authorization.
+    // authorization to find out if it is allowed to join
+    // the conference.
     if (!active) {
         for (Station& s : _stations) {
             if (!s.active) {
@@ -124,23 +153,68 @@ void Conference::processText(IPAddress source,
                 s.authorized = false;
                 s.id = sourceStationId;
                 s.connectStamp = time_ms();
+                // We do this to avoid an immediate timeout
+                s.lastRxStamp = time_ms();
                 s.ssrc = _ssrcGenerator++;
-                _authority->validate(sourceStationId);
+
                 char buf[32];
                 formatIP4Address(sourceStationId.getAddr().getAddr(), buf, 32);
-                _log->info("New connection request %s %s", buf, 
-                    sourceStationId.getCall().c_str());
+                _log->info("New connection request %s from %s", 
+                    sourceStationId.getCall().c_str(), buf);
+
+                // This is asynchronous
+                _authority->validate(sourceStationId);
+
+                break;
             }
         }    
     }
 
+    // Record the receive activity
     for (Station& s : _stations) {
         if (s.active) {
             if (s.id == sourceStationId) {
                 if (s.authorized) {
                     s.lastRxStamp = time_ms();
                 }
+                break;
             }
+        }
+    }
+}
+
+StationID Conference::_extractStationID(IPAddress source, const uint8_t* data,
+    uint32_t dataLen) {
+
+    // Pull out the callsign
+    SDESItem items[8];
+    uint32_t ssrc = 0;
+    uint32_t itemCount = parseSDES(data, dataLen, &ssrc, items, 8);
+
+    for (uint32_t item = 0; item < itemCount; item++) {
+        if (items[item].type == 2) {
+            char callSignAndName[64];
+            items[item].toString(callSignAndName, 64);
+            // Strip off the call (up to the first space)
+            char callSignStr[32];
+            uint32_t i = 0;
+            // Leave space for null
+            for (i = 0; i < 31 && callSignAndName[i] != ' '; i++)
+                callSignStr[i] = callSignAndName[i];
+            callSignStr[i] = 0;
+            return StationID(source, CallSign(callSignStr));
+        }
+    }
+
+    return StationID();
+}
+
+void Conference::dropAll() {
+    for (Station& s : _stations) {
+        if (s.active) {
+            _log->info("Dropping station %s", s.id.getCall().c_str());
+            _sendBye(s.id);
+            s.active = false;
         }
     }
 }
@@ -163,6 +237,7 @@ bool Conference::run() {
             if (s.talker && 
                 time_ms() - s.lastRxStamp > TALKER_INTERVAL_MS) {
                 s.talker = false;
+                _log->info("Station %s is finished talking", s.id.getCall().c_str());
             }
         }
     }
@@ -170,9 +245,46 @@ bool Conference::run() {
 }
 
 void Conference::_sendPing(StationID id) {
+
+    // Make the SDES message and send
+    {
+        uint32_t ssrc = 0;
+        const uint16_t packetSize = 128;
+        uint8_t packet[packetSize];
+        uint32_t packetLen = formatRTCPPacket_SDES(ssrc, 
+            _callSign, _fullName, ssrc, packet, packetSize); 
+        _output->sendText(id, packet, packetLen);
+    }
+
+    {
+        const uint16_t packetSize = 128;
+        uint8_t packet[packetSize];
+
+        // Make the initial oNDATA message for the RTP port
+        const uint16_t bufferSize = 64;
+        char buffer[bufferSize];
+        buffer[0] = 0;
+        strcatLimited(buffer, "oNDATA\r", bufferSize);
+        strcatLimited(buffer, _callSign.c_str(), bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, "MicroLink V ", bufferSize);
+        strcatLimited(buffer, VERSION_ID, bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, _fullName.c_str(), bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, _location.c_str(), bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        uint32_t packetLen = formatOnDataPacket(buffer, 0, packet, packetSize);
+        
+        _output->sendAudio(id, 0, packet, packetLen, AudioFormat::TEXT);
+    }
 }
 
 void Conference::_sendBye(StationID id) {
+    const uint16_t packetSize = 128;
+    uint8_t packet[packetSize];
+    uint32_t packetLen = formatRTCPPacket_BYE(0, packet, packetSize);
+    _output->sendText(id, packet, packetLen);
 }
 
 StationID Conference::_getTalker() const {

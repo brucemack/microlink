@@ -60,27 +60,34 @@ bool LwIPLib::run() {
 
     if (_dnsRespPending) {
         _dnsRespPending = false;
-        _events->dns(_lastHostNameReq, _lastAddrResp);
+        for (uint32_t i = 0; i < _eventsLen; i++)
+            _events[i]->dns(_lastHostNameReq, _lastAddrResp);
     }
 
     if (_bindRespPending) {
         _bindRespPending = false;
-        _events->bind(_lastChannel);
+        for (uint32_t i = 0; i < _eventsLen; i++)
+            _events[i]->bind(_lastChannel);
     }
 
     return true;
 }
 
 void LwIPLib::addEventSink(IPLibEvents* e) {
-    _events = e;
+    if (_eventsLen < _maxEvents) {
+        _events[_eventsLen++] = e;
+    } else {
+        panic_unsupported();
+    }
 }
 
 void LwIPLib::queryDNS(HostName hostName) {
 
-    if (traceLevel)
+    if (traceLevel > 0)
         _log->info("DNS request for %s", hostName.c_str());
 
     _lastHostNameReq = hostName;
+
     ip_addr_t addr;
     err_t e = dns_gethostbyname(hostName.c_str(), &addr, _dnsCb, this);
     // This is the case where the response is immediately avaialble
@@ -111,7 +118,8 @@ void LwIPLib::_dns(const char* name, const ip_addr_t* ipaddr) {
 
     HostName hn(name);
     IPAddress ad(addr);
-    _events->dns(hn, ad);
+    for (uint32_t i = 0; i < _eventsLen; i++)
+        _events[i]->dns(hn, ad);
 }
 
 err_t LwIPLib::_tcpRecvCb(void *arg, tcp_pcb *tpcb, pbuf *p, err_t err) {
@@ -126,7 +134,8 @@ err_t LwIPLib::_tcpRecv(tcp_pcb *tpcb, pbuf *p, err_t err) {
     // Look for disconnect
     if (p == 0) {
         if (i != -1) {
-            _events->disc(Channel(i, true));
+            for (uint32_t k = 0; k < _eventsLen; k++)
+                _events[k]->disc(Channel(i, true));
         } else {
             _log->error("Socket not found");
         }
@@ -134,8 +143,9 @@ err_t LwIPLib::_tcpRecv(tcp_pcb *tpcb, pbuf *p, err_t err) {
     // Look for normal data receive
     else {
         if (i != -1) {
-            _events->recv(Channel(i, true), (const uint8_t*)p->payload, p->len, 
-                IPAddress(0), 0);
+            for (uint32_t k = 0; k < _eventsLen; k++)
+                _events[k]->recv(Channel(i, true), (const uint8_t*)p->payload, p->len, 
+                    IPAddress(0), 0);
         } else {
             _log->error("Socket not found");
         }
@@ -159,12 +169,13 @@ err_t LwIPLib::_tcpConnect(tcp_pcb* pcb, err_t err) {
 
     BooleanHolder h(&_inCallback);
 
-    for (uint32_t i = 0; i < _trackersSize; i++) {
-        if (_trackers[i].inUse == true &&
-            _trackers[i].state == Tracker::State::IN_CONNECT &&
-            _trackers[i].pcb == pcb) {
-            _trackers[i].state = Tracker::State::IDLE;
-            _events->conn(Channel(i, true));
+    for (uint32_t t = 0; t < _trackersSize; t++) {
+        if (_trackers[t].inUse == true &&
+            _trackers[t].state == Tracker::State::IN_CONNECT &&
+            _trackers[t].pcb == pcb) {
+            _trackers[t].state = Tracker::State::IDLE;
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                _events[i]->conn(Channel(t, true));
             return ERR_OK;
         }
     }
@@ -298,7 +309,8 @@ void LwIPLib::_udpRecv(udp_pcb* upcb, pbuf *p, const ip_addr_t *addr, u16_t port
     }
     //prettyHexDump((const uint8_t*)p->payload, p->len, cout);
     IPAddress a(ntohl(addr->addr));
-    _events->recv(Channel(i, true), (const uint8_t*)p->payload, p->len, a, port);
+    for (uint32_t k = 0; k < _eventsLen; k++)
+        _events[k]->recv(Channel(i, true), (const uint8_t*)p->payload, p->len, a, port);
     pbuf_free(p);
 }
 

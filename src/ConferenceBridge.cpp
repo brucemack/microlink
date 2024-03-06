@@ -18,6 +18,8 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include <iostream>
+
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/Log.h"
@@ -34,7 +36,7 @@ namespace kc1fsz {
 static const uint32_t RTP_PORT = 5198;
 static const uint32_t RTCP_PORT = 5199;
 
-static const uint32_t CHANNEL_SETUP_TIMEOUT_MS = 250;
+static const uint32_t CHANNEL_SETUP_TIMEOUT_MS = 1000;
 static const uint32_t SEND_TIMEOUT_MS = 1000;
 
 static const char* FAILED_MSG = "Station connection failed";
@@ -81,8 +83,7 @@ void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
                 prettyHexDump(data, dataLen, cout);
             }
 
-            if (_conf)
-                _conf->processText(fromAddr, data, dataLen);
+            _conf->processText(fromAddr, data, dataLen);
         } 
         else if (ch == _rtpChannel) {
 
@@ -92,9 +93,8 @@ void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
             }
 
             if (isOnDataPacket(data, dataLen)) {
-                if (_conf) 
-                    _conf->processAudio(fromAddr, 0, 0, 
-                        data, dataLen, AudioFormat::TEXT);
+                _conf->processAudio(fromAddr, 0, 0, 
+                    data, dataLen, AudioFormat::TEXT);
             }
             else if (dataLen == 144) {
                 const uint8_t* d = data;
@@ -104,15 +104,37 @@ void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
                 remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
                     ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
                 d += 12;
-                if (_conf)
-                    _conf->processAudio(fromAddr, remoteSSRC, remoteSeq,
-                        d, 33 * 4, AudioFormat::GSMFR4X);
+                _conf->processAudio(fromAddr, remoteSSRC, remoteSeq,
+                    d, 33 * 4, AudioFormat::GSMFR4X);
             }
             else {
                 _log->info("Unrecognized packet");
             }
         }
     }
+}
+
+void ConferenceBridge::sendAudio(StationID dest, uint32_t ssrc,
+    const uint8_t* data, uint32_t dataLen, AudioFormat fmt) {
+    
+    if (fmt == AudioFormat::TEXT) {
+        _ctx->sendUDPChannel(_rtpChannel, dest.getAddr(), RTP_PORT, 
+            data, dataLen);
+    } else {
+        cout << "MISSING"<< endl;
+    }
+}
+
+void ConferenceBridge::sendText(StationID dest,
+    const uint8_t* data, uint32_t dataLen) {
+    
+    if (traceLevel > 0) {
+        _log->info("Sending to %s", dest.getCall().c_str());
+        prettyHexDump(data, dataLen, cout);
+    }
+
+    _ctx->sendUDPChannel(_rtcpChannel, dest.getAddr(), RTCP_PORT, 
+        data, dataLen);
 }
 
 void ConferenceBridge::_process(int state, bool entry) {

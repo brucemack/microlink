@@ -64,6 +64,7 @@ Launch command:
 
 #include "contexts/LwIPLib.h"
 #include "machines/LogonMachine2.h"
+#include "machines/LookupMachine3.h"
 #include "Conference.h"
 #include "ConferenceBridge.h"
 // TEMP
@@ -156,7 +157,7 @@ using namespace kc1fsz;
 
 int main(int, const char**) {
 
-    LogonMachine2::traceLevel = 1;
+    LogonMachine2::traceLevel = 0;
     LwIPLib::traceLevel = 1;
     ConferenceBridge::traceLevel = 1;
     //Conference::traceLevel = 1;
@@ -281,18 +282,29 @@ int main(int, const char**) {
     // ====== Internet Connectivity Stuff =====================================
 
     TestUserInfo info;
+
     LogonMachine2 lm(&ctx, &info, &log);
     lm.setServerName(addressingServerHost);
     lm.setServerPort(addressingServerPort);
     lm.setCallSign(ourCallSign);
     lm.setPassword(ourPassword);
-    //lm.setFullName(ourFullName);
     lm.setLocation(ourLocation);
 
-    ConferenceBridge confBridge(&ctx, &info, &log);
-    //Conference conf(0, &confBridge , &log);
+    LookupMachine3 lookup(&ctx, &info, &log);
+    lookup.setServerName(addressingServerHost);
+    lookup.setServerPort(addressingServerPort);
 
+    ConferenceBridge confBridge(&ctx, &info, &log);
+    Conference conf(&lookup, &confBridge, &log);
+    conf.setCallSign(ourCallSign);
+    conf.setFullName(ourFullName);
+    conf.setLocation(ourLocation);
+
+    confBridge.setConference(&conf);
+    lookup.setConference(&conf);
     ctx.addEventSink(&lm);
+    ctx.addEventSink(&lookup);
+    ctx.addEventSink(&confBridge);
 
     // Last thing before going into the event loop
 	//watchdog_enable(WATCHDOG_DELAY_MS, true);
@@ -310,8 +322,9 @@ int main(int, const char**) {
 
         ctx.run();
         lm.run();
+        lookup.run();
         confBridge.run();
-        //conf.run();
+        conf.run();
 
         // ----- Serial Commands ---------------------------------------------
         
@@ -319,6 +332,9 @@ int main(int, const char**) {
         if (c > 0) {
             if (c == 'q') {
                 break;
+            } 
+            else if (c == 'd') {
+                conf.dropAll();
             } 
         }
     }    

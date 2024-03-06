@@ -22,6 +22,7 @@
 #define _StateMachine2_h
 
 #include <cstdint>
+#include <iostream>
 
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/Runnable.h"
@@ -38,6 +39,7 @@ public:
 
     virtual bool run() {
         if (_isTimedOut()) {
+            //std::cout << "Timed out from " << _state << "->" << _timeoutState << std::endl;
             _setState(_timeoutState);
         }
         bool entry = _state != _lastState;

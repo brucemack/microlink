@@ -25,6 +25,7 @@
 
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/CallSign.h"
+#include "kc1fsz-tools/FixedString.h"
 
 namespace kc1fsz {
 
@@ -88,6 +89,10 @@ public:
     Conference(Authority* auth, ConferenceOutput* out, Log* log) 
     : _authority(auth), _output(out), _log(log) { }
 
+    void setCallSign(CallSign cs) { _callSign = cs; }
+    void setFullName(FixedString fn) { _fullName = fn; }
+    void setLocation(FixedString l) { _location = l; }
+
     void authorize(StationID id);
 
     void deAuthorize(StationID id);
@@ -96,6 +101,8 @@ public:
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt);
     void processText(IPAddress source,
         const uint8_t* frame, uint32_t frameLen);
+
+    void dropAll();
 
     // ----- From Runnable ------------------------------------------------
 
@@ -108,6 +115,9 @@ private:
     StationID _getTalker() const;
     void _sendPing(StationID id);
     void _sendBye(StationID id);
+
+    static StationID _extractStationID(IPAddress source, const uint8_t* data,
+        uint32_t dataLen);
 
     struct Station {
         bool active = false;
@@ -128,6 +138,10 @@ private:
     Authority* _authority = 0;
     ConferenceOutput* _output = 0;
     Log* _log = 0;
+
+    CallSign _callSign;
+    FixedString _fullName;
+    FixedString _location;
 };
 
 }

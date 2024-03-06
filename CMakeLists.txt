@@ -60,7 +60,7 @@ src/machines/LogonMachine.cpp
 #  src/machines/QSOConnectMachine.cpp
 #  src/machines/QSOFlowMachine.cpp
 #  src/machines/WaitMachine.cpp
-#  src/machines/LookupMachine2.cpp
+  src/machines/LookupMachine3.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/AudioAnalyzer.cpp
   kc1fsz-tools-cpp/src/DTMFDetector.cpp
