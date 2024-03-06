@@ -18,14 +18,9 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#include "kc1fsz-tools/CommContext.h"
-
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/CallSign.h"
-#include "kc1fsz-tools/events/UDPReceiveEvent.h"
-#include "kc1fsz-tools/events/TickEvent.h"
-#include "kc1fsz-tools/events/SendEvent.h"
-#include "kc1fsz-tools/events/ChannelSetupEvent.h"
+#include "kc1fsz-tools/Log.h"
 
 #include "common.h"
 #include "UserInfo.h"
@@ -44,125 +39,87 @@ static const uint32_t SEND_TIMEOUT_MS = 1000;
 
 static const char* FAILED_MSG = "Station connection failed";
 
-static TickEvent tickEv;
-
 int ConferenceBridge::traceLevel = 0;
 
-ConferenceBridge::ConferenceBridge(CommContext* ctx, UserInfo* userInfo, Conference* conf)
+ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log)
 :   _ctx(ctx),
     _userInfo(userInfo),
-    _conf(conf) {   
-}
-
-void ConferenceBridge::start() {  
+    _conf(0),
+    _log(log) {   
 
     // Get UDP connections created
     _rtcpChannel = _ctx->createUDPChannel();
     _rtpChannel = _ctx->createUDPChannel();
 
-    // A dummy address/port
-    IPAddress remoteAddr(0x44444444);
-    uint32_t remotePort = 9999;
-
-    // Start the RTCP socket setup (target address)
-    _ctx->setupUDPChannel(_rtcpChannel, RTCP_PORT, remoteAddr, remotePort);
-    _state = State::IN_SETUP_1;
-    _setTimeoutMs(time_ms() + CHANNEL_SETUP_TIMEOUT_MS);
+    // Start the RTCP socket setup (RTCP)
+    _ctx->bindUDPChannel(_rtcpChannel, RTCP_PORT);
+    _setState(State::IN_SETUP_1, CHANNEL_SETUP_TIMEOUT_MS, State::FAILED);
 }
 
-void ConferenceBridge::processEvent(const Event* ev) {
+void ConferenceBridge::bind(Channel ch) {
+    if (_isState(State::IN_SETUP_1) && ch == _rtcpChannel) {
+        // Start the RTP socket setup
+        _ctx->bindUDPChannel(_rtpChannel, RTP_PORT);
+        _setState(State::IN_SETUP_2, CHANNEL_SETUP_TIMEOUT_MS, State::FAILED);
+    }
+    else if (_isState(State::IN_SETUP_2) && ch == _rtpChannel) {
+        // Start listening
+        _userInfo->setStatus("Ready to receive");
+        _setState(State::WAITING);
+    }
+}
 
+void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen, 
+    IPAddress fromAddr, uint16_t fromPort) {
+
+    if (_isState(State::WAITING)) {
+
+        if (ch == _rtcpChannel) {
+
+            if (traceLevel > 0) {
+                _log->info("ConferenceBridge: GOT RTCP DATA");
+                prettyHexDump(data, dataLen, cout);
+            }
+
+            if (_conf)
+                _conf->processText(fromAddr, data, dataLen);
+        } 
+        else if (ch == _rtpChannel) {
+
+            if (traceLevel > 0) {
+                _log->info("ConferenceBridge: GOT RTP DATA");
+                //prettyHexDump(data, dataLen, cout);
+            }
+
+            if (isOnDataPacket(data, dataLen)) {
+                if (_conf) 
+                    _conf->processAudio(fromAddr, 0, 0, 
+                        data, dataLen, AudioFormat::TEXT);
+            }
+            else if (dataLen == 144) {
+                const uint8_t* d = data;
+                uint16_t remoteSeq = 0;
+                uint32_t remoteSSRC = 0;
+                remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
+                remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
+                    ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
+                d += 12;
+                if (_conf)
+                    _conf->processAudio(fromAddr, remoteSSRC, remoteSeq,
+                        d, 33 * 4, AudioFormat::GSMFR4X);
+            }
+            else {
+                _log->info("Unrecognized packet");
+            }
+        }
+    }
+}
+
+void ConferenceBridge::_process(int state, bool entry) {
     if (traceLevel > 0) {
-        if (ev->getType() != TickEvent::TYPE) {
-            cout << "ConferenceBridge state=" << _state << " event=" << ev->getType() <<  endl;
-        }
+        if (entry)
+            _log->info("ConferenceBridge state %d", _getState());
     }
-
-    // In this state we are waiting for confirmation that the RTCP 
-    // socket was setup.
-    if (_state == State::IN_SETUP_1) {
-        if (ev->getType() == ChannelSetupEvent::TYPE) {
-            auto evt = static_cast<const ChannelSetupEvent*>(ev);
-            if (evt->isGood()) {
-                // A dummy address/port
-                IPAddress remoteAddr(0x44444444);
-                uint32_t remotePort = 9999;
-                // Start the RTP socket setup
-                _ctx->setupUDPChannel(_rtpChannel, RTP_PORT, remoteAddr, remotePort);
-                _state = State::IN_SETUP_2;
-                _setTimeoutMs(time_ms() + CHANNEL_SETUP_TIMEOUT_MS);
-            } else {
-                _userInfo->setStatus(FAILED_MSG);
-                _state = State::FAILED;
-            }
-        }
-        else if (_isTimedOut()) {
-            _userInfo->setStatus(FAILED_MSG);
-            _state = State::FAILED;
-        }
-    }
-    // In this state we are waiting for confirmation that the RTP 
-    // socket was setup.
-    else if (_state == State::IN_SETUP_2) {
-        if (ev->getType() == ChannelSetupEvent::TYPE) {
-            auto evt = static_cast<const ChannelSetupEvent*>(ev);
-            if (evt->isGood()) {
-                _userInfo->setStatus("Ready to receive");
-                _state = State::WAITING;  
-            } else {
-                _userInfo->setStatus(FAILED_MSG);
-                _state = State::FAILED;
-            }
-        }
-        else if (_isTimedOut()) {
-            _userInfo->setStatus(FAILED_MSG);
-            _state = State::FAILED;
-        }
-    } 
-    // In this state we are waiting for messages.
-    else if (_state == WAITING) {        
-        if (ev->getType() == UDPReceiveEvent::TYPE) {
-
-            const UDPReceiveEvent* evt = (UDPReceiveEvent*)ev;
-
-            if (evt->getChannel() == _rtcpChannel) {
-
-                if (traceLevel > 0) {
-                    cout << "ConferenceBridge: GOT RTCP DATA" << endl;
-                    prettyHexDump(evt->getData(), evt->getDataLen(), cout);
-                }
-
-                _conf->processText(evt->getAddress(),
-                    evt->getData(), evt->getDataLen());
-            } 
-            else if (evt->getChannel() == _rtpChannel) {
-
-                if (traceLevel > 0) {
-                    cout << "ConferenceBridge: GOT RTP DATA" << endl;
-                    prettyHexDump(evt->getData(), evt->getDataLen(), cout);
-                }
-
-                if (isOnDataPacket(evt->getData(), evt->getDataLen())) {
-                    _conf->processText(evt->getAddress(),
-                        evt->getData(), evt->getDataLen());
-                }
-                else {
-                    // TODO - PARSE OUT AUDIO PACKET AND SSRC
-                    _conf->processAudio(evt->getAddress(),
-                        0,
-                        evt->getData(), evt->getDataLen(), AudioFormat::GSMFR4X);
-                }
-            }
-        }
-    }
-}
-
-bool ConferenceBridge::isDone() const {
-    return _state == FAILED || _state == SUCCEEDED;
-}
-
-bool ConferenceBridge::isGood() const {
-    return _state == SUCCEEDED;
 }
 
 }

@@ -26,17 +26,16 @@
 #include "kc1fsz-tools/Channel.h"
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/CallSign.h"
-#include "kc1fsz-tools/Runnable.h"
+#include "kc1fsz-tools/IPLib.h"
 
-#include "StateMachine.h"
+#include "StateMachine2.h"
 
 namespace kc1fsz {
 
-class CommContext;
 class UserInfo;
 class Conference;
 
-class ConferenceBridge : public StateMachine, public Runnable {
+class ConferenceBridge : public StateMachine2, public IPLibEvents {
 public:
 
     static int traceLevel;
@@ -50,26 +49,27 @@ public:
         uint32_t ssrc2,
         uint8_t* packet, uint32_t packetSize);      
 
-    ConferenceBridge(CommContext* ctx, UserInfo* userInfo, Conference* conf);
+    ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log);
 
-    uint32_t getSSRC() const { return _localSsrc; }
+    void setConference(Conference* conf) { _conf = conf; }
 
-    void requestCleanStop() { }
+    // ----- From IPLibEvents -------------------------------------------------
 
-    // ----- From StateMachine ---------------------------------------------------
+    virtual void dns(HostName name, IPAddress addr) { }
+    virtual void bind(Channel ch);
+    virtual void conn(Channel ch) { }
+    virtual void disc(Channel ch) { }
+    virtual void recv(Channel ch, const uint8_t* data, uint32_t dataLen, IPAddress fromAddr,
+        uint16_t fromPort);
+    virtual void err(Channel ch, int type) { }
 
-    virtual void processEvent(const Event* ev);
-    virtual void start();
-    virtual bool isDone() const;
-    virtual bool isGood() const;
+    // ----- From StateMachine2 -----------------------------------------------
 
-    // ----- From Runnable -------------------------------------------------------
+protected:
 
-    virtual bool run();
+    virtual void _process(int state, bool entry);
 
 private:
-
-    static uint32_t _ssrcCounter;
 
     enum State { 
         IDLE, 
@@ -85,15 +85,12 @@ private:
         FAILED 
     };
 
-    CommContext* _ctx;
+    IPLib* _ctx;
     UserInfo* _userInfo;
     Conference* _conf;
-
+    Log* _log;
     Channel _rtpChannel;
     Channel _rtcpChannel;
-    // This is generated
-    uint32_t _localSsrc;
-    uint32_t _remoteSsrc;
 };
 
 }

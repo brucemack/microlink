@@ -158,6 +158,8 @@ int main(int, const char**) {
 
     LogonMachine2::traceLevel = 1;
     LwIPLib::traceLevel = 1;
+    ConferenceBridge::traceLevel = 1;
+    //Conference::traceLevel = 1;
 
     // Seup PICO
     stdio_init_all();
@@ -287,7 +289,8 @@ int main(int, const char**) {
     //lm.setFullName(ourFullName);
     lm.setLocation(ourLocation);
 
-    Conference conf(0, 0 , &log);
+    ConferenceBridge confBridge(&ctx, &info, &log);
+    //Conference conf(0, &confBridge , &log);
 
     ctx.addEventSink(&lm);
 
@@ -307,6 +310,7 @@ int main(int, const char**) {
 
         ctx.run();
         lm.run();
+        confBridge.run();
         //conf.run();
 
         // ----- Serial Commands ---------------------------------------------

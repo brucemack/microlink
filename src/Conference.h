@@ -31,7 +31,7 @@ namespace kc1fsz {
 class Log;
 class UserInfo;
 
-enum AudioFormat { PCM16, GSMFR, GSMFR4X };
+enum AudioFormat { PCM16, GSMFR, GSMFR4X, TEXT };
 
 class StationID {
 public:
@@ -55,12 +55,12 @@ private:
     bool _null = true;
 };
 
-class AudioOutput {
+class ConferenceOutput {
 public:
     virtual void sendAudio(StationID dest, uint32_t ssrc,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) = 0;
-    virtual void sendPing(StationID dest) = 0;
-    virtual void sendBye(StationID dest) = 0;
+    virtual void sendText(StationID dest,
+        const uint8_t* frame, uint32_t frameLen) = 0;
 };
 
 class Authority {
@@ -85,14 +85,14 @@ from the talking StationID is forwarded to all other Stations.
 class Conference {
 public:
 
-    Conference(Authority* auth, AudioOutput* out, Log* log) 
+    Conference(Authority* auth, ConferenceOutput* out, Log* log) 
     : _authority(auth), _output(out), _log(log) { }
 
     void authorize(StationID id);
 
     void deAuthorize(StationID id);
 
-    void processAudio(IPAddress source, uint32_t ssrc,
+    void processAudio(IPAddress source, uint32_t ssrc, uint16_t seq,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt);
     void processText(IPAddress source,
         const uint8_t* frame, uint32_t frameLen);
@@ -106,26 +106,28 @@ private:
     static uint32_t _ssrcGenerator;
 
     StationID _getTalker() const;
+    void _sendPing(StationID id);
+    void _sendBye(StationID id);
 
     struct Station {
-        bool active;
+        bool active = false;
         StationID id;
-        bool authorized;
-        uint32_t connectStamp;
-        uint32_t lastRxStamp;
-        uint32_t lastTxStamp;
-        bool talker;
+        bool authorized = false;
+        uint32_t connectStamp = 0;
+        uint32_t lastRxStamp = 0;
+        uint32_t lastTxStamp = 0;
+        bool talker = false;
         // A unique number that identifies traffic from this 
         // station.
-        uint32_t ssrc;
+        uint32_t ssrc = 0;
     };
 
     static const uint32_t _maxStations = 4;
     Station _stations[_maxStations];
 
-    Authority* _authority;
-    AudioOutput* _output;
-    Log* _log;
+    Authority* _authority = 0;
+    ConferenceOutput* _output = 0;
+    Log* _log = 0;
 };
 
 }

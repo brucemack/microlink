@@ -51,7 +51,7 @@ void Conference::deAuthorize(StationID id) {
 }
 
 void Conference::processAudio(IPAddress sourceIp, 
-    uint32_t ssrc,
+    uint32_t ssrc, uint16_t seq,
     const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) {
 
     // Figure out what station this is
@@ -67,6 +67,11 @@ void Conference::processAudio(IPAddress sourceIp,
         return;
     }
 
+    // TODO: HANDLE TEXT
+    if (fmt == AudioFormat::TEXT) {
+        return;
+    }
+
     // If someone else is already talking then ignore any new audio
     StationID talker = _getTalker();
     if (!talker.isNull() && !(talker == source)) {
@@ -77,6 +82,9 @@ void Conference::processAudio(IPAddress sourceIp,
     for (Station& s : _stations) {
         if (s.id == source) {
             if (s.authorized) {
+                if (s.talker) {
+                    _log->info("Station %s is talking", s.id.getCall().c_str());
+                }
                 s.talker = true;
                 s.lastRxStamp = time_ms();
             }
@@ -94,7 +102,7 @@ void Conference::processAudio(IPAddress sourceIp,
 void Conference::processText(IPAddress source, 
     const uint8_t* frame, uint32_t frameLen) {
 
-    // Pull out the call sign
+    // Pull out the call sign from the RTCP message
     CallSign cs;
     StationID sourceStationId;
 
@@ -142,12 +150,13 @@ bool Conference::run() {
         if (s.active && s.authorized) {
             // Check for the need to send outbound ping
             if (time_ms() - s.lastTxStamp > KEEP_ALIVE_INTERVAL_MS) {
-                _output->sendPing(s.id);
+                _sendPing(s.id);
                 s.lastTxStamp = time_ms();
             }
             // Look for timeouts
             if (time_ms() - s.lastRxStamp > (KEEP_ALIVE_INTERVAL_MS * 6)) {
-                _output->sendBye(s.id);
+                _log->info("Timing out station %s", s.id.getCall().c_str());
+                _sendBye(s.id);
                 s.active = false;
             }
             // Time out talking
@@ -158,6 +167,12 @@ bool Conference::run() {
         }
     }
     return true;
+}
+
+void Conference::_sendPing(StationID id) {
+}
+
+void Conference::_sendBye(StationID id) {
 }
 
 StationID Conference::_getTalker() const {
