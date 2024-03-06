@@ -156,6 +156,9 @@ using namespace kc1fsz;
 
 int main(int, const char**) {
 
+    LogonMachine2::traceLevel = 1;
+    LwIPLib::traceLevel = 1;
+
     // Seup PICO
     stdio_init_all();
 
@@ -232,12 +235,61 @@ int main(int, const char**) {
         log.info("Normal reboot");
     }
 
-    TestUserInfo info;
-    LwIPLib ctx(&log);
-    LogonMachine2 logonMachine(&ctx, &info, &log);
-    Conference conf(0,0,0);
+    // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
-    ctx.addEventSink(&logonMachine);
+    HostName addressingServerHost;
+    uint32_t addressingServerPort;
+    CallSign ourCallSign;
+    FixedString ourPassword;
+    FixedString ourFullName;
+    FixedString ourLocation;
+    uint32_t rxNoiseThreshold = 50;
+    bool useHardCos = true;
+
+    // The very last sector of flash is used. Compute the memory-mapped address, 
+    // remembering to include the offset for RAM
+    const uint8_t* addr = (uint8_t*)(XIP_BASE + (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE));
+    auto p = (const StationConfig*)addr;
+    if (p->version != CONFIG_VERSION) {
+        log.error("Configuration data is invalid");
+        panic_unsupported();
+        return -1;
+    } 
+
+    addressingServerHost = HostName(p->addressingServerHost);
+    addressingServerPort = p->addressingServerPort;
+    ourCallSign = CallSign(p->callSign);
+    ourPassword = FixedString(p->password);
+    ourFullName = FixedString(p->fullName);
+    ourLocation = FixedString(p->location);
+
+    log.info("EL Addressing Server : %s:%lu", addressingServerHost.c_str(),
+        addressingServerPort);
+    log.info("Identification       : %s/%s/%s", ourCallSign.c_str(),
+        ourFullName.c_str(), ourLocation.c_str());
+
+    // ====== Internet Connectivity Stuff =====================================
+    if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
+        log.error("Failed to initialize WIFI");
+    } else {
+        cyw43_arch_enable_sta_mode();
+        cyw43_arch_wifi_connect_async(p->wifiSsid, p->wifiPassword, CYW43_AUTH_WPA2_AES_PSK);
+    }
+    LwIPLib ctx(&log);
+    // ====== Internet Connectivity Stuff =====================================
+
+    TestUserInfo info;
+    LogonMachine2 lm(&ctx, &info, &log);
+    lm.setServerName(addressingServerHost);
+    lm.setServerPort(addressingServerPort);
+    lm.setCallSign(ourCallSign);
+    lm.setPassword(ourPassword);
+    //lm.setFullName(ourFullName);
+    lm.setLocation(ourLocation);
+
+    Conference conf(0, 0 , &log);
+
+    ctx.addEventSink(&lm);
 
     // Last thing before going into the event loop
 	//watchdog_enable(WATCHDOG_DELAY_MS, true);
@@ -252,7 +304,27 @@ int main(int, const char**) {
         // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
         // main loop (not from a timer) to check for Wi-Fi driver or lwIP work that needs to be done.
         cyw43_arch_poll();
+
+        ctx.run();
+        lm.run();
+        //conf.run();
+
+        // ----- Serial Commands ---------------------------------------------
+        
+        int c = getchar_timeout_us(0);
+        if (c > 0) {
+            if (c == 'q') {
+                break;
+            } 
+        }
     }    
+
+    cout << "Out of loop" << endl;
+
+    while (true) {
+        // Keep things alive
+        watchdog_update();
+    }
 
     return 0;
 }

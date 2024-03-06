@@ -120,7 +120,7 @@ void LogonMachine2::_process(int state, bool entry) {
 
     if (traceLevel > 0) {
         if (entry)
-            _log->info("LogonMachine2: state=", _getState());
+            _log->info("LogonMachine2: state=%d", _getState());
     }
 
     if (_isState(State::IDLE)) {

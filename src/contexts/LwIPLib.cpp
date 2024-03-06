@@ -81,7 +81,6 @@ void LwIPLib::queryDNS(HostName hostName) {
         _log->info("DNS request for %s", hostName.c_str());
 
     _lastHostNameReq = hostName;
-
     ip_addr_t addr;
     err_t e = dns_gethostbyname(hostName.c_str(), &addr, _dnsCb, this);
     // This is the case where the response is immediately avaialble
