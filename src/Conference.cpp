@@ -29,6 +29,8 @@ namespace kc1fsz {
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
 static const uint32_t TALKER_INTERVAL_MS = 1000;
 
+uint32_t Conference::_ssrcGenerator = 0xa000;
+
 void Conference::authorize(StationID id) {
     for (Station& s : _stations) {
         if (s.active && s.id == id) {
@@ -49,6 +51,7 @@ void Conference::deAuthorize(StationID id) {
 }
 
 void Conference::processAudio(IPAddress sourceIp, 
+    uint32_t ssrc,
     const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) {
 
     // Figure out what station this is
@@ -82,7 +85,7 @@ void Conference::processAudio(IPAddress sourceIp,
             s.talker = false;
             if (s.authorized) {                
                 s.lastTxStamp = time_ms();
-                _output->sendAudio(s.id, frame, frameLen, fmt);
+                _output->sendAudio(s.id, ssrc, frame, frameLen, fmt);
             }
         }
     }
@@ -112,6 +115,8 @@ void Conference::processText(IPAddress source,
                 s.active = true;
                 s.authorized = false;
                 s.id = sourceStationId;
+                s.connectStamp = time_ms();
+                s.ssrc = _ssrcGenerator++;
                 _authority->validate(sourceStationId);
                 char buf[32];
                 formatIP4Address(sourceStationId.getAddr().getAddr(), buf, 32);

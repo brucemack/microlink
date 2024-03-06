@@ -37,10 +37,61 @@ message("Desktop build!")
 add_compile_options(-fstack-protector-all -Wall -Wpedantic -g)
 endif()
 
+# ------ link-main-2 ------------------------------------------------------------
+#
+add_executable(link-main-2
+  src/link-main-2.cpp
+  src/common.cpp
+  src/Prompts.cpp
+  src/Synth.cpp
+  src/RXMonitor.cpp
+  src/LinkUserInfo.cpp
+  src/Conference.cpp
+  src/ConferenceBridge.cpp
+  src/contexts/LwIPLib.cpp
+  src/contexts/I2CAudioOutputContext.cpp
+  src/contexts/PicoAudioInputContext.cpp
+#  src/machines/LinkRootMachine.cpp
+src/machines/LogonMachine2.cpp
+src/machines/LogonMachine.cpp
+#  src/machines/QSOAcceptMachine.cpp
+#  src/machines/ValidationMachine.cpp
+#  src/machines/WelcomeMachine.cpp
+#  src/machines/QSOConnectMachine.cpp
+#  src/machines/QSOFlowMachine.cpp
+#  src/machines/WaitMachine.cpp
+#  src/machines/LookupMachine2.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/AudioAnalyzer.cpp
+  kc1fsz-tools-cpp/src/DTMFDetector.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
+  kc1fsz-tools-cpp/src/md5/md5c.c
+  gsm-0610-codec/src/fixed_math.cpp
+  gsm-0610-codec/src/wav_util.cpp
+  gsm-0610-codec/src/Parameters.cpp
+  gsm-0610-codec/src/Encoder.cpp
+  gsm-0610-codec/src/Decoder.cpp
+)
+
+if(DEFINED ENV{PICO_BUILD})
+pico_enable_stdio_usb(link-main-2 1)
+# Watch out!  Don't let the STDIO get sent to the UART
+pico_enable_stdio_uart(link-main-2 0)
+# ADDED FOR PICO W
+pico_add_extra_outputs(link-main-2)
+target_compile_definitions(link-main-2 PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
+target_compile_definitions(link-main-2 PRIVATE PICO_BUILD=1)
+target_link_libraries(link-main-2 pico_stdlib hardware_i2c hardware_adc pico_cyw43_arch_lwip_poll)
+endif()
+
+target_include_directories(link-main-2 PRIVATE src)
+target_include_directories(link-main-2 PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(link-main-2 PRIVATE gsm-0610-codec/include)
+target_include_directories(link-main-2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+
 # ------ link-main -------------------------------------------------------------
 #
-# Runs on the RP2040
-
 add_executable(link-main
   src/link-main.cpp
   src/ATResponseProcessor.cpp

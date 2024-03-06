@@ -147,7 +147,9 @@ void ConferenceBridge::processEvent(const Event* ev) {
                         evt->getData(), evt->getDataLen());
                 }
                 else {
+                    // TODO - PARSE OUT AUDIO PACKET AND SSRC
                     _conf->processAudio(evt->getAddress(),
+                        0,
                         evt->getData(), evt->getDataLen(), AudioFormat::GSMFR4X);
                 }
             }

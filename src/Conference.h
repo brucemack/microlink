@@ -57,7 +57,7 @@ private:
 
 class AudioOutput {
 public:
-    virtual void sendAudio(StationID dest, 
+    virtual void sendAudio(StationID dest, uint32_t ssrc,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) = 0;
     virtual void sendPing(StationID dest) = 0;
     virtual void sendBye(StationID dest) = 0;
@@ -85,13 +85,14 @@ from the talking StationID is forwarded to all other Stations.
 class Conference {
 public:
 
-    Conference(Authority* auth, AudioOutput* output);
+    Conference(Authority* auth, AudioOutput* out, Log* log) 
+    : _authority(auth), _output(out), _log(log) { }
 
     void authorize(StationID id);
 
     void deAuthorize(StationID id);
 
-    void processAudio(IPAddress source,
+    void processAudio(IPAddress source, uint32_t ssrc,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt);
     void processText(IPAddress source,
         const uint8_t* frame, uint32_t frameLen);
@@ -100,7 +101,9 @@ public:
 
     bool run();
 
-protected:
+private:
+
+    static uint32_t _ssrcGenerator;
 
     StationID _getTalker() const;
 
@@ -112,14 +115,17 @@ protected:
         uint32_t lastRxStamp;
         uint32_t lastTxStamp;
         bool talker;
+        // A unique number that identifies traffic from this 
+        // station.
+        uint32_t ssrc;
     };
 
     static const uint32_t _maxStations = 4;
     Station _stations[_maxStations];
 
-    Log* _log;
-    AudioOutput* _output;
     Authority* _authority;
+    AudioOutput* _output;
+    Log* _log;
 };
 
 }
