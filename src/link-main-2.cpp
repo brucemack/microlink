@@ -265,7 +265,7 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-
+    /*
     // TEMPORARY!
     {
         // Write flash
@@ -274,11 +274,11 @@ int main(int, const char**) {
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
         strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "warslink", 32);
+        strncpy(config.password, "xxx", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
-        strncpy(config.wifiPassword, "emergency", 16);
+        strncpy(config.wifiPassword, "xxx", 16);
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 1000;
         config.idleTimeoutS = 5 * 1000;
@@ -291,6 +291,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
+    */
 
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
