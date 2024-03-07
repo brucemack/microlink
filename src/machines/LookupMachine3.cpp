@@ -54,8 +54,8 @@ void LookupMachine3::validate(StationID id) {
     _targetCallSign = id.getCall();
     _targetAddr = id.getAddr();
 
-    char buf[20];
-    formatIP4Address(_targetAddr.getAddr(), buf, 20);
+    char buf[16];
+    _targetAddr.formatAsDottedDecimal(buf, 16);
     _log->info("Request to validate %s from %s", _targetCallSign.c_str(), buf);
 
     _setState(State::REQUEST);
@@ -64,8 +64,6 @@ void LookupMachine3::validate(StationID id) {
 void LookupMachine3::dns(HostName name, IPAddress addr) {
 
     if (_isState(State::DNS_WAIT) && name == _serverHostName) {
-
-        _userInfo->setStatus("Connecting ...");
 
         // Start the process of opening the TCP connection to the 
         // Addressing server
@@ -135,8 +133,11 @@ void LookupMachine3::disc(Channel ch) {
                     _userInfo->setStatus(SUCCESSFUL_MSG);
                     _conf->authorize(StationID(_targetAddr, _targetCallSign));
                     _setState(State::SUCCEEDED);
-                } else if (_targetAddr == IPAddress(0)) {
-                    _log->info("Zero address");
+                } 
+                // This is a special case.  If the validation request has a zero
+                // address then the address is not considered in the validation.
+                // This is what allows us to manually join stations to the conference.
+                else if (_targetAddr == IPAddress(0)) {
                     _conf->authorize(StationID(authAddr, _targetCallSign));
                     _setState(State::SUCCEEDED);
                 } else {

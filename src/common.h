@@ -37,15 +37,6 @@ extern const char* VERSION_ID;
  */
 uint32_t parseIP4Address(const char* dottedAddr);
 
-/**
- * Puts the address into a string in decimal-dotted format.
- *
- * @param addr IP4 address expressed as a 32-bit integer.  The
- * assumption is that the endian thing has been sorted out 
- * before this point and the most-significant bits of the integer
- * are the left-most parts of the dotted address display.
- */
-void formatIP4Address(uint32_t addr, char* dottedAddr, uint32_t dottedAddrSize);
 
 // trim from start (in place)
 void ltrim(std::string &s);
@@ -92,9 +83,14 @@ uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     uint32_t* ssrc,
     SDESItem* items, uint32_t itemsSize);
 
-// IMPORTANT: MUST BE EXACTLY 256 BYTES!!
+// IMPORTANT: MUST BE EXACTLY 512 BYTES!!
 struct StationConfig {
+    
     uint32_t version;
+    uint8_t useHardCos;
+    uint8_t pad1;
+    uint8_t pad2;
+    uint8_t pad3;
     char addressingServerHost[32];
     uint32_t addressingServerPort;
     char callSign[32];
@@ -102,8 +98,17 @@ struct StationConfig {
     char fullName[32];
     char location[32];
     char wifiSsid[64];
-    char wifiPassword[16];
-    char padding[256 - (4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 16)];
+    char wifiPassword[32];
+    // How long a station can stay quiet before 
+    // being kicked out.
+    uint32_t silentTimeoutS;
+    // How long a station can stay connected with no TX/RX before 
+    // being kicked out.
+    uint32_t idleTimeoutS;
+    // Used for soft COS detection
+    uint32_t rxNoiseThreshold;
+
+    char padding[512 - (4 + 4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 32 + 4 + 4 + 4)];
 };
 
 uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,

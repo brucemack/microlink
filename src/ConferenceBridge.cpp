@@ -50,7 +50,7 @@ ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log,
     _conf(0),
     _log(log),
     _radio0(radio0),
-    _radio0Addr(0xf000) {   
+    _radio0Addr(0xff000002) {   
 
     // Get UDP connections created
     _rtcpChannel = _ctx->createUDPChannel();

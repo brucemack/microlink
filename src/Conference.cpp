@@ -48,6 +48,18 @@ uint32_t Conference::getActiveStationCount() const {
     return result;
 }
 
+void Conference::dumpStations(Log* log) const {
+    for (const Station& s : _stations) {
+        if (s.active) {
+            char addr[16];
+            s.id.getAddr().formatAsDottedDecimal(addr, 16);
+            log->info("Call: %s, ip: %s, auth: %d, lck: %d, tlk: %d/%d/%d",
+                s.id.getCall().c_str(), addr, s.authorized, s.locked, 
+                s.talker, s.secondsSinceLastAudioRx(), s.secondsSinceLastAudioTx());
+        }
+    }
+}
+
 void Conference::addRadio(CallSign cs, IPAddress addr) {
 
     _log->info("Adding radio %s", cs.c_str());
@@ -153,6 +165,7 @@ void Conference::processAudio(IPAddress sourceIp,
             s.talker = false;
             if (s.authorized) {                
                 s.lastTxStamp = time_ms();
+                s.lastAudioTxStamp = time_ms();
                 _output->sendAudio(s.id, ssrc, s.seq++, frame, frameLen, fmt);
             }
         }
@@ -280,10 +293,25 @@ bool Conference::run() {
                 _sendPing(s.id);
                 s.lastTxStamp = time_ms();
             }
-            // Look for timeouts
+            // Look for timeouts (technical)
             if (!s.locked && 
-                time_ms() - s.lastRxStamp > (KEEP_ALIVE_INTERVAL_MS * 6)) {
-                _log->info("Timing out station %s", s.id.getCall().c_str());
+                time_ms() - s.lastRxStamp > (KEEP_ALIVE_INTERVAL_MS * 3)) {
+                _log->info("Timing out disconnected station %s", s.id.getCall().c_str());
+                _sendBye(s.id);
+                s.active = false;
+            }
+            // Look for timeouts (just not talking anymore)
+            if (!s.locked &&
+                s.secondsSinceLastAudioRx() > _silentTimeoutS) {
+                _log->info("Timing out silent station %s", s.id.getCall().c_str());
+                _sendBye(s.id);
+                s.active = false;
+            }
+            // Look for timeouts (just not talking anymore)
+            if (!s.locked &&
+                s.secondsSinceLastAudioRx() > _idleTimeoutS &&
+                s.secondsSinceLastAudioTx() > _idleTimeoutS) {
+                _log->info("Timing out idle station %s", s.id.getCall().c_str());
                 _sendBye(s.id);
                 s.active = false;
             }
@@ -318,7 +346,7 @@ void Conference::_sendPing(StationID id) {
         uint8_t packet[packetSize];
 
         // Make the initial oNDATA message for the RTP port
-        const uint16_t bufferSize = 64;
+        const uint16_t bufferSize = 128;
         char buffer[bufferSize];
         buffer[0] = 0;
         strcatLimited(buffer, "oNDATA\r", bufferSize);

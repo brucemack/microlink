@@ -92,6 +92,8 @@ public:
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setFullName(FixedString fn) { _fullName = fn; }
     void setLocation(FixedString l) { _location = l; }
+    void setSilentTimeoutS(uint32_t s) { _silentTimeoutS = s; }
+    void setIdleTimeoutS(uint32_t s) { _idleTimeoutS = s; }
 
     void authorize(StationID id);
 
@@ -108,7 +110,7 @@ public:
 
     uint32_t getActiveStationCount() const;
 
-    void dumpStations(std::ostream& str) const;
+    void dumpStations(Log* log) const;
    
     // ----- From Runnable ------------------------------------------------
 
@@ -136,6 +138,7 @@ private:
         uint32_t lastRxStamp = 0;
         uint32_t lastTxStamp = 0;
         uint32_t lastAudioRxStamp = 0;
+        uint32_t lastAudioTxStamp = 0;
         bool talker = false;
         // A unique number that identifies traffic from this 
         // station.
@@ -150,6 +153,7 @@ private:
             lastRxStamp = 0;
             lastAudioRxStamp = 0;
             lastTxStamp = 0;
+            lastAudioTxStamp = 0;
             talker = false;
             ssrc = 0;
             seq = 0;
@@ -163,6 +167,14 @@ private:
         uint32_t secondsSinceLastAudioRx() const {
             return (time_ms() - lastAudioRxStamp) / 1000;
         }
+
+        /**
+         * @returns Time since we sent real audio to this
+         * station (indicating that it's active)
+        */
+        uint32_t secondsSinceLastAudioTx() const {
+            return (time_ms() - lastAudioTxStamp) / 1000;
+        }
     };
 
     static const uint32_t _maxStations = 4;
@@ -175,6 +187,8 @@ private:
     CallSign _callSign;
     FixedString _fullName;
     FixedString _location;
+    uint32_t _silentTimeoutS = 30 * 1000;
+    uint32_t _idleTimeoutS = 5 * 1000;
 };
 
 }

@@ -74,21 +74,6 @@ uint32_t parseIP4Address(const char* dottedAddr) {
 #endif
 }
 
-void formatIP4Address(uint32_t addr_nl, char* dottedAddr, uint32_t dottedAddrSize) {
-#ifndef PICO_BUILD
-    inet_ntop(AF_INET, &addr_nl, dottedAddr, dottedAddrSize);
-#else
-    // This is the high-order part of the address.
-    uint32_t a = (addr_nl & 0xff000000) >> 24;
-    uint32_t b = (addr_nl & 0x00ff0000) >> 16;
-    uint32_t c = (addr_nl & 0x0000ff00) >> 8;
-    uint32_t d = (addr_nl & 0x000000ff);
-    char buf[64];
-    sprintf(buf, "%lu.%lu.%lu.%lu", a, b, c, d);
-    strcpyLimited(dottedAddr, buf, dottedAddrSize);
-#endif
-}
-
 #ifndef PICO_BUILD
 // trim from start (in place)
 void ltrim(std::string &s) {

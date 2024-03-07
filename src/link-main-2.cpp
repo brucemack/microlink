@@ -158,7 +158,7 @@ Launch command:
 #define DMTF_ACCUMULATOR_TIMEOUT_MS (10 * 1000)
 // The version of the configuration version that we expect 
 // to find (must be at least this version)
-#define CONFIG_VERSION (0xbab1)
+#define CONFIG_VERSION (0xbab2)
 
 using namespace std;
 using namespace kc1fsz;
@@ -179,7 +179,9 @@ static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
     AudioAnalyzer* txAnalyzer, int16_t baselineRxNoise, 
-    uint32_t rxNoiseThreshold, bool cosState, ostream& str);
+    uint32_t rxNoiseThreshold, bool cosState, 
+    bool wifiState, int wifiRssi, 
+    ostream& str);
 
 int main(int, const char**) {
 
@@ -264,36 +266,60 @@ int main(int, const char**) {
         log.info("Normal reboot");
     }
 
+    // TEMPORARY!
+    {
+        // Write flash
+        StationConfig config;
+        config.version = CONFIG_VERSION;
+        strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
+        config.addressingServerPort = 5200;
+        strncpy(config.callSign, "W1TKZ-L", 32);
+        strncpy(config.password, "warslink", 32);
+        strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
+        strncpy(config.location, "Wellesley, MA USA", 32);
+        strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
+        strncpy(config.wifiPassword, "emergency", 16);
+        config.useHardCos = false;
+        config.silentTimeoutS = 30 * 1000;
+        config.idleTimeoutS = 5 * 1000;
+        config.rxNoiseThreshold = 50;
+
+        uint32_t ints = save_and_disable_interrupts();
+        // Must erase a full sector first (4096 bytes)
+        flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
+        // IMPORTANT: Must be a multiple of 256!
+        flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
+        restore_interrupts(ints);
+    } 
+
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
-    HostName addressingServerHost;
-    uint32_t addressingServerPort;
-    CallSign ourCallSign;
-    FixedString ourPassword;
-    FixedString ourFullName;
-    FixedString ourLocation;
-    uint32_t rxNoiseThreshold = 50;
-    bool useHardCos = true;
+    //uint32_t addressingServerPort;
+    //uint32_t rxNoiseThreshold = 50;
+    //bool useHardCos = true;
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
     // remembering to include the offset for RAM
     const uint8_t* addr = (uint8_t*)(XIP_BASE + (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE));
-    auto p = (const StationConfig*)addr;
-    if (p->version != CONFIG_VERSION) {
+    auto config = (const StationConfig*)addr;
+    if (config->version != CONFIG_VERSION) {
         log.error("Configuration data is invalid");
         panic_unsupported();
         return -1;
     } 
 
-    addressingServerHost = HostName(p->addressingServerHost);
-    addressingServerPort = p->addressingServerPort;
-    ourCallSign = CallSign(p->callSign);
-    ourPassword = FixedString(p->password);
-    ourFullName = FixedString(p->fullName);
-    ourLocation = FixedString(p->location);
+    HostName ourAddressingServerHost(config->addressingServerHost);
+    CallSign ourCallSign;
+    FixedString ourPassword;
+    FixedString ourFullName;
+    FixedString ourLocation;
+    ourCallSign = CallSign(config->callSign);
+    ourPassword = FixedString(config->password);
+    ourFullName = FixedString(config->fullName);
+    ourLocation = FixedString(config->location);
 
-    log.info("EL Addressing Server : %s:%lu", addressingServerHost.c_str(),
-        addressingServerPort);
+    log.info("EL Addressing Server : %s:%lu", ourAddressingServerHost.c_str(),
+        config->addressingServerPort);
     log.info("Identification       : %s/%s/%s", ourCallSign.c_str(),
         ourFullName.c_str(), ourLocation.c_str());
 
@@ -302,9 +328,11 @@ int main(int, const char**) {
         log.error("Failed to initialize WIFI");
     } else {
         cyw43_arch_enable_sta_mode();
-        cyw43_arch_wifi_connect_async(p->wifiSsid, p->wifiPassword, CYW43_AUTH_WPA2_AES_PSK);
+        cyw43_arch_wifi_connect_async(config->wifiSsid, config->wifiPassword, 
+            CYW43_AUTH_WPA2_AES_PSK);
     }
     LwIPLib ctx(&log);
+    bool wifiState = false;
     // ====== Internet Connectivity Stuff =====================================
 
     TestUserInfo info;
@@ -343,15 +371,15 @@ int main(int, const char**) {
     // ===== Audio Stuff ======================================================
 
     LogonMachine2 lm(&ctx, &info, &log);
-    lm.setServerName(addressingServerHost);
-    lm.setServerPort(addressingServerPort);
+    lm.setServerName(ourAddressingServerHost);
+    lm.setServerPort(config->addressingServerPort);
     lm.setCallSign(ourCallSign);
     lm.setPassword(ourPassword);
     lm.setLocation(ourLocation);
 
     LookupMachine3 lookup(&ctx, &info, &log);
-    lookup.setServerName(addressingServerHost);
-    lookup.setServerPort(addressingServerPort);
+    lookup.setServerName(ourAddressingServerHost);
+    lookup.setServerPort(config->addressingServerPort);
 
     ConferenceBridge confBridge(&ctx, &info, &log, &radio0Out);
 
@@ -359,6 +387,8 @@ int main(int, const char**) {
     conf.setCallSign(ourCallSign);
     conf.setFullName(ourFullName);
     conf.setLocation(ourLocation);
+    conf.setSilentTimeoutS(config->silentTimeoutS);
+    conf.setIdleTimeoutS(config->idleTimeoutS);
 
     confBridge.setConference(&conf);
     lookup.setConference(&conf);
@@ -384,6 +414,11 @@ int main(int, const char**) {
     bool statusPage = false;
     PicoPollTimer renderTimer;
     renderTimer.setIntervalUs(500000);
+    PicoPollTimer flashTimer;
+    flashTimer.setIntervalUs(250 * 1000);
+    bool flashState = false;
+    PicoPollTimer secondTimer;
+    secondTimer.setIntervalUs(1000 * 1000);
 
     const uint32_t dtmfAccumulatorSize = 16;
     char dtmfAccumulator[dtmfAccumulatorSize];
@@ -391,11 +426,11 @@ int main(int, const char**) {
     uint32_t lastDtmfActivity = 0;
 
     // Register the physical radio into the conference
-    conf.addRadio(CallSign("RADIO0"), IPAddress(0xf000));
+    conf.addRadio(CallSign("RADIO0"), IPAddress(0xff000002));
     radio0In.setADCEnabled(true);
 
     // Last thing before going into the event loop
-	//watchdog_enable(WATCHDOG_DELAY_MS, true);
+	watchdog_enable(WATCHDOG_DELAY_MS, true);
 
     log.info("Entering event loop");
 
@@ -447,8 +482,8 @@ int main(int, const char**) {
                 }
             }
             else if (c == 'i') {
-                log.info("Stations %d", conf.getActiveStationCount());
-                //conf.dumpStations(cout);
+                log.info("Station Count: %d", conf.getActiveStationCount());
+                conf.dumpStations(&log);
             }
         }
 
@@ -536,15 +571,15 @@ int main(int, const char**) {
         // 1. Hard COS: explicit signal from rig (preferred)
         // 2. Soft COS: thresholding noise level on receiver
 
-        bool rigCos = (useHardCos) ? 
+        bool rigCosState = (config->useHardCos) ? 
             gpio_get(RIG_COS_PIN) : 
-            (rxAnalyzer.getRMS() - baselineRxNoise) > (int16_t)rxNoiseThreshold;
+            (rxAnalyzer.getRMS() - baselineRxNoise) > (int16_t)config->rxNoiseThreshold;
 
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.
         //
         // Look for LOW->HI transition
-        if (rigCos && cosState == false) {
+        if (rigCosState && cosState == false) {
             // Debounce.  The LOW->HI transition is taken very quickly,
             // so long as we are not just finishing up a transmission.
             if ((time_ms() - lastCosTransition) > LINGER_AFTER_TX_MS &&
@@ -554,7 +589,7 @@ int main(int, const char**) {
             }
         }
         // Look for HI->LOW transition
-        else if (!rigCos && cosState == true) {
+        else if (!rigCosState && cosState == true) {
             // The HI->LO transition is fully debounced and is less
             // agressive.
             if ((time_ms() - lastCosOn) > COS_DEBOUNCE_OFF_MS) {
@@ -562,7 +597,7 @@ int main(int, const char**) {
             }
         }
 
-        if (rigCos)
+        if (rigCosState)
             lastCosOn = time_ms();
 
         // Use the debounced cosState to adjust the state of the node
@@ -580,17 +615,54 @@ int main(int, const char**) {
 
         // ----- UI Rendering ------------------------------------------------
 
-        // Provided a live-updating dashboard of system status/audio/etc.
+        if (flashTimer.poll()) {
+            flashTimer.reset();
+            flashState = !flashState;
+        }
+
+        // Displays that happen on a slow pol
+        if (secondTimer.poll()) {
+            secondTimer.reset();
+
+            if (cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_UP) {
+                if (!wifiState) {
+                    log.info("WIFI is up");
+                }
+                wifiState = true;
+            } else {
+                if (wifiState) {
+                    log.info("WIFI is down");
+                }
+                wifiState = false;
+            }
+        }
+
+        // The key LED is steady when the rig key is down and flashing 
+        // when the rig COS is enabled
+        if (rigKeyState) {
+            gpio_put(KEY_LED_PIN, 1);
+        } else if (cosState) {
+            gpio_put(KEY_LED_PIN, flashState);
+        } else {
+            gpio_put(KEY_LED_PIN, 0);
+        }
+
+        // Provide a live-updating dashboard of system status/audio/etc.
         if (statusPage) {
             if (renderTimer.poll()) {
                 renderTimer.reset();
+                int32_t rssi = 0;
+                cyw43_wifi_get_rssi(&cyw43_state, &rssi);
                 renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
-                    baselineRxNoise, rxNoiseThreshold, cosState, cout);
+                    baselineRxNoise, config->rxNoiseThreshold, cosState, 
+                    wifiState,
+                    rssi,
+                    cout);
             }
         }
     }    
 
-    cout << "Out of loop" << endl;
+    log.info("Out of loop");
 
     while (true) {
         // Keep things alive
@@ -603,7 +675,8 @@ int main(int, const char**) {
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
     AudioAnalyzer* txAnalyzer, int16_t baselineRxNoise, 
-    uint32_t rxNoiseThreshold, bool cosState, ostream& str) {
+    uint32_t rxNoiseThreshold, bool cosState, 
+    bool wifiState, int wifiRssi, ostream& str) {
 
     // [K - Erase line
     // [2J - Clear screen
@@ -615,6 +688,10 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     str << ESC << "[H";
     str << "===== MicoLink Status =====";
     str << endl << ESC << "[K";
+    str << endl << ESC << "[K";
+    str << "              WIFI : " << (wifiState ? "Yes" : "No");
+    str << endl << ESC << "[K";
+    str << "         WIFI RSSI : " << wifiRssi;
     str << endl << ESC << "[K";
     str << "               COS : " << (cosState ? "Yes" : "No");
     str << endl << ESC << "[K";
