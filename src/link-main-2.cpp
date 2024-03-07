@@ -265,7 +265,7 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-    
+    /*
     // TEMPORARY!
     {
         // Write flash
@@ -291,7 +291,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
-    
+    */
 
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 

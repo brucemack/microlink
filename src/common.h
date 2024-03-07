@@ -120,6 +120,11 @@ uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
     uint32_t ssrc2,
     uint8_t* packet, uint32_t packetSize);      
 
+/**
+ * A utility function for building Logon/ONLINE request messages.
+*/
+uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
+    CallSign cs, FixedString pwd, FixedString loc);
 }
 
 

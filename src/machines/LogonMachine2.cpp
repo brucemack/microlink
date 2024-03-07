@@ -25,8 +25,6 @@
 #include "kc1fsz-tools/Log.h"
 #include "../UserInfo.h"
 
-// TEMP
-#include "LogonMachine.h"
 #include "LogonMachine2.h"
 
 using namespace std;

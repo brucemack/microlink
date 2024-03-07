@@ -422,4 +422,40 @@ uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
 }
 
 
+uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
+    CallSign cs, FixedString pwd, FixedString loc) {
+
+    uint8_t* p = buf;
+
+    // TODO: MOVE TO CONTEXT
+    time_t t = time(0);
+    struct tm tm;
+    char local_time_str[6];
+    strftime(local_time_str, 6, "%H:%M", localtime_r(&t, &tm));
+
+    (*p++) = 'l';
+    memcpy(p, cs.c_str(), cs.len());
+    p += cs.len();
+    (*p++) = 0xac;
+    (*p++) = 0xac;
+    memcpy(p, pwd.c_str(), pwd.len());
+    p += pwd.len();
+    (*p++) = 0x0d;
+    memcpy(p, "ONLINE", 6);
+    p += 6;
+    memcpy(p, VERSION_ID, strlen(VERSION_ID));
+    p += strlen(VERSION_ID);
+    (*p++) = '(';
+    memcpy(p, local_time_str, 5);
+    p += 5;
+    (*p++) = ')';
+    (*p++) = 0x0d;
+    memcpy(p, loc.c_str(), loc.len());
+    p += loc.len();
+    (*p++) = 0x0d;
+
+    return (p - buf);
+}
+
+
 }
