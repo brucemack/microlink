@@ -385,6 +385,11 @@ int main(int, const char**) {
     PicoPollTimer renderTimer;
     renderTimer.setIntervalUs(500000);
 
+    const uint32_t dtmfAccumulatorSize = 16;
+    char dtmfAccumulator[dtmfAccumulatorSize];
+    uint32_t dtmfAccumulatorLen = 0;
+    uint32_t lastDtmfActivity = 0;
+
     // Register the physical radio into the conference
     conf.addRadio(CallSign("RADIO0"), IPAddress(0xf000));
     radio0In.setADCEnabled(true);
@@ -419,6 +424,9 @@ int main(int, const char**) {
             if (c == 'q') {
                 break;
             } 
+            else if (c == 'z') {
+                radio0Out.tone(800, 1000);
+            }
             else if (c == 'd') {
                 conf.dropAll();
             } else if (c == 'a') {
@@ -437,6 +445,33 @@ int main(int, const char**) {
                     statusPage = true;
                     cout << "\033[2J";
                 }
+            }
+            else if (c == 'i') {
+                log.info("Stations %d", conf.getActiveStationCount());
+                //conf.dumpStations(cout);
+            }
+        }
+
+        // ----- Deal with Inbound DTMF Requests ---------------------------------
+
+        if (dtmfAccumulatorLen > 0 &&
+            time_ms() - lastDtmfActivity > DMTF_ACCUMULATOR_TIMEOUT_MS) {
+            dtmfAccumulatorLen = 0;
+            log.info("Discarding DTMF activity");
+        }
+
+        while (dtmfDetector.resultAvailable()) {
+            char c = dtmfDetector.getResult();
+            log.info("DTMF: %c", c);
+            if (dtmfAccumulatorLen < dtmfAccumulatorSize)
+                dtmfAccumulator[dtmfAccumulatorLen++] = c;
+            lastDtmfActivity = time_ms();
+        }
+
+        if (dtmfAccumulatorLen >= 2) {
+            if (dtmfAccumulator[0] == '1' and dtmfAccumulator[1] == '4') {
+            }
+            else if (dtmfAccumulator[0] == '1' and dtmfAccumulator[1] == '7') {
             }
         }
 

@@ -32,6 +32,22 @@ static const uint32_t TALKER_INTERVAL_MS = 1000;
 uint32_t Conference::_ssrcGenerator = 0xa000;
 int Conference::_traceLevel = 0;
 
+uint32_t Conference::getActiveStationCount() const {
+
+    uint32_t result = 0;
+    for (const Station& s : _stations) {
+        if (s.active && s.authorized) {
+            if (s.locked) {
+                if (s.secondsSinceLastAudioRx() < 120) 
+                    result++;
+            } else {
+                result++;
+            }
+        }
+    }
+    return result;
+}
+
 void Conference::addRadio(CallSign cs, IPAddress addr) {
 
     _log->info("Adding radio %s", cs.c_str());
@@ -44,8 +60,8 @@ void Conference::addRadio(CallSign cs, IPAddress addr) {
             s.id = StationID(addr, cs);
             s.authorized = true;
             s.lastRxStamp = time_ms();
+            s.lastAudioRxStamp = time_ms();
             s.connectStamp = time_ms();
-            s.lastTxStamp = 0;
             break;
         }
     }
@@ -71,8 +87,8 @@ void Conference::authorize(StationID id) {
             s.id = id;
             s.authorized = true;
             s.lastRxStamp = time_ms();
+            s.lastAudioRxStamp = time_ms();
             s.connectStamp = time_ms();
-            s.lastTxStamp = 0;
             break;
         }
     }
@@ -130,6 +146,7 @@ void Conference::processAudio(IPAddress sourceIp,
                 }
                 s.talker = true;
                 s.lastRxStamp = time_ms();
+                s.lastAudioRxStamp = time_ms();
             }
         }
         else {
@@ -190,6 +207,7 @@ void Conference::processText(IPAddress source,
                 s.connectStamp = time_ms();
                 // We do this to avoid an immediate timeout
                 s.lastRxStamp = time_ms();
+                s.lastAudioRxStamp = time_ms();
                 s.ssrc = _ssrcGenerator++;
 
                 char buf[32];
@@ -271,7 +289,7 @@ bool Conference::run() {
             }
             // Time out talking
             if (s.talker && 
-                time_ms() - s.lastRxStamp > TALKER_INTERVAL_MS) {
+                time_ms() - s.lastAudioRxStamp > TALKER_INTERVAL_MS) {
                 s.talker = false;
                 _log->info("Station %s is finished talking", s.id.getCall().c_str());
             }

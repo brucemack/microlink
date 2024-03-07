@@ -106,6 +106,10 @@ public:
 
     void addRadio(CallSign cs, IPAddress addr);
 
+    uint32_t getActiveStationCount() const;
+
+    void dumpStations(std::ostream& str) const;
+   
     // ----- From Runnable ------------------------------------------------
 
     bool run();
@@ -131,6 +135,7 @@ private:
         uint32_t connectStamp = 0;
         uint32_t lastRxStamp = 0;
         uint32_t lastTxStamp = 0;
+        uint32_t lastAudioRxStamp = 0;
         bool talker = false;
         // A unique number that identifies traffic from this 
         // station.
@@ -143,11 +148,20 @@ private:
             authorized = false;
             connectStamp = 0;
             lastRxStamp = 0;
+            lastAudioRxStamp = 0;
             lastTxStamp = 0;
             talker = false;
             ssrc = 0;
             seq = 0;
             locked = false;
+        }
+
+        /**
+         * @returns Time since we received real audio from this
+         * station (indicating that it's active)
+        */
+        uint32_t secondsSinceLastAudioRx() const {
+            return (time_ms() - lastAudioRxStamp) / 1000;
         }
     };
 
