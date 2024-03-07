@@ -287,9 +287,10 @@ void Conference::dropAll() {
 
 bool Conference::run() {
     for (Station& s : _stations) {
-        if (s.active && s.authorized) {
+        if (s.active) {
             // Check for the need to send outbound ping
-            if (time_ms() - s.lastTxStamp > KEEP_ALIVE_INTERVAL_MS) {
+            if (s.authorized && 
+                time_ms() - s.lastTxStamp > KEEP_ALIVE_INTERVAL_MS) {
                 _sendPing(s.id);
                 s.lastTxStamp = time_ms();
             }

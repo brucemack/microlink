@@ -53,11 +53,16 @@ LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log)
     _log(log),
     _conf(0),
     _serverPort(0),
-    _logonRespPtr(0) {
+    _logonRespPtr(0),
+    _lastLogonStamp(0) {
 
     _channel = Channel(0, false);
     _logonRespPtr = 0;
     _setState(State::IDLE);
+}
+
+uint32_t LogonMachine2::secondsSinceLastLogon() const {
+    return (time_ms() - _lastLogonStamp) / 1000;
 }
 
 void LogonMachine2::dns(HostName name, IPAddress addr) {
@@ -116,6 +121,7 @@ void LogonMachine2::disc(Channel ch) {
     if (_isState(State::DISCONNECT_WAIT) && ch == _channel) {
         // Parse the response to make sure we got what we expected
         if (_logonRespPtr >= 1 && _logonResp[0] == 'O' && _logonResp[1] == 'K') {
+            _lastLogonStamp = time_ms();
             _userInfo->setStatus("Logon succeeded");
             _setState(State::SUCCEEDED);
         } else {

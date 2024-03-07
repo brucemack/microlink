@@ -100,7 +100,11 @@ void LwIPLib::queryDNS(HostName hostName) {
         _lastAddrResp = IPAddress(ntohl(addr.addr));
     }
     else if (e == ERR_ARG) {
-        panic("Invalid DNS request");
+        if (traceLevel > 0)
+            _log->error("DNS request failed");
+    } else if (e == ERR_INPROGRESS) {
+    } else {
+        panic_unsupported();
     }
 }
 
@@ -163,6 +167,7 @@ err_t LwIPLib::_tcpSentCb(void *arg, tcp_pcb *tpcb, u16_t len) {
 }
 
 void LwIPLib::_errCb(void *arg, err_t err) {
+    cout << "ERROR CB " << err << endl;
 }
 
 err_t LwIPLib::_tcpConnectCb(void *arg, tcp_pcb* pcb, err_t err) {

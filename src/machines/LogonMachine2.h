@@ -52,6 +52,7 @@ public:
     void setPassword(FixedString pw) { _password = pw; }
     void setLocation(FixedString loc) { _location = loc; }
     void setConference(Conference* conf) { _conf = conf; }
+    uint32_t secondsSinceLastLogon() const;
 
     // ----- From IPLibEvents -------------------------------------------------
 
@@ -94,11 +95,13 @@ private:
     FixedString _location;
 
     Channel _channel;
-
+    
     // Here is were we collect the logon response
     static const uint16_t _logonRespSize = 64;
     uint8_t _logonResp[_logonRespSize];
     uint16_t _logonRespPtr;
+
+    uint32_t _lastLogonStamp;
 };
 
 }

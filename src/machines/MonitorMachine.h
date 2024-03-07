@@ -18,8 +18,8 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _LookupMachine3_h
-#define _LookupMachine3_h
+#ifndef _MonitorMachine_h
+#define _MonitorMachine_h
 
 #include "kc1fsz-tools/Channel.h"
 #include "kc1fsz-tools/IPAddress.h"
@@ -33,31 +33,29 @@
 namespace kc1fsz {
 
 class UserInfo;
+class LogonMachine2;
 
 /**
  * A state machine used for managing the EL directory lookup.
 */
-class LookupMachine3 : public StateMachine2, public IPLibEvents, public Authority {
+class MonitorMachine : public StateMachine2, public IPLibEvents {
 public:
 
     static int traceLevel;
 
-    LookupMachine3(IPLib* ctx, UserInfo* userInfo, Log* log);
+    MonitorMachine(IPLib* ctx, UserInfo* userInfo, Log* log);
 
     void setServerName(HostName hn) { _serverHostName = hn; }
-    void setServerPort(uint32_t p) { _serverPort = p; }
+    void setCallSign(CallSign cs) { _callSign = cs; }
     void setConference(Conference* conf) { _conf = conf; }
-
-    // ----- From Authority ---------------------------------------------------
-
-    virtual void validate(StationID id);
+    void setLogonMachine(LogonMachine2* lm) { _lm = lm; }
 
     // ----- From IPLibEvents -------------------------------------------------
 
     virtual void dns(HostName name, IPAddress addr);
     virtual void bind(Channel ch) { }
-    virtual void conn(Channel ch);
-    virtual void disc(Channel ch);
+    virtual void conn(Channel ch) { }
+    virtual void disc(Channel ch) { }
     virtual void recv(Channel ch, const uint8_t* data, uint32_t dataLen, IPAddress fromAddr,
         uint16_t fromPort);
     virtual void err(Channel ch, int type) { }
@@ -71,33 +69,28 @@ protected:
 private:
 
     enum State { 
+        INIT,
         IDLE, 
-        REQUEST,
+        LINK_WAIT,
         DNS_WAIT, 
-        CONNECT_WAIT, 
-        DISCONNECT_WAIT, 
-        FAILED, 
-        SUCCEEDED 
+        SEND,
+        WAIT,
+        FAILED
     };
 
     IPLib* _ctx;
     UserInfo* _userInfo;
     Log* _log;
     Conference* _conf;
+    LogonMachine2* _lm;
 
     HostName _serverHostName;
-    uint32_t _serverPort;
-    CallSign _targetCallSign;
-    IPAddress _targetAddr;
+    IPAddress _serverAddr;
+    CallSign _callSign;
     Channel _channel;
-    // A place to accumulate characters while trying to build a complete 
-    // directory entry.
-    static const uint32_t _saveAreaSize = 256;
-    uint8_t _saveArea[_saveAreaSize];
-    uint32_t _saveAreaUsed;
+    uint32_t _startStamp;
 };
 
 }
 
 #endif
-

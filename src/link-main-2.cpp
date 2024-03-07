@@ -60,6 +60,8 @@ Launch command:
 #include "hardware/flash.h"
 #include "pico/cyw43_arch.h"
 
+#include "lwip/dns.h"
+
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/DTMFDetector.h"
@@ -71,6 +73,7 @@ Launch command:
 
 #include "machines/LogonMachine2.h"
 #include "machines/LookupMachine3.h"
+#include "machines/MonitorMachine.h"
 
 #include "RXMonitor.h"
 #include "Conference.h"
@@ -397,6 +400,12 @@ int main(int, const char**) {
     rxMonitor.setSink(&confBridge);
     logonMachine.setConference(&conf);
 
+    MonitorMachine monitorMachine(&ctx, &info, &log);
+    monitorMachine.setServerName(HostName("monitor.w1tkz.net"));
+    monitorMachine.setCallSign(ourCallSign);
+    monitorMachine.setLogonMachine(&logonMachine);
+    ctx.addEventSink(&monitorMachine);
+
     bool rigKeyState = false;
     uint32_t lastRigKeyTransitionTime = 0;
     uint32_t rigKeyLockoutTime = 0;
@@ -451,6 +460,7 @@ int main(int, const char**) {
         radio0Out.run();
         radio0In.run();
         rxMonitor.run();
+        monitorMachine.run();
 
         // ----- Serial Commands ---------------------------------------------
         
