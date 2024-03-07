@@ -27,6 +27,7 @@
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/IPLib.h"
+#include "kc1fsz-tools/AudioProcessor.h"
 
 #include "gsm-0610-codec/Decoder.h"
 #include "gsm-0610-codec/Encoder.h"
@@ -39,7 +40,9 @@ class UserInfo;
 class Conference;
 class AudioOutputContext;
 
-class ConferenceBridge : public StateMachine2, public IPLibEvents, public ConferenceOutput {
+class ConferenceBridge : public StateMachine2, public IPLibEvents, 
+    public ConferenceOutput, public AudioProcessor {
+
 public:
 
     static int traceLevel;
@@ -83,6 +86,16 @@ public:
     virtual void sendText(StationID dest,
         const uint8_t* frame, uint32_t frameLen);
 
+    // ----- From AudioProcessor -----------------------------------------------
+
+    /**
+     * @param frame 160 x 4 samples of 16-bit PCM audio.
+     * @return true if the audio was taken, or false if the 
+     *   session is busy and the TX will need to be 
+     *   retried.
+    */
+    virtual bool play(const int16_t* frame, uint32_t frameLen);
+
 private:
 
     enum State { 
@@ -113,6 +126,8 @@ private:
     IPAddress _radio0Addr;
     Decoder _gsmDecoder0;
     Encoder _gsmEncoder0;
+    uint32_t _radio0Ssrc = 7;
+    uint16_t _radio0Seq = 0;
 };
 
 }

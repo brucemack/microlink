@@ -13,7 +13,7 @@ be interesting to someone who wants to get deep into the nuts-and-bolts of EchoL
 should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I try to avoid off-the-shelf software/components where 
 possible. This has been a huge learning opportunity.
 
-The system currently runs on a Pi Pico (RP2040) development board. I'm pretty sure it 
+The system currently runs on a Pi Pico W (RP2040) development board. I'm pretty sure it 
 could also run on an ESP-32, or possibly an Arduino of the correct caliber. More experimentation
 is needed here.
 
@@ -55,11 +55,9 @@ The hardware is used in two configurations:
 
 ## Current Parts List (HW)
 
-* The main processor is a Pi Pico (RP2040) development board.  $4.00 on DigiKey.
-* Internet connectivity currently comes over WIFI using an ESP-32-WROOM development 
-board. $5.00 on Amazon. Work 
-is underway to provide a 4G cellular data option using a SIM7600 module. More on 
-this to follow.
+* The main processor is a Pi Pico W (RP2040) development board. This includes WIFI 
+connectivity.  $6.00 on DigiKey. Work is underway to provide a 4G cellular data option 
+using a SIM7600 module. More on this to follow.
 * The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
 filter.  The microphone part needs work. The next revision will use a TLV9161 op amp for the 
 microphone pre-amp to reduce noise.
@@ -69,12 +67,12 @@ microphone pre-amp to reduce noise.
 * The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
 * Isolation transformers and optocouplers are used to eliminate the need for common ground 
 between the radio and the MicroLink system. This helps to reduce digital noise.
-* The radio link is a Baofeng BF-F8HP.
+* The radio link is an ICOM IC-2000H mobile rig.
 
 ## Current Parts List (SW)
 
 * The main station firmware is completely homebrew (C++, see GitHub repo).
-* The ESP-32 runs the Espressif AT firmware (version 3.2.0.0).
+* The LwIP embedded TCP/IP stack is used for IP connectivity on the Pi Pico W.
 * Importantly, audio compression/decompression uses a GSM 06-10 Full Rate CODEC which is homebrew 
 in C++. Getting that to work required studying
 the European Telecommunications Standards Institute specification for GSM and a lot of testing,
@@ -134,7 +132,6 @@ connectivity.
 approximately 14,000 baud.
 * The RP2040 runs at 125 MHz. Only one of the two processors is used at this time.
 * The DAC runs on an I2C bus running at 400 kHz.
-* The ESP-32 is on a serial port that runs at 115,200 baud.
 * The voice prompts (all letters, numbers, and a few words) take up about 40K of 
 flash. The audio is stored in GSM full-rate format for efficiency.
 
@@ -266,6 +263,8 @@ This is the official binary that runs in production.
     make <target>
 
 ## ESP32 AT Firmware Notes
+
+(No longer used)
 
     esptool.py --chip auto --port /dev/ttyUSB0 --baud 115200 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB 0x0 /home/bruce/Downloads/ESP32-WROOM-32-V3.2.0.0/factory/factory_WROOM-32.bin
 
@@ -438,7 +437,6 @@ enough.
   - [Connecting to the Internet with the Pico W](https://datasheets.raspberrypi.com/picow/connecting-to-the-internet-with-pico-w.pdf)
   - [Pi Pico CYW43 Driver Docs](https://cec-code-lab.aps.edu/robotics/resources/pico-c-api/group__cyw43__driver.html#ga71e656d02aabca214ae344f29ae1d033)
   - [Light Weight IP - LwIP API Documentation](https://www.nongnu.org/lwip/2_1_x/index.html)
-
 * ESP-32 
   - [AT Command Reference](https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html)
 * SIM7600 Cellular

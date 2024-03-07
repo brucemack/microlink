@@ -121,6 +121,27 @@ void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
     }
 }
 
+bool ConferenceBridge::play(const int16_t* pcmAudio, uint32_t frameLen)  {
+
+    uint8_t gsmAudio[4 * 33];
+    uint8_t* gsmAudioPtr = gsmAudio;
+    const int16_t* pcmAudioPtr = pcmAudio;
+
+    for (int f = 0; f < 4; f++) {
+        Parameters params;
+        _gsmEncoder0.encode(pcmAudioPtr, &params);
+        PackingState state;
+        params.pack(gsmAudioPtr, &state);
+        pcmAudioPtr += 160;
+        gsmAudioPtr += 33;
+    }
+
+    _conf->processAudio(_radio0Addr, _radio0Ssrc, _radio0Seq++,
+        gsmAudio, 33 * 4, AudioFormat::GSMFR4X);
+
+    return true;
+}
+
 void ConferenceBridge::sendAudio(StationID dest, uint32_t ssrc, uint16_t seq,
     const uint8_t* data, uint32_t dataLen, AudioFormat fmt) {
     if (fmt == AudioFormat::TEXT) {

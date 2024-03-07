@@ -61,6 +61,9 @@ Launch command:
 #include "pico/cyw43_arch.h"
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
+#include "kc1fsz-tools/AudioAnalyzer.h"
+#include "kc1fsz-tools/DTMFDetector.h"
+#include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
 #include "contexts/I2CAudioOutputContext.h"
 #include "contexts/PicoAudioInputContext.h"
@@ -69,6 +72,7 @@ Launch command:
 #include "machines/LogonMachine2.h"
 #include "machines/LookupMachine3.h"
 
+#include "RXMonitor.h"
 #include "Conference.h"
 #include "ConferenceBridge.h"
 // TEMP
@@ -170,6 +174,12 @@ static const uint32_t audioFrameBlockFactor = 4;
 static const uint32_t audioBufDepth = 16;
 static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
+
+// Used for drawing a real-time 
+static void renderStatus(PicoAudioInputContext* inCtx,
+    AudioAnalyzer* rxAnalyzer, 
+    AudioAnalyzer* txAnalyzer, int16_t baselineRxNoise, 
+    uint32_t rxNoiseThreshold, bool cosState, ostream& str);
 
 int main(int, const char**) {
 
@@ -299,15 +309,38 @@ int main(int, const char**) {
 
     TestUserInfo info;
 
+    // ===== Audio Stuff ======================================================
     // NOTE: Audio is encoded and decoded in 4-frame chunks.
     I2CAudioOutputContext radio0Out(audioFrameSize * 4, sampleRate, 
         audioBufDepthLog2, audioBuf, &info);
-
     // ADC/audio in setup
     PicoAudioInputContext::setup();
     PicoAudioInputContext radio0In;
     // Connect the input (ADC) timer to the output (DAC)
     radio0In.setSampleCb(I2CAudioOutputContext::tickISR, &radio0Out);
+
+    // Analyzers for sound data
+    int16_t txAnalyzerHistory[2048];
+    AudioAnalyzer txAnalyzer(txAnalyzerHistory, 2048, sampleRate);
+    radio0Out.setAnalyzer(&txAnalyzer);
+
+    int16_t rxAnalyzerHistory[2048];
+    AudioAnalyzer rxAnalyzer(rxAnalyzerHistory, 2048, sampleRate);
+    radio0In.setAnalyzer(&rxAnalyzer);
+
+    int16_t dtmfDetectorHistory[400];
+    DTMFDetector dtmfDetector(dtmfDetectorHistory, 400, sampleRate);
+
+    // The RXMonitor is basically a gate between the rig's receiver
+    // and the Conference.  
+    RXMonitor rxMonitor;
+    rxMonitor.setInfo(&info);
+    // RXMonitor -> DTMF detector
+    rxMonitor.setDTMFDetector(&dtmfDetector);
+
+    // Radio RX -> RXMonitor
+    radio0In.setSink(&rxMonitor);
+    // ===== Audio Stuff ======================================================
 
     LogonMachine2 lm(&ctx, &info, &log);
     lm.setServerName(addressingServerHost);
@@ -321,6 +354,7 @@ int main(int, const char**) {
     lookup.setServerPort(addressingServerPort);
 
     ConferenceBridge confBridge(&ctx, &info, &log, &radio0Out);
+
     Conference conf(&lookup, &confBridge, &log);
     conf.setCallSign(ourCallSign);
     conf.setFullName(ourFullName);
@@ -331,11 +365,25 @@ int main(int, const char**) {
     ctx.addEventSink(&lm);
     ctx.addEventSink(&lookup);
     ctx.addEventSink(&confBridge);
+    rxMonitor.setSink(&confBridge);
 
     bool rigKeyState = false;
     uint32_t lastRigKeyTransitionTime = 0;
     uint32_t rigKeyLockoutTime = 0;
     uint32_t rigKeyLockoutCount = 0;
+
+    uint32_t lastCosOn = 0;
+    bool cosState = false;
+    bool lastCosState = false;
+    uint32_t lastCosTransition = 0;
+
+    int startupMode = 2;
+    uint32_t startupMs = time_ms();
+    int16_t baselineRxNoise = 0;
+
+    bool statusPage = false;
+    PicoPollTimer renderTimer;
+    renderTimer.setIntervalUs(500000);
 
     // Register the physical radio into the conference
     conf.addRadio(CallSign("RADIO0"), IPAddress(0xf000));
@@ -361,6 +409,8 @@ int main(int, const char**) {
         confBridge.run();
         conf.run();
         radio0Out.run();
+        radio0In.run();
+        rxMonitor.run();
 
         // ----- Serial Commands ---------------------------------------------
         
@@ -377,9 +427,43 @@ int main(int, const char**) {
                 StationID sid(addr, cs);
                 lookup.validate(sid);
             }
+            else if (c == 'o') {
+                if (statusPage) {
+                log.setStdout(true);
+                    statusPage = false;
+                    cout << "\033[2J" << endl;
+                } else {
+                    log.setStdout(false);
+                    statusPage = true;
+                    cout << "\033[2J";
+                }
+            }
         }
 
-        // Rig Key Management
+        // ----- Calibration --------------------------------------------------
+
+        // At startup we wait some time to adjust a few parameters before 
+        // opening the state machines for connections.
+        if (startupMode == 2) {
+            if (time_ms() > startupMs + 500) {
+                int16_t avg = rxAnalyzer.getAvg();
+                log.info("Basline DC bias (V) %d", -avg);
+                radio0In.addBias(-avg);
+                radio0In.resetMax();
+                radio0In.resetOverflowCount();
+                startupMode = 1;
+                startupMs = time_ms();
+            }
+        } 
+        else if (startupMode == 1) {
+            if (time_ms() > startupMs + 500) {
+                baselineRxNoise = rxAnalyzer.getRMS();
+                log.info("Baseline RX noise (Vrms) %d", baselineRxNoise);
+                startupMode = 0;
+            }
+        }
+
+        // ----- Rig Key Management -------------------------------------------
         //
         // Key rig when audio is coming in, but enforce limits to prevent
         // the key from being stuck open for long periods.
@@ -411,8 +495,64 @@ int main(int, const char**) {
 
         gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
 
+        // ----- Rig Carrier Detect Management --------------------------------
+        //
+        // There are two ways supported:
+        // 1. Hard COS: explicit signal from rig (preferred)
+        // 2. Soft COS: thresholding noise level on receiver
 
+        bool rigCos = (useHardCos) ? 
+            gpio_get(RIG_COS_PIN) : 
+            (rxAnalyzer.getRMS() - baselineRxNoise) > (int16_t)rxNoiseThreshold;
 
+        // Produce a debounced cosState, which indicates the state of
+        // the carrier detect.
+        //
+        // Look for LOW->HI transition
+        if (rigCos && cosState == false) {
+            // Debounce.  The LOW->HI transition is taken very quickly,
+            // so long as we are not just finishing up a transmission.
+            if ((time_ms() - lastCosTransition) > LINGER_AFTER_TX_MS &&
+                !info.getSquelch() &&
+                info.getMsSinceLastSquelchClose() > LINGER_AFTER_TX_MS) {
+                cosState = true;
+            }
+        }
+        // Look for HI->LOW transition
+        else if (!rigCos && cosState == true) {
+            // The HI->LO transition is fully debounced and is less
+            // agressive.
+            if ((time_ms() - lastCosOn) > COS_DEBOUNCE_OFF_MS) {
+                cosState = false;
+            }
+        }
+
+        if (rigCos)
+            lastCosOn = time_ms();
+
+        // Use the debounced cosState to adjust the state of the node
+        if (cosState != lastCosState) {
+            if (cosState) 
+                info.setStatus("Rig COS on");
+            else
+                info.setStatus("Rig COS off");
+            // This is the important part: it turns on the forwarding from 
+            // the readio into the Conference.            
+            rxMonitor.setForward(cosState);
+            lastCosState = cosState;
+            lastCosTransition = time_ms();
+        }
+
+        // ----- UI Rendering ------------------------------------------------
+
+        // Provided a live-updating dashboard of system status/audio/etc.
+        if (statusPage) {
+            if (renderTimer.poll()) {
+                renderTimer.reset();
+                renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
+                    baselineRxNoise, rxNoiseThreshold, cosState, cout);
+            }
+        }
     }    
 
     cout << "Out of loop" << endl;
@@ -424,3 +564,55 @@ int main(int, const char**) {
 
     return 0;
 }
+
+static void renderStatus(PicoAudioInputContext* inCtx,
+    AudioAnalyzer* rxAnalyzer, 
+    AudioAnalyzer* txAnalyzer, int16_t baselineRxNoise, 
+    uint32_t rxNoiseThreshold, bool cosState, ostream& str) {
+
+    // [K - Erase line
+    // [2J - Clear screen
+    // [H - Home
+    char ESC = '\033';
+
+    std::ios_base::fmtflags f(str.flags());
+
+    str << ESC << "[H";
+    str << "===== MicoLink Status =====";
+    str << endl << ESC << "[K";
+    str << endl << ESC << "[K";
+    str << "               COS : " << (cosState ? "Yes" : "No");
+    str << endl << ESC << "[K";
+    str << "          RX Level : " << (int)rxAnalyzer->getRMS();
+    str << endl << ESC << "[K";
+    str << "   RX Level Excess : " << rxAnalyzer->getRMS() - baselineRxNoise;
+    str << endl << ESC << "[K";
+    str << "RX Noise Threshold : " << rxNoiseThreshold;
+    str << endl << ESC << "[K";
+    str << "    RX Audio Peak% : " << rxAnalyzer->getPeakPercent();
+    str << endl << ESC << "[K";
+    str << "      RX Audio Avg : " << rxAnalyzer->getAvg();
+    str << endl << ESC << "[K";
+    str.setf(ios::fixed,ios::floatfield);
+    str.precision(1);    
+    str << "RX Audio Peak dBFS : " << rxAnalyzer->getPeakDBFS();
+    str.flags(f);
+    str << endl << ESC << "[K";
+    str << "    TX Audio Power : " << (int)txAnalyzer->getRMS();
+    str << endl << ESC << "[K";
+    str << "   TX Audio Peak%  : " << txAnalyzer->getPeakPercent();
+    str << endl << ESC << "[K";
+    str << "      TX Audio Avg : " << txAnalyzer->getAvg();
+    str << endl << ESC << "[K";
+    str.setf(ios::fixed,ios::floatfield);
+    str.precision(1);    
+    str << "TX Audio Peak dBFS : " << txAnalyzer->getPeakDBFS();
+    str.flags(f);
+    str << endl << ESC << "[K";
+    str << " Audio In Overflow : " << inCtx->getOverflowCount();
+    str << endl << ESC << "[K";
+    str << "     Max Skew (us) : " << inCtx->getMaxSkew();
+    str << endl << ESC << "[K";
+    str << "      Max Len (us) : " << inCtx->getMaxLen();
+}
+
