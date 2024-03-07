@@ -33,6 +33,7 @@ namespace kc1fsz {
 
 class UserInfo;
 class Log;
+class Conference;
 
 /**
  * This state machine is used to manage the process of logging 
@@ -50,6 +51,7 @@ public:
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setPassword(FixedString pw) { _password = pw; }
     void setLocation(FixedString loc) { _location = loc; }
+    void setConference(Conference* conf) { _conf = conf; }
 
     // ----- From IPLibEvents -------------------------------------------------
 
@@ -71,6 +73,7 @@ private:
 
     enum State { 
         IDLE, 
+        LINK_WAIT,
         DNS_WAIT, 
         CONNECT_WAIT, 
         DISCONNECT_WAIT,
@@ -82,7 +85,8 @@ private:
     IPLib* _ctx;
     UserInfo* _userInfo;
     Log* _log;
-
+    Conference* _conf;
+    
     HostName _serverHostName;
     uint32_t _serverPort;
     CallSign _callSign;

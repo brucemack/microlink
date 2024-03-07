@@ -30,7 +30,7 @@ static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
 static const uint32_t TALKER_INTERVAL_MS = 1000;
 
 uint32_t Conference::_ssrcGenerator = 0xa000;
-int Conference::_traceLevel = 0;
+int Conference::traceLevel = 0;
 
 uint32_t Conference::getActiveStationCount() const {
 
@@ -328,7 +328,7 @@ bool Conference::run() {
 
 void Conference::_sendPing(StationID id) {
 
-    if (_traceLevel > 0)
+    if (traceLevel > 0)
         _log->info("Ping to %s", id.getCall().c_str());
 
     // Make the SDES message and send

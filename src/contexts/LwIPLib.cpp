@@ -81,6 +81,10 @@ void LwIPLib::addEventSink(IPLibEvents* e) {
     }
 }
 
+bool LwIPLib::isLinkUp() const {
+    return cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_UP;
+}
+
 void LwIPLib::queryDNS(HostName hostName) {
 
     if (traceLevel > 0)

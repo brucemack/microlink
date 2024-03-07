@@ -186,9 +186,9 @@ static void renderStatus(PicoAudioInputContext* inCtx,
 int main(int, const char**) {
 
     LogonMachine2::traceLevel = 0;
-    LwIPLib::traceLevel = 1;
+    LwIPLib::traceLevel = 0;
     ConferenceBridge::traceLevel = 0;
-    //Conference::traceLevel = 1;
+    Conference::traceLevel = 0;
 
     // Seup PICO
     stdio_init_all();
@@ -369,12 +369,12 @@ int main(int, const char**) {
     radio0In.setSink(&rxMonitor);
     // ===== Audio Stuff ======================================================
 
-    LogonMachine2 lm(&ctx, &info, &log);
-    lm.setServerName(ourAddressingServerHost);
-    lm.setServerPort(config->addressingServerPort);
-    lm.setCallSign(ourCallSign);
-    lm.setPassword(ourPassword);
-    lm.setLocation(ourLocation);
+    LogonMachine2 logonMachine(&ctx, &info, &log);
+    logonMachine.setServerName(ourAddressingServerHost);
+    logonMachine.setServerPort(config->addressingServerPort);
+    logonMachine.setCallSign(ourCallSign);
+    logonMachine.setPassword(ourPassword);
+    logonMachine.setLocation(ourLocation);
 
     LookupMachine3 lookup(&ctx, &info, &log);
     lookup.setServerName(ourAddressingServerHost);
@@ -391,10 +391,11 @@ int main(int, const char**) {
 
     confBridge.setConference(&conf);
     lookup.setConference(&conf);
-    ctx.addEventSink(&lm);
+    ctx.addEventSink(&logonMachine);
     ctx.addEventSink(&lookup);
     ctx.addEventSink(&confBridge);
     rxMonitor.setSink(&confBridge);
+    logonMachine.setConference(&conf);
 
     bool rigKeyState = false;
     uint32_t lastRigKeyTransitionTime = 0;
@@ -443,7 +444,7 @@ int main(int, const char**) {
         cyw43_arch_poll();
 
         ctx.run();
-        lm.run();
+        logonMachine.run();
         lookup.run();
         confBridge.run();
         conf.run();
@@ -623,7 +624,7 @@ int main(int, const char**) {
         if (secondTimer.poll()) {
             secondTimer.reset();
 
-            if (cyw43_tcpip_link_status(&cyw43_state, CYW43_ITF_STA) == CYW43_LINK_UP) {
+            if (ctx.isLinkUp()) {
                 if (!wifiState) {
                     log.info("WIFI is up");
                 }

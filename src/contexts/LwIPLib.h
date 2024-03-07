@@ -57,6 +57,8 @@ public:
 
     // ----- From IPLib ------------------------------------------------------
 
+    virtual bool isLinkUp() const;
+
     virtual void addEventSink(IPLibEvents* e);
 
     virtual void queryDNS(HostName hostName);

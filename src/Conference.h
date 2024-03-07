@@ -86,6 +86,8 @@ from the talking StationID is forwarded to all other Stations.
 class Conference {
 public:
 
+    static int traceLevel;
+
     Conference(Authority* auth, ConferenceOutput* out, Log* log) 
     : _authority(auth), _output(out), _log(log) { }
 
@@ -117,8 +119,6 @@ public:
     bool run();
 
 private:
-
-    static int _traceLevel;
 
     static uint32_t _ssrcGenerator;
 

@@ -23,7 +23,9 @@
 #include <cstring>
 
 #include "kc1fsz-tools/Log.h"
+
 #include "../UserInfo.h"
+#include "../Conference.h"
 
 #include "LogonMachine2.h"
 
@@ -39,6 +41,9 @@ static const uint32_t PAUSE_INTERVAL_MS = 10 * 1000;
 static const uint32_t DNS_TIMEOUT_MS = 10000;
 static const uint32_t CONNECT_TIMEOUT_MS = 5000;
 static const uint32_t LOGON_TIMEOUT_MS = 10 * 1000;
+// How long to wait for the Internet link to come up before re-trying 
+// the sequence. 
+static const uint32_t LINK_WAIT_MS = 10 * 1000;
 
 int LogonMachine2::traceLevel = 0;
 
@@ -46,6 +51,7 @@ LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log)
 :   _ctx(ctx),
     _userInfo(userInfo),
     _log(log),
+    _conf(0),
     _serverPort(0),
     _logonRespPtr(0) {
 
@@ -57,9 +63,6 @@ LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log)
 void LogonMachine2::dns(HostName name, IPAddress addr) {
 
     if (_isState(State::DNS_WAIT) && name == _serverHostName) {
-
-        _userInfo->setStatus("Connecting ...");
-
         // Start the process of opening the TCP connection to the 
         // Addressing server
         _channel = _ctx->createTCPChannel();
@@ -76,9 +79,17 @@ void LogonMachine2::conn(Channel ch) {
 
     if (_isState(State::CONNECT_WAIT) && ch == _channel) {
 
+        // Append the conference size to the location string
+        char augmentedLocation[28];
+        strcpyLimited(augmentedLocation, _location.c_str(), 28);
+        char count[16];
+        snprintf(count, 16, "[%lu]", _conf->getActiveStationCount());
+        strcatLimited(augmentedLocation, count, 28);        
+
         // Build the logon message
         uint8_t buf[256];
-        uint32_t bufLen = createOnlineMessage(buf, 256, _callSign, _password, _location);
+        uint32_t bufLen = createOnlineMessage(buf, 256, _callSign, _password, 
+            FixedString(augmentedLocation));
         _ctx->sendTCPChannel(_channel, buf, bufLen);
         // Get ready to accumulate the response
         _logonRespPtr = 0;
@@ -122,10 +133,18 @@ void LogonMachine2::_process(int state, bool entry) {
     }
 
     if (_isState(State::IDLE)) {
-        // Launch the DNS resolution process
-        _ctx->queryDNS(_serverHostName);
-        // We give the lookup 5 seconds to complete
-        _setState(State::DNS_WAIT, DNS_TIMEOUT_MS, State::FAILED);
+        if (_ctx->isLinkUp()) {
+            // Launch the DNS resolution process
+            _ctx->queryDNS(_serverHostName);
+            // We give the lookup 5 seconds to complete
+            _setState(State::DNS_WAIT, DNS_TIMEOUT_MS, State::FAILED);
+        }
+        else {
+            _log->info("Link not ready, waiting");
+            // We give some time for the link to come up before
+            // going back to the idle state
+            _setState(State::LINK_WAIT, LINK_WAIT_MS, State::IDLE);
+        }
     }
     else if (_isState(State::SUCCEEDED)) {
         if (_channel.isGood()) {
