@@ -265,7 +265,7 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-    /*
+    
     // TEMPORARY!
     {
         // Write flash
@@ -280,8 +280,8 @@ int main(int, const char**) {
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
         strncpy(config.wifiPassword, "xxx", 16);
         config.useHardCos = false;
-        config.silentTimeoutS = 30 * 1000;
-        config.idleTimeoutS = 5 * 1000;
+        config.silentTimeoutS = 30 * 60;
+        config.idleTimeoutS = 5 * 60;
         config.rxNoiseThreshold = 50;
 
         uint32_t ints = save_and_disable_interrupts();
@@ -291,13 +291,9 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
-    */
+    
 
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
-
-    //uint32_t addressingServerPort;
-    //uint32_t rxNoiseThreshold = 50;
-    //bool useHardCos = true;
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
     // remembering to include the offset for RAM
@@ -323,6 +319,8 @@ int main(int, const char**) {
         config->addressingServerPort);
     log.info("Identification       : %s/%s/%s", ourCallSign.c_str(),
         ourFullName.c_str(), ourLocation.c_str());
+    log.info("Idle Timeout (s)     : %d", config->idleTimeoutS);
+    log.info("Silent Timeout (s)   : %d", config->silentTimeoutS);
 
     // ====== Internet Connectivity Stuff =====================================
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
