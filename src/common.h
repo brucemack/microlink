@@ -26,6 +26,7 @@
 #include <iostream>
 
 #include "kc1fsz-tools/CallSign.h"
+#include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/FixedString.h"
 
 namespace kc1fsz {
@@ -48,7 +49,18 @@ bool isOnDataPacket(const uint8_t* d, uint32_t len);
 
 bool isRTCPPacket(const uint8_t* d, uint32_t len);
 
-bool isRTCPPingPacket(const uint8_t* d, uint32_t len);
+bool isRTCPSDESPacket(const uint8_t* d, uint32_t len);
+
+bool isRTCPPINGPacket(const uint8_t* d, uint32_t len);
+
+bool isRTCPOPENPacket(const uint8_t* d, uint32_t len);
+
+struct RTCPOPENContents {
+    CallSign call;
+    IPAddress address;
+};
+
+RTCPOPENContents parseRTCPOPENPacket(const uint8_t* d, uint32_t len);
 
 bool isRTCPByePacket(const uint8_t* d, uint32_t len);
 
@@ -81,6 +93,10 @@ struct SDESItem {
     }
 };
 
+/**
+ * NOTE: Resulting items will be null-terminated even if they were 
+ * not in the actual message.
+*/
 uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     uint32_t* ssrc,
     SDESItem* items, uint32_t itemsSize);
@@ -127,6 +143,17 @@ uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
 */
 uint32_t formatRTCPPacket_PING(uint32_t ssrc,
     CallSign callSign, uint8_t* packet, uint32_t packetSize);      
+
+/**
+ * @returns The lenth of the actual packet in bytes.
+*/
+uint32_t formatRTCPPacket_OVER(uint32_t ssrc,
+    uint8_t* packet, uint32_t packetSize);      
+
+/**
+ * @returns The lenth of the actual packet in bytes.
+*/
+uint32_t formatRTPPacket_McAD(uint8_t* p, uint32_t packetSize);
 
 /**
  * A utility function for building Logon/ONLINE request messages.

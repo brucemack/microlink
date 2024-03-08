@@ -18,6 +18,8 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
+#include <iostream>
+
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/Log.h"
 
@@ -201,9 +203,39 @@ void Conference::processText(IPAddress source,
         return;
     }
 
+    prettyHexDump(data, dataLen, std::cout);
+
     // Look for PING back from Addressing Server and ignore
-    if (isRTCPPingPacket(data, dataLen)) {
+    if (isRTCPPINGPacket(data, dataLen)) {
         _lastPingRxStamp = time_ms();
+        return;
+    }
+
+
+    // Look for OPEN packet from the Addressing Server and use
+    // it to open the firewall for the incoming request. 
+    //
+    // NOTE: This doesn't do anything to validate or even remember
+    // the calling station!  We're just trying to help with 
+    // connectivity.
+    if (isRTCPOPENPacket(data, dataLen)) {
+
+        auto [ cs, ad ] = parseRTCPOPENPacket(data, dataLen);
+        char addr[32];
+        ad.formatAsDottedDecimal(addr, 32);
+        _log->info("OPEN request received for %s %s", cs.c_str(), addr);
+        
+        // Send the OVER
+        uint32_t ssrc = 0;
+        const uint32_t packetSize = 128;
+        uint8_t packet[packetSize];
+        uint32_t packetLen = formatRTCPPacket_OVER(ssrc, packet, packetSize);      
+        _output->sendText(ad, packet, packetLen);
+
+        // Send the McAd
+        packetLen = formatRTPPacket_McAD(packet, packetSize);      
+        _output->sendAudio(ad, 0, 0, packet, packetLen, AudioFormat::TEXT);
+        
         return;
     }
 
@@ -212,7 +244,7 @@ void Conference::processText(IPAddress source,
     }    
 
     // Pull out the call sign from the RTCP message
-    StationID sourceStationId = _extractStationID(source, data, dataLen);
+    auto sourceStationId = _extractStationID(source, data, dataLen);
     if (sourceStationId.isNull()) {
         return;
     }

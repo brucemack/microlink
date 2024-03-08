@@ -166,7 +166,7 @@ bool isRTCPByePacket(const uint8_t* d, uint32_t len) {
     return d[8] == 0xe1 && d[9] == 0xcb;
 }
 
-bool isRTCPPingPacket(const uint8_t* d, uint32_t len) {
+bool isRTCPPINGPacket(const uint8_t* d, uint32_t len) {
     if (!isRTCPSDESPacket(d, len)) {
         return false;
     }
@@ -179,6 +179,40 @@ bool isRTCPPingPacket(const uint8_t* d, uint32_t len) {
         }
     }
     return false;
+}
+
+bool isRTCPOPENPacket(const uint8_t* d, uint32_t len) {
+    if (!isRTCPSDESPacket(d, len)) {
+        return false;
+    }
+    // OPEN item
+    uint8_t target[6] = { 0x05, 0x04, 'O', 'P', 'E', 'N' };
+    // Search packet
+    for (uint32_t i = 16; i < len - 6; i++) {
+        if (memcmp(d + i, target, 6) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+RTCPOPENContents parseRTCPOPENPacket(const uint8_t* d, uint32_t len) {
+    if (!isRTCPOPENPacket(d, len)) {
+        panic_unsupported();
+    }
+    uint32_t ssrc;
+    SDESItem items[10];
+    uint32_t itemCount = parseSDES(d, len, &ssrc, items, 10);
+    CallSign cs;
+    IPAddress ad;
+    for (uint32_t i = 0; i < itemCount; i++) {
+        if (items[i].type == 1) {
+            cs = CallSign((const char*)items[i].content);
+        } else if (items[i].type == 3) {
+            ad = IPAddress(parseIP4Address((const char*)items[i].content));
+        }
+    }
+    return { cs, ad };
 }
 
 /**
@@ -528,6 +562,42 @@ uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
         *(p++) = 0x00;
 
     return unpaddedLength + padSize;
+}
+
+uint32_t formatRTCPPacket_OVER(uint32_t ssrc,
+    uint8_t* p, uint32_t packetSize) {
+
+    if (packetSize < 12) {
+        panic_unsupported();
+    }
+
+    // RTCP header
+    *(p++) = 0xc0;
+    *(p++) = 0xcc;
+    // Length
+    *(p++) = 0x00;
+    *(p++) = 0x02;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+    *(p++) = 'O';
+    *(p++) = 'V';
+    *(p++) = 'E';
+    *(p++) = 'R';
+    return 12;
+}
+
+uint32_t formatRTPPacket_McAD(uint8_t* p, uint32_t packetSize) {
+
+    if (packetSize < 4) {
+        panic_unsupported();
+    }
+
+    *(p++) = 'm';
+    *(p++) = 'c';
+    *(p++) = 'A';
+    *(p++) = 'd';
+    return 12;
 }
 
 /**
