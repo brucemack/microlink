@@ -27,6 +27,7 @@
 #include "../UserInfo.h"
 #include "../Conference.h"
 
+#include "DNSMachine.h"
 #include "LogonMachine2.h"
 
 using namespace std;
@@ -41,21 +42,22 @@ static const uint32_t PAUSE_INTERVAL_MS = 10 * 1000;
 static const uint32_t DNS_TIMEOUT_MS = 10000;
 static const uint32_t CONNECT_TIMEOUT_MS = 5000;
 static const uint32_t LOGON_TIMEOUT_MS = 10 * 1000;
-// How long to wait for the Internet link to come up before re-trying 
+// How long to wait for the DNS address to be avalble before re-trying 
 // the sequence. 
-static const uint32_t LINK_WAIT_MS = 10 * 1000;
+static const uint32_t DNS_WAIT_MS = 10'000;
 
 int LogonMachine2::traceLevel = 0;
 
-LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log) 
+LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
+    DNSMachine* dm)
 :   _ctx(ctx),
     _userInfo(userInfo),
     _log(log),
+    _dnsMachine(dm),
     _conf(0),
     _serverPort(0),
     _logonRespPtr(0),
     _lastLogonStamp(0) {
-
     _channel = Channel(0, false);
     _logonRespPtr = 0;
     _setState(State::IDLE);
@@ -63,21 +65,6 @@ LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log)
 
 uint32_t LogonMachine2::secondsSinceLastLogon() const {
     return (time_ms() - _lastLogonStamp) / 1000;
-}
-
-void LogonMachine2::dns(HostName name, IPAddress addr) {
-
-    if (_isState(State::DNS_WAIT) && name == _serverHostName) {
-        // Start the process of opening the TCP connection to the 
-        // Addressing server
-        _channel = _ctx->createTCPChannel();
-        if (!_channel.isGood()) {
-            _setState(State::FAILED);
-            return;
-        } 
-        _ctx->connectTCPChannel(_channel, addr, _serverPort);
-        _setState(State::CONNECT_WAIT, CONNECT_TIMEOUT_MS, State::FAILED);
-    }
 }
 
 void LogonMachine2::conn(Channel ch) {
@@ -139,17 +126,24 @@ void LogonMachine2::_process(int state, bool entry) {
     }
 
     if (_isState(State::IDLE)) {
-        if (_ctx->isLinkUp()) {
-            // Launch the DNS resolution process
-            _ctx->queryDNS(_serverHostName);
-            // We give the lookup 5 seconds to complete
-            _setState(State::DNS_WAIT, DNS_TIMEOUT_MS, State::FAILED);
+        if (_dnsMachine->isValid()) {
+
+            // Start the process of opening the TCP connection to the 
+            // Addressing server
+            _channel = _ctx->createTCPChannel();
+            if (!_channel.isGood()) {
+                _setState(State::FAILED);
+                return;
+            } 
+            _ctx->connectTCPChannel(_channel, _dnsMachine->getAddress(), 
+                _serverPort);
+            _setState(State::CONNECT_WAIT, CONNECT_TIMEOUT_MS, State::FAILED);
         }
         else {
-            _log->info("Link not ready, waiting");
+            _log->info("Waiting on server address");
             // We give some time for the link to come up before
             // going back to the idle state
-            _setState(State::LINK_WAIT, LINK_WAIT_MS, State::IDLE);
+            _setState(State::DNS_WAIT, DNS_WAIT_MS, State::IDLE);
         }
     }
     else if (_isState(State::SUCCEEDED)) {
@@ -169,4 +163,3 @@ void LogonMachine2::_process(int state, bool entry) {
 }
 
 }
-

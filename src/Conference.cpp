@@ -23,14 +23,25 @@
 
 #include "common.h"
 #include "Conference.h"
+#include "machines/DNSMachine.h"
 
 namespace kc1fsz {
 
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
 static const uint32_t TALKER_INTERVAL_MS = 1000;
+static const uint32_t PING_INTERVAL_US = 15'000'000;
 
 uint32_t Conference::_ssrcGenerator = 0xa000;
 int Conference::traceLevel = 0;
+
+Conference::Conference(Authority* auth, ConferenceOutput* out, Log* log,
+    DNSMachine* addressingDNS) 
+:   _authority(auth), 
+    _output(out), 
+    _log(log),
+    _addressingDNS(addressingDNS) { 
+    _pingTimer.setIntervalUs(PING_INTERVAL_US);
+}
 
 uint32_t Conference::getActiveStationCount() const {
 
@@ -166,7 +177,8 @@ void Conference::processAudio(IPAddress sourceIp,
             if (s.authorized) {                
                 s.lastTxStamp = time_ms();
                 s.lastAudioTxStamp = time_ms();
-                _output->sendAudio(s.id, ssrc, s.seq++, frame, frameLen, fmt);
+                _output->sendAudio(s.id.getAddr(), 
+                    ssrc, s.seq++, frame, frameLen, fmt);
             }
         }
     }
@@ -186,6 +198,12 @@ void Conference::processText(IPAddress source,
                 }
             }
         }
+        return;
+    }
+
+    // Look for PING back from Addressing Server and ignore
+    if (isRTCPPingPacket(data, dataLen)) {
+        _lastPingRxStamp = time_ms();
         return;
     }
 
@@ -224,7 +242,7 @@ void Conference::processText(IPAddress source,
                 s.ssrc = _ssrcGenerator++;
 
                 char buf[32];
-                formatIP4Address(sourceStationId.getAddr().getAddr(), buf, 32);
+                sourceStationId.getAddr().formatAsDottedDecimal(buf, 32);
                 _log->info("New connection request %s from %s", 
                     sourceStationId.getCall().c_str(), buf);
 
@@ -286,12 +304,21 @@ void Conference::dropAll() {
 }
 
 bool Conference::run() {
+
+    // Ping the Addressing Server to keep the link up
+    // Ping the diagnostic server
+    if (_pingTimer.poll()) {
+        _pingTimer.reset();
+        _sendPing();
+    }
+
+    // Station maintenance
     for (Station& s : _stations) {
         if (s.active) {
             // Check for the need to send outbound ping
             if (s.authorized && 
                 time_ms() - s.lastTxStamp > KEEP_ALIVE_INTERVAL_MS) {
-                _sendPing(s.id);
+                _sendStationPing(s.id);
                 s.lastTxStamp = time_ms();
             }
             // Look for timeouts (technical)
@@ -327,7 +354,25 @@ bool Conference::run() {
     return true;
 }
 
-void Conference::_sendPing(StationID id) {
+void Conference::_sendPing() {
+
+    if (traceLevel > 0)
+        _log->info("Ping");
+
+    if (_addressingDNS->isValid()) {
+        // Make the SDES message and send
+        {
+            uint32_t ssrc = 0;
+            const uint16_t packetSize = 64;
+            uint8_t packet[packetSize];
+            uint32_t packetLen = formatRTCPPacket_PING(ssrc, _callSign, 
+                packet, packetSize); 
+            _output->sendText(_addressingDNS->getAddress(), packet, packetLen);
+        }
+    }
+}
+
+void Conference::_sendStationPing(StationID id) {
 
     if (traceLevel > 0)
         _log->info("Ping to %s", id.getCall().c_str());
@@ -339,7 +384,7 @@ void Conference::_sendPing(StationID id) {
         uint8_t packet[packetSize];
         uint32_t packetLen = formatRTCPPacket_SDES(ssrc, 
             _callSign, _fullName, ssrc, packet, packetSize); 
-        _output->sendText(id, packet, packetLen);
+        _output->sendText(id.getAddr(), packet, packetLen);
     }
 
     {
@@ -362,7 +407,7 @@ void Conference::_sendPing(StationID id) {
         strcatLimited(buffer, "\r", bufferSize);
         uint32_t packetLen = formatOnDataPacket(buffer, 0, packet, packetSize);
         
-        _output->sendAudio(id, 0, 0, packet, packetLen, AudioFormat::TEXT);
+        _output->sendAudio(id.getAddr(), 0, 0, packet, packetLen, AudioFormat::TEXT);
     }
 }
 
@@ -370,7 +415,7 @@ void Conference::_sendBye(StationID id) {
     const uint16_t packetSize = 128;
     uint8_t packet[packetSize];
     uint32_t packetLen = formatRTCPPacket_BYE(0, packet, packetSize);
-    _output->sendText(id, packet, packetLen);
+    _output->sendText(id.getAddr(), packet, packetLen);
 }
 
 StationID Conference::_getTalker() const {

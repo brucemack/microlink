@@ -18,12 +18,10 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _LogonMachine2_h
-#define _LogonMachine2_h
+#ifndef _DNSMachine_h
+#define _DNSMachine_h
 
 #include "kc1fsz-tools/HostName.h"
-#include "kc1fsz-tools/Channel.h"
-#include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/IPLib.h"
 
@@ -33,36 +31,31 @@ namespace kc1fsz {
 
 class UserInfo;
 class Log;
-class Conference;
-class DNSMachine;
 
 /**
- * This state machine is used to manage the process of logging 
- * on to the EchoLink server from time to time.
+ * This state machine is used to manage the process of 
+ * periodically refreshing the IP address of an endpoint.
  */
-class LogonMachine2 : public StateMachine2, public IPLibEvents {
+class DNSMachine : public StateMachine2, public IPLibEvents {
 public:
 
     static int traceLevel;
 
-    LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
-        DNSMachine* dm);
+    DNSMachine(IPLib* ctx, UserInfo* userInfo, Log* log, 
+        uint32_t intervalMs);
 
-    void setServerPort(uint32_t p) { _serverPort = p; }
-    void setCallSign(CallSign cs) { _callSign = cs; }
-    void setPassword(FixedString pw) { _password = pw; }
-    void setLocation(FixedString loc) { _location = loc; }
-    void setConference(Conference* conf) { _conf = conf; }
-    uint32_t secondsSinceLastLogon() const;
+    void setHostName(HostName hn) { _hostName = hn; }
+    bool isValid() const { return _isValid; }
+    IPAddress getAddress() const { return _address; }
 
     // ----- From IPLibEvents -------------------------------------------------
 
-    virtual void dns(HostName name, IPAddress addr) { }
+    virtual void dns(HostName name, IPAddress addr);
     virtual void bind(Channel ch) { }
-    virtual void conn(Channel ch);
-    virtual void disc(Channel ch);
+    virtual void conn(Channel ch) { }
+    virtual void disc(Channel ch) { }
     virtual void recv(Channel ch, const uint8_t* data, uint32_t dataLen, IPAddress fromAddr,
-        uint16_t fromPort);
+        uint16_t fromPort) { }
     virtual void err(Channel ch, int type) { }
 
     // ----- From StateMachine2 -----------------------------------------------
@@ -75,9 +68,8 @@ private:
 
     enum State { 
         IDLE, 
+        LINK_WAIT,
         DNS_WAIT, 
-        CONNECT_WAIT, 
-        DISCONNECT_WAIT,
         WAIT,
         FAILED,
         SUCCEEDED,
@@ -86,22 +78,11 @@ private:
     IPLib* _ctx;
     UserInfo* _userInfo;
     Log* _log;
-    DNSMachine* _dnsMachine;
-    Conference* _conf;
+    uint32_t _intervalMs;
     
-    uint32_t _serverPort;
-    CallSign _callSign;
-    FixedString _password;
-    FixedString _location;
-
-    Channel _channel;
-    
-    // Here is were we collect the logon response
-    static const uint16_t _logonRespSize = 32;
-    uint8_t _logonResp[_logonRespSize];
-    uint16_t _logonRespPtr;
-
-    uint32_t _lastLogonStamp;
+    HostName _hostName;
+    bool _isValid;
+    IPAddress _address;
 };
 
 }

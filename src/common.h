@@ -48,6 +48,8 @@ bool isOnDataPacket(const uint8_t* d, uint32_t len);
 
 bool isRTCPPacket(const uint8_t* d, uint32_t len);
 
+bool isRTCPPingPacket(const uint8_t* d, uint32_t len);
+
 bool isRTCPByePacket(const uint8_t* d, uint32_t len);
 
 bool isRTPAudioPacket(const uint8_t* d, uint32_t len);
@@ -119,6 +121,12 @@ uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
     FixedString fullName,
     uint32_t ssrc2,
     uint8_t* packet, uint32_t packetSize);      
+
+/**
+ * @returns The lenth of the actual packet in bytes.
+*/
+uint32_t formatRTCPPacket_PING(uint32_t ssrc,
+    CallSign callSign, uint8_t* packet, uint32_t packetSize);      
 
 /**
  * A utility function for building Logon/ONLINE request messages.

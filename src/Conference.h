@@ -26,11 +26,13 @@
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"
+#include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
 namespace kc1fsz {
 
 class Log;
 class UserInfo;
+class DNSMachine;
 
 enum AudioFormat { PCM16, GSMFR, GSMFR4X, TEXT };
 
@@ -58,9 +60,9 @@ private:
 
 class ConferenceOutput {
 public:
-    virtual void sendAudio(StationID dest, uint32_t ssrc, uint16_t seq,
+    virtual void sendAudio(IPAddress dest, uint32_t ssrc, uint16_t seq,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) = 0;
-    virtual void sendText(StationID dest,
+    virtual void sendText(IPAddress dest,
         const uint8_t* frame, uint32_t frameLen) = 0;
 };
 
@@ -88,8 +90,8 @@ public:
 
     static int traceLevel;
 
-    Conference(Authority* auth, ConferenceOutput* out, Log* log) 
-    : _authority(auth), _output(out), _log(log) { }
+    Conference(Authority* auth, ConferenceOutput* out, Log* log,
+        DNSMachine* addressingDNS);
 
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setFullName(FixedString fn) { _fullName = fn; }
@@ -122,8 +124,10 @@ private:
 
     static uint32_t _ssrcGenerator;
 
+    void _sendPing();
+
     StationID _getTalker() const;
-    void _sendPing(StationID id);
+    void _sendStationPing(StationID id);
     void _sendBye(StationID id);
 
     static StationID _extractStationID(IPAddress source, const uint8_t* data,
@@ -183,12 +187,15 @@ private:
     Authority* _authority = 0;
     ConferenceOutput* _output = 0;
     Log* _log = 0;
+    DNSMachine* _addressingDNS = 0;
 
     CallSign _callSign;
     FixedString _fullName;
     FixedString _location;
     uint32_t _silentTimeoutS = 30 * 1000;
     uint32_t _idleTimeoutS = 5 * 1000;
+    PicoPollTimer _pingTimer;
+    uint32_t _lastPingRxStamp = 0;
 };
 
 }

@@ -26,7 +26,6 @@
  * This test runs on the RP2040 hardware and provides a fairly comprehensive test
  * of connection, logon, and receipt of audio packets from the *ECHOTEST* station.
 */
-
 /*
 Build commands:
 
@@ -71,6 +70,7 @@ Launch command:
 #include "contexts/PicoAudioInputContext.h"
 #include "contexts/LwIPLib.h"
 
+#include "machines/DNSMachine.h"
 #include "machines/LogonMachine2.h"
 #include "machines/LookupMachine3.h"
 #include "machines/MonitorMachine.h"
@@ -80,6 +80,28 @@ Launch command:
 #include "ConferenceBridge.h"
 // TEMP
 #include "tests/TestUserInfo.h"
+
+// Monitor Server
+#define MONITOR_SERVER_NAME ("monitor.w1tkz.net")
+// The time the raw COS needs to be active to be consered "on"
+#define COS_DEBOUNCE_ON_MS 5
+// The time the raw COS needs to be inactive to be considered "off"
+#define COS_DEBOUNCE_OFF_MS 250
+// The time the COS is ignore immediate after a TX cycle (to avoid 
+// having the transmitter interfering with the receiver
+#define LINGER_AFTER_TX_MS 500
+// How long we wait in silence before flushing any accumualted DTMF
+// tones.
+#define DMTF_ACCUMULATOR_TIMEOUT_MS (10 * 1000)
+// 
+#define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
+//
+#define TX_TIMEOUT_MS (90 * 1000)
+// 
+#define TX_LOCKOUT_MS (30 * 1000)
+// How long we wait between refreshing the DNS address of the 
+// servers used by the node.  Important to fail-over speed.
+#define DNS_INTERVAL_MS (5 * 60 * 1000)
 
 // ===============
 // LEFT SIDE PINS 
@@ -100,9 +122,6 @@ Launch command:
 // Physical pin 15. This is an output to drive an LED indicating
 // that we are in a QSO. 
 #define QSO_LED_PIN (11)
-
-// Physical pin 16. Ouptut to hard reset on ESP32 (EN on DEVKITV1)
-//#define ESP_EN_PIN (12)
 
 // Physical pin 20.  Used for diagnostics/timing checks
 #define DIAG_PIN (15)
@@ -140,25 +159,10 @@ Launch command:
 #define U_STOP_BITS 1
 #define U_PARITY UART_PARITY_NONE
 
-#define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
-
-#define TX_TIMEOUT_MS (90 * 1000)
-#define TX_LOCKOUT_MS (30 * 1000)
-
 // This controls the maximum delay before the watchdog
 // will reboot the system
 #define WATCHDOG_DELAY_MS (2 * 1000)
 
-// The time the raw COS needs to be active to be consered "on"
-#define COS_DEBOUNCE_ON_MS 5
-// The time the raw COS needs to be inactive to be considered "off"
-#define COS_DEBOUNCE_OFF_MS 250
-// The time the COS is ignore immediate after a TX cycle (to avoid 
-// having the transmitter interfering with the receiver
-#define LINGER_AFTER_TX_MS 500
-// How long we wait in silence before flushing any accumualted DTMF
-// tones.
-#define DMTF_ACCUMULATOR_TIMEOUT_MS (10 * 1000)
 // The version of the configuration version that we expect 
 // to find (must be at least this version)
 #define CONFIG_VERSION (0xbab2)
@@ -244,14 +248,13 @@ int main(int, const char**) {
     gpio_set_function(I2C0_SCL, GPIO_FUNC_I2C);
     gpio_pull_up(I2C0_SDA);
     gpio_pull_up(I2C0_SCL);
-    //i2c_set_baudrate(i2c_default, 400000 * 4);
     i2c_set_baudrate(i2c_default, 800000);
 
-    // Hello indicator
+    // Hello indicator on boot
     for (int i = 0; i < 4; i++) {
-    //    gpio_put(LED_PIN, 1);
+        //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
         sleep_ms(250);
-    //    gpio_put(LED_PIN, 0);
+        //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
         sleep_ms(250);
     }
 
@@ -259,7 +262,7 @@ int main(int, const char**) {
     log.setStdout(true);
 
     log.info("===== MicroLink Link Station ============");
-    log.info("Copyright (C) 2024 Bruce MacKinnon KC1FSZ");
+    log.info("Copyright (c) 2024 Bruce MacKinnon KC1FSZ");
 
     if (watchdog_caused_reboot()) {
         log.info("WATCHDOG REBOOT");
@@ -372,20 +375,26 @@ int main(int, const char**) {
     radio0In.setSink(&rxMonitor);
     // ===== Audio Stuff ======================================================
 
-    LogonMachine2 logonMachine(&ctx, &info, &log);
-    logonMachine.setServerName(ourAddressingServerHost);
+    DNSMachine dnsMachine1(&ctx, &info, &log, DNS_INTERVAL_MS);
+    ctx.addEventSink(&dnsMachine1);
+    dnsMachine1.setHostName(ourAddressingServerHost);
+
+    LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1);
+    ctx.addEventSink(&logonMachine);
     logonMachine.setServerPort(config->addressingServerPort);
     logonMachine.setCallSign(ourCallSign);
     logonMachine.setPassword(ourPassword);
     logonMachine.setLocation(ourLocation);
 
     LookupMachine3 lookup(&ctx, &info, &log);
+    ctx.addEventSink(&lookup);
     lookup.setServerName(ourAddressingServerHost);
     lookup.setServerPort(config->addressingServerPort);
 
     ConferenceBridge confBridge(&ctx, &info, &log, &radio0Out);
+    ctx.addEventSink(&confBridge);
 
-    Conference conf(&lookup, &confBridge, &log);
+    Conference conf(&lookup, &confBridge, &log, &dnsMachine1);
     conf.setCallSign(ourCallSign);
     conf.setFullName(ourFullName);
     conf.setLocation(ourLocation);
@@ -394,14 +403,11 @@ int main(int, const char**) {
 
     confBridge.setConference(&conf);
     lookup.setConference(&conf);
-    ctx.addEventSink(&logonMachine);
-    ctx.addEventSink(&lookup);
-    ctx.addEventSink(&confBridge);
     rxMonitor.setSink(&confBridge);
     logonMachine.setConference(&conf);
 
     MonitorMachine monitorMachine(&ctx, &info, &log);
-    monitorMachine.setServerName(HostName("monitor.w1tkz.net"));
+    monitorMachine.setServerName(HostName(MONITOR_SERVER_NAME));
     monitorMachine.setCallSign(ourCallSign);
     monitorMachine.setLogonMachine(&logonMachine);
     ctx.addEventSink(&monitorMachine);
@@ -443,6 +449,13 @@ int main(int, const char**) {
 
     log.info("Entering event loop");
 
+    /*
+    // TEMP
+    uint8_t packet[128];
+    uint32_t l = formatRTCPPacket_PING(0, ourCallSign, packet, 128);
+    prettyHexDump(packet, l, cout);
+    */
+
     while (true) {
 
         // Keep things alive
@@ -453,6 +466,7 @@ int main(int, const char**) {
         cyw43_arch_poll();
 
         ctx.run();
+        dnsMachine1.run();
         logonMachine.run();
         lookup.run();
         confBridge.run();

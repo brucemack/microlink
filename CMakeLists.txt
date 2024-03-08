@@ -51,6 +51,7 @@ add_executable(link-main-2
   src/contexts/LwIPLib.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
+  src/machines/DNSMachine.cpp
   src/machines/LogonMachine2.cpp
   src/machines/LookupMachine3.cpp
   src/machines/MonitorMachine.cpp

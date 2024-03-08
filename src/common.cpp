@@ -145,6 +145,17 @@ bool isRTCPPacket(const uint8_t* d, uint32_t len) {
     return (len > 2 && d[0] == 0xc0 && d[1] == 0xc9);
 }
 
+// TODO ADD MORE TO THIS
+bool isRTCPSDESPacket(const uint8_t* d, uint32_t len) {
+    if (!isRTCPPacket(d, len)) {
+        return false;
+    }
+    if (len < 10) {
+        return false;
+    }
+    return d[8] == 0xe1 && d[9] == 0xca;
+}
+
 bool isRTCPByePacket(const uint8_t* d, uint32_t len) {
     if (!isRTCPPacket(d, len)) {
         return false;
@@ -153,6 +164,21 @@ bool isRTCPByePacket(const uint8_t* d, uint32_t len) {
         return false;
     }
     return d[8] == 0xe1 && d[9] == 0xcb;
+}
+
+bool isRTCPPingPacket(const uint8_t* d, uint32_t len) {
+    if (!isRTCPSDESPacket(d, len)) {
+        return false;
+    }
+    // PING item
+    uint8_t target[6] = { 0x05, 0x04, 0x50, 0x49, 0x4e, 0x47 };
+    // Search packet
+    for (uint32_t i = 16; i < len - 6; i++) {
+        if (memcmp(d + i, target, 6) == 0) {
+            return true;
+        }
+    }
+    return false;
 }
 
 /**
@@ -275,6 +301,109 @@ uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
     }
     return itemCount;
 }
+
+uint32_t formatRTCPPacket_PING(uint32_t ssrc,
+    CallSign callSign, uint8_t* p, uint32_t packetSize) {
+
+    // These are the only variable length fields
+    const uint32_t callSignLen = callSign.len();
+
+    // Do the length calculation to make sure we have the 
+    // space we need.
+    //
+    // RTCP header = 8
+    // SDES = 4
+    // SSRC = 4
+    uint32_t unpaddedLength = 8 + 4 + 4;
+    // Item 1 = 2 + Len(call)
+    unpaddedLength += 2 + callSignLen;
+    // Item 2 = 2
+    unpaddedLength += 2;
+    // Item 3 = 2
+    unpaddedLength += 2;
+    // Item 4 = 2
+    unpaddedLength += 2;
+    // Item 5 = 2 + PING
+    unpaddedLength += 2 + 4;
+    // Item 6 = 2
+    unpaddedLength += 2;
+    // Token 8 = 2 + 6
+    unpaddedLength += 2 + 6;
+    // Token 8 = 2 + 3
+    unpaddedLength += 2 + 3;
+    // Now we deal with the extra padding required by SDES to bring
+    // the packet up to a 4-byte boundary.
+    uint32_t sdesPadSize = 4 - (unpaddedLength % 4);
+    unpaddedLength += sdesPadSize;
+
+    // Put in the pad now (at the very end) to make sure it fits
+    uint32_t padSize = addRTCPPad(unpaddedLength, p, packetSize);
+    // Calculate the special SDES length
+    uint32_t sdesLength = (unpaddedLength + padSize - 12) / 4;
+
+    // RTCP header
+    *(p++) = 0xc0;
+    *(p++) = 0xc9;
+    // Length
+    *(p++) = 0x00;
+    *(p++) = 0x01;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+    // Packet identifier
+    *(p++) = 0xe1;
+    *(p++) = 0xca;
+    // SDES length
+    *(p++) = (sdesLength >> 8) & 0xff;
+    *(p++) = (sdesLength     ) & 0xff;
+    // SSRC
+    writeInt32(p, ssrc);
+    p += 4;
+
+    // Item 1
+    *(p++) = 0x01;
+    *(p++) = (uint8_t)callSignLen;
+    memcpy(p, callSign.c_str(), callSignLen);
+    p += callSignLen;
+    // Item 2
+    *(p++) = 0x02;
+    *(p++) = 0x00;
+    // Item 3
+    *(p++) = 0x03;
+    *(p++) = 0x00;
+    // Item 4
+    *(p++) = 0x04;
+    *(p++) = 0x00;
+    // Item 5
+    *(p++) = 0x05;
+    *(p++) = 0x04;
+    memcpy(p, "PING", 4);
+    p += 4;
+    // Item 6
+    *(p++) = 0x06;
+    *(p++) = 0x00;
+    // Token 8a - PORT
+    *(p++) = 0x08;
+    *(p++) = 0x06;
+    *(p++) = 0x01;
+    *(p++) = 0x50;
+    *(p++) = 0x35;
+    *(p++) = 0x31;
+    *(p++) = 0x39;
+    *(p++) = 0x38;
+    // Token 8b - DTMF Support
+    *(p++) = 0x08;
+    *(p++) = 0x03;
+    *(p++) = 0x01;
+    // Sending D1 (enabled)
+    *(p++) = 0x44;
+    *(p++) = 0x31;
+    // SDES padding (as needed)
+    for (uint32_t i = 0; i < sdesPadSize; i++)
+        *(p++) = 0x00;
+
+    return unpaddedLength + padSize;
+}      
 
 uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
     CallSign callSign, 

@@ -142,18 +142,17 @@ bool ConferenceBridge::play(const int16_t* pcmAudio, uint32_t frameLen)  {
     return true;
 }
 
-void ConferenceBridge::sendAudio(StationID dest, uint32_t ssrc, uint16_t seq,
+void ConferenceBridge::sendAudio(IPAddress dest, uint32_t ssrc, uint16_t seq,
     const uint8_t* data, uint32_t dataLen, AudioFormat fmt) {
     if (fmt == AudioFormat::TEXT) {
-        if (dest.getAddr() == _radio0Addr) {
+        if (dest == _radio0Addr) {
             // Radio can't handle the text
         }
         else {
-            _ctx->sendUDPChannel(_rtpChannel, dest.getAddr(), RTP_PORT, 
-                data, dataLen);
+            _ctx->sendUDPChannel(_rtpChannel, dest, RTP_PORT, data, dataLen);
         }
     } else if (fmt == AudioFormat::GSMFR4X && dataLen == (4 * 33)) {
-        if (dest.getAddr() == _radio0Addr) {
+        if (dest == _radio0Addr) {
             // Convert the GSM data to PCM16 audio so that it can be 
             // transmitted.
             int16_t pcmAudio[160 * 4];
@@ -185,23 +184,24 @@ void ConferenceBridge::sendAudio(StationID dest, uint32_t ssrc, uint16_t seq,
 
             uint8_t packet[144];
             uint32_t packetLen = formatRTPPacket(seq, ssrc, gsmFrames, packet, 144);
-            _ctx->sendUDPChannel(_rtpChannel, dest.getAddr(), RTP_PORT, packet, packetLen);
+            _ctx->sendUDPChannel(_rtpChannel, dest, RTP_PORT, packet, packetLen);
         }
     } else {
         panic_unsupported();
     }
 }
 
-void ConferenceBridge::sendText(StationID dest,
+void ConferenceBridge::sendText(IPAddress dest,
     const uint8_t* data, uint32_t dataLen) {
     
     if (traceLevel > 0) {
-        _log->info("Sending to %s", dest.getCall().c_str());
+        char addr[32];
+        dest.formatAsDottedDecimal(addr, 32);
+        _log->info("Sending to %s", addr);
         prettyHexDump(data, dataLen, cout);
     }
 
-    _ctx->sendUDPChannel(_rtcpChannel, dest.getAddr(), RTCP_PORT, 
-        data, dataLen);
+    _ctx->sendUDPChannel(_rtcpChannel, dest, RTCP_PORT, data, dataLen);
 }
 
 void ConferenceBridge::_process(int state, bool entry) {
