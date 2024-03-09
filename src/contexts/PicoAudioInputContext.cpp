@@ -102,13 +102,16 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     _perfTimer.reset();
     _maxSkew = std::max((uint32_t)_maxSkew, (uint32_t)std::abs(125 - (int32_t)t));
 
-    // We clear one sample every interrupt
+    // We clear one sample every interrupt. We should never get in 
+    // the case where the FIFO is empty when the interrupt fires
     if (adc_fifo_is_empty()) {
-        panic("ADC empty");
+        return;
     }
 
     // This will be a number from 0->4095 (12 bits).  
     int16_t rawSample = adc_fifo_get();
+    _lastRawSample = rawSample;
+    rawSample += _rawOffset;
     // Center to give a number from -2048->2047 (12 bits)
     int16_t sample = rawSample - 2048;
     // Adjust center

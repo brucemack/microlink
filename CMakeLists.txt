@@ -54,7 +54,6 @@ add_executable(link-main-2
   src/machines/DNSMachine.cpp
   src/machines/LogonMachine2.cpp
   src/machines/LookupMachine3.cpp
-  src/machines/MonitorMachine.cpp
   kc1fsz-tools-cpp/src/Common.cpp
   kc1fsz-tools-cpp/src/AudioAnalyzer.cpp
   kc1fsz-tools-cpp/src/DTMFDetector.cpp

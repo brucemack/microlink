@@ -73,7 +73,6 @@ Launch command:
 #include "machines/DNSMachine.h"
 #include "machines/LogonMachine2.h"
 #include "machines/LookupMachine3.h"
-#include "machines/MonitorMachine.h"
 
 #include "RXMonitor.h"
 #include "Conference.h"
@@ -97,7 +96,8 @@ Launch command:
 #define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
 //
 #define TX_TIMEOUT_MS (90 * 1000)
-// 
+// A window of time during which the rig is not allowed to
+// be keyed.
 #define TX_LOCKOUT_MS (30 * 1000)
 // How long we wait between refreshing the DNS address of the 
 // servers used by the node.  Important to fail-over speed.
@@ -118,6 +118,9 @@ Launch command:
 #define UART1_RX_PIN (9)
 
 // NOTE: Physical 13 is GND
+
+// Physical pin 14 - Serial data logger reset
+#define LOGGER_RST_PIN (10)
 
 // Physical pin 15. This is an output to drive an LED indicating
 // that we are in a QSO. 
@@ -190,6 +193,29 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     bool wifiState, int wifiRssi, 
     ostream& str);
 
+bool rigKeyFailSafe();
+
+extern "C" void set_system_time(uint32_t sec)
+{
+    cout << "Time: " << sec << endl;
+    /*
+    time_t epoch = sec;
+    struct tm *time = gmtime(&epoch);
+
+    datetime_t datetime = {
+            .year = (int16_t) (1900 + time->tm_year),
+            .month = (int8_t) (time->tm_mon + 1),
+            .day = (int8_t) time->tm_mday,
+            .hour = (int8_t) time->tm_hour,
+            .min = (int8_t) time->tm_min,
+            .sec = (int8_t) time->tm_sec,
+            .dotw = (int8_t) time->tm_wday,
+    };
+
+    rtc_set_datetime(&datetime);
+    */
+}
+
 int main(int, const char**) {
 
     LogonMachine2::traceLevel = 0;
@@ -234,7 +260,7 @@ int main(int, const char**) {
     gpio_put(DIAG_PIN, 0);
        
     // UART1 setup (logging)
-    uart_init(uart1, U_BAUD_RATE);
+    uart_init(uart1, 9600);
     gpio_set_function(UART1_TX_PIN, GPIO_FUNC_UART);
     gpio_set_function(UART1_RX_PIN, GPIO_FUNC_UART);
     uart_set_hw_flow(uart1, false, false);
@@ -246,8 +272,10 @@ int main(int, const char**) {
     i2c_init(i2c_default, 100 * 1000);
     gpio_set_function(I2C0_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C0_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(I2C0_SDA);
-    gpio_pull_up(I2C0_SCL);
+    // TODO: DECIDE IF THESE ARE NEEDED OR NOT - WE HAVE PULL-UPS 
+    // ON THE ANALOG BOARD.
+    //gpio_pull_up(I2C0_SDA);
+    //gpio_pull_up(I2C0_SCL);
     i2c_set_baudrate(i2c_default, 800000);
 
     // Hello indicator on boot
@@ -257,6 +285,9 @@ int main(int, const char**) {
         //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
         sleep_ms(250);
     }
+
+    gpio_put(LOGGER_RST_PIN, 0);
+    gpio_put(LOGGER_RST_PIN, 1);
 
     SerialLog log(uart1);
     log.setStdout(true);
@@ -289,7 +320,7 @@ int main(int, const char**) {
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
         config.rxNoiseThreshold = 50;
-
+        config.adcRawOffset = -19;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
         flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
@@ -327,6 +358,7 @@ int main(int, const char**) {
         ourFullName.c_str(), ourLocation.c_str());
     log.info("Idle Timeout (s)     : %d", config->idleTimeoutS);
     log.info("Silent Timeout (s)   : %d", config->silentTimeoutS);
+    log.info("ADC offset           : %d", config->adcRawOffset);
 
     // ====== Internet Connectivity Stuff =====================================
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
@@ -351,6 +383,7 @@ int main(int, const char**) {
     PicoAudioInputContext radio0In;
     // Connect the input (ADC) timer to the output (DAC)
     radio0In.setSampleCb(I2CAudioOutputContext::tickISR, &radio0Out);
+    radio0In.setRawOffset(config->adcRawOffset);
 
     // Analyzers for sound data
     int16_t txAnalyzerHistory[2048];
@@ -379,6 +412,10 @@ int main(int, const char**) {
     ctx.addEventSink(&dnsMachine1);
     dnsMachine1.setHostName(ourAddressingServerHost);
 
+    DNSMachine dnsMachine2(&ctx, &info, &log, DNS_INTERVAL_MS);
+    ctx.addEventSink(&dnsMachine2);
+    dnsMachine2.setHostName(MONITOR_SERVER_NAME);
+
     LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1);
     ctx.addEventSink(&logonMachine);
     logonMachine.setServerPort(config->addressingServerPort);
@@ -394,7 +431,7 @@ int main(int, const char**) {
     ConferenceBridge confBridge(&ctx, &info, &log, &radio0Out);
     ctx.addEventSink(&confBridge);
 
-    Conference conf(&lookup, &confBridge, &log, &dnsMachine1);
+    Conference conf(&lookup, &confBridge, &log, &dnsMachine1, &dnsMachine2);
     conf.setCallSign(ourCallSign);
     conf.setFullName(ourFullName);
     conf.setLocation(ourLocation);
@@ -405,12 +442,6 @@ int main(int, const char**) {
     lookup.setConference(&conf);
     rxMonitor.setSink(&confBridge);
     logonMachine.setConference(&conf);
-
-    MonitorMachine monitorMachine(&ctx, &info, &log);
-    monitorMachine.setServerName(HostName(MONITOR_SERVER_NAME));
-    monitorMachine.setCallSign(ourCallSign);
-    monitorMachine.setLogonMachine(&logonMachine);
-    ctx.addEventSink(&monitorMachine);
 
     bool rigKeyState = false;
     uint32_t lastRigKeyTransitionTime = 0;
@@ -425,6 +456,8 @@ int main(int, const char**) {
     int startupMode = 2;
     uint32_t startupMs = time_ms();
     int16_t baselineRxNoise = 0;
+
+    bool inContactWithMonitor = false;
 
     bool statusPage = false;
     PicoPollTimer renderTimer;
@@ -467,6 +500,7 @@ int main(int, const char**) {
 
         ctx.run();
         dnsMachine1.run();
+        dnsMachine2.run();
         logonMachine.run();
         lookup.run();
         confBridge.run();
@@ -474,7 +508,7 @@ int main(int, const char**) {
         radio0Out.run();
         radio0In.run();
         rxMonitor.run();
-        monitorMachine.run();
+        log.run();
 
         // ----- Serial Commands ---------------------------------------------
         
@@ -483,6 +517,11 @@ int main(int, const char**) {
             if (c == 'q') {
                 break;
             } 
+            else if (c == 'r') {
+                log.info("Manual reboot");
+                // Force the watchdog timer to catch
+                while (true);
+            } 
             else if (c == 'z') {
                 radio0Out.tone(800, 1000);
             }
@@ -490,6 +529,11 @@ int main(int, const char**) {
                 conf.dropAll();
             } else if (c == 'a') {
                 CallSign cs("*ECHOTEST*");
+                IPAddress addr(0);
+                StationID sid(addr, cs);
+                lookup.validate(sid);
+            } else if (c == 'b') {
+                CallSign cs("*SCARS*");
                 IPAddress addr(0);
                 StationID sid(addr, cs);
                 lookup.validate(sid);
@@ -506,6 +550,8 @@ int main(int, const char**) {
                 }
             }
             else if (c == 'i') {
+                log.info("Diagnostics:");
+                log.info("RX ADC value %d", radio0In.getLastRawSample());
                 log.info("Station Count: %d", conf.getActiveStationCount());
                 conf.dumpStations(&log);
             }
@@ -541,7 +587,7 @@ int main(int, const char**) {
         if (startupMode == 2) {
             if (time_ms() > startupMs + 500) {
                 int16_t avg = rxAnalyzer.getAvg();
-                log.info("Basline DC bias (V) %d", -avg);
+                log.info("Baseline DC bias (V) %d", -avg);
                 radio0In.addBias(-avg);
                 radio0In.resetMax();
                 radio0In.resetOverflowCount();
@@ -557,27 +603,51 @@ int main(int, const char**) {
             }
         }
 
+        // ----- Monitor State -----------------------------------------------
+
+        // This is a dead-man's switch.  If the monitor isn't pinging us then 
+        // we are out of contact and certain functions become disabled.
+        if (!inContactWithMonitor) {
+            if (conf.getSecondsSinceLastMonitorRx() < 60) {
+                log.info("In contact with monitor");
+                inContactWithMonitor = true;
+            }
+        } else {
+            if (conf.getSecondsSinceLastMonitorRx() >= 60) {
+                log.info("Lost contact with monitor, no rig key allowed");
+                inContactWithMonitor = false;
+            }
+        }
+
         // ----- Rig Key Management -------------------------------------------
         //
         // Key rig when audio is coming in, but enforce limits to prevent
         // the key from being stuck open for long periods.
 
         if (!rigKeyState) {
+            // This logic will key the rig when (a) we are sending audio
+            // to the rig and (b) we are not inside of the "lockout 
+            // interval."
             if (radio0Out.getSquelch() && 
                 time_ms() > (rigKeyLockoutTime + TX_LOCKOUT_MS)) {
-                info.setStatus("Keying rig");
-                rigKeyState = true;
-                lastRigKeyTransitionTime = time_ms();
+                if (conf.getSecondsSinceLastMonitorRx() > 60) {
+                }
+                else {
+                    info.setStatus("Keying rig");
+                    rigKeyState = true;
+                    lastRigKeyTransitionTime = time_ms();
+                }
             }
         }
         else {
-            // Check for normal unkey
+            // Check for normal unkey when we've stopped streaming audio to 
+            // the rig.
             if (!info.getSquelch()) {
-                info.setStatus("Unkeying rig");
                 rigKeyState = false;
                 lastRigKeyTransitionTime = time_ms();
+                info.setStatus("Unkeying rig");
             }
-            // Look for timeout case
+            // Look for timeout case where the rig has been keyed for too long
             else if (time_ms() > lastRigKeyTransitionTime + TX_TIMEOUT_MS) {
                 info.setStatus("TX lockout triggered");
                 rigKeyState = false;
@@ -587,7 +657,7 @@ int main(int, const char**) {
             }
         }
 
-        gpio_put(RIG_KEY_PIN, rigKeyState ? 1 : 0);
+        gpio_put(RIG_KEY_PIN, rigKeyFailSafe() && rigKeyState ? 1 : 0);
 
         // ----- Rig Carrier Detect Management --------------------------------
         //
@@ -688,6 +758,7 @@ int main(int, const char**) {
     }    
 
     log.info("Out of loop");
+    gpio_put(RIG_KEY_PIN, 0);
 
     while (true) {
         // Keep things alive
@@ -753,3 +824,12 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     str << "      Max Len (us) : " << inCtx->getMaxLen();
 }
 
+/**
+ * This function should contain special logic to make sure that the 
+ * rig isn't keyed unexpectedly. The most important part of an 
+ * application like this is making sure that we don't accidenally
+ * leave the radio key-down.
+ */
+bool rigKeyFailSafe() {
+    return true;
+}

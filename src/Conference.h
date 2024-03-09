@@ -93,7 +93,7 @@ public:
     static int traceLevel;
 
     Conference(Authority* auth, ConferenceOutput* out, Log* log,
-        DNSMachine* addressingDNS);
+        DNSMachine* addressingDNS, DNSMachine* monitorDNS);
 
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setFullName(FixedString fn) { _fullName = fn; }
@@ -117,6 +117,17 @@ public:
     uint32_t getActiveStationCount() const;
 
     void dumpStations(Log* log) const;
+
+    /**
+     * @returns How long has it been since we got a message from the monitor?
+    */
+    uint32_t getSecondsSinceLastMonitorRx() const { 
+        // Dummy result for startup
+        if (_lastMonitorRxStamp == 0) {
+            return 1000;
+        }
+        return (time_ms() - _lastMonitorRxStamp) / 1000; 
+    }
    
     // ----- From Runnable ------------------------------------------------
 
@@ -222,6 +233,7 @@ private:
     ConferenceOutput* _output = 0;
     Log* _log = 0;
     DNSMachine* _addressingDNS = 0;
+    DNSMachine* _monitorDNS = 0;
 
     CallSign _callSign;
     FixedString _fullName;
@@ -230,6 +242,18 @@ private:
     uint32_t _idleTimeoutS = 5 * 1000;
     PicoPollTimer _pingTimer;
     uint32_t _lastPingRxStamp = 0;
+
+    // Monitor related
+    void _sendMonitorPing();
+    void _processMonitorText(IPAddress source,
+        const uint8_t* frame, uint32_t frameLen);
+
+    uint32_t _startStamp;
+    PicoPollTimer _monitorTimer;
+    uint32_t _monitorTxCount = 0;
+    IPAddress _monitorAddr;
+    uint32_t _lastMonitorTxStamp = 0;
+    uint32_t _lastMonitorRxStamp = 0;
 };
 
 }

@@ -125,8 +125,10 @@ struct StationConfig {
     uint32_t idleTimeoutS;
     // Used for soft COS detection
     uint32_t rxNoiseThreshold;
+    // Used for ADC calibration
+    int32_t adcRawOffset;
 
-    char padding[512 - (4 + 4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 32 + 4 + 4 + 4)];
+    char padding[512 - (4 + 4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 32 + 4 + 4 + 4 + 4)];
 };
 
 uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,

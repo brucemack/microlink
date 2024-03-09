@@ -96,6 +96,11 @@ void LwIPLib::queryDNS(HostName hostName) {
     err_t e = dns_gethostbyname(hostName.c_str(), &addr, _dnsCb, this);
     // This is the case where the response is immediately avaialble
     if (e == ERR_OK) {
+        // TODO: Clean up, this is very limited
+        if (_dnsRespPending) {
+            _log->info("DNS request already in process");
+            return;
+        }
         _dnsRespPending = true;        
         _lastAddrResp = IPAddress(ntohl(addr.addr));
     }

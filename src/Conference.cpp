@@ -34,17 +34,21 @@ static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
 // someone has stopped talking.
 static const uint32_t TALKER_INTERVAL_MS = 500;
 static const uint32_t PING_INTERVAL_US = 15'000'000;
+static const uint32_t MONITOR_INTERVAL_US = 30'000'000;
 
 uint32_t Conference::_ssrcGenerator = 0xa000;
 int Conference::traceLevel = 0;
 
 Conference::Conference(Authority* auth, ConferenceOutput* out, Log* log,
-    DNSMachine* addressingDNS) 
+    DNSMachine* addressingDNS, DNSMachine* monitorDNS) 
 :   _authority(auth), 
     _output(out), 
     _log(log),
-    _addressingDNS(addressingDNS) { 
+    _addressingDNS(addressingDNS),
+    _monitorDNS(monitorDNS) { 
     _pingTimer.setIntervalUs(PING_INTERVAL_US);
+    _monitorTimer.setIntervalUs(MONITOR_INTERVAL_US);
+    _startStamp = time_ms();
 }
 
 uint32_t Conference::getActiveStationCount() const {
@@ -208,6 +212,17 @@ void Conference::processAudio(IPAddress sourceIp,
 void Conference::processText(IPAddress source, 
     const uint8_t* data, uint32_t dataLen) {
 
+    if (source == _monitorAddr) {
+        _processMonitorText(source, data, dataLen);
+        return;
+    }
+
+    // Look for PING back from Addressing Server and ignore
+    if (isRTCPPINGPacket(data, dataLen)) {
+        _lastPingRxStamp = time_ms();
+        return;
+    }
+
     // If this is a bye, shut down the station
     if (isRTCPByePacket(data, dataLen)) {
         for (Station& s : _stations) {
@@ -221,14 +236,6 @@ void Conference::processText(IPAddress source,
         }
         return;
     }
-
-    // Look for PING back from Addressing Server and ignore
-    if (isRTCPPINGPacket(data, dataLen)) {
-        _lastPingRxStamp = time_ms();
-        return;
-    }
-
-    //prettyHexDump(data, dataLen, std::cout);
 
     // Look for OPEN packet from the Addressing Server and use
     // it to open the firewall for the incoming request. 
@@ -318,6 +325,14 @@ void Conference::processText(IPAddress source,
     }
 }
 
+void Conference::_processMonitorText(IPAddress source, 
+    const uint8_t* data, uint32_t dataLen) {
+
+    prettyHexDump(data, dataLen, std::cout);
+
+    _lastMonitorRxStamp = time_ms();
+}
+
 CallSign Conference::_extractCallSign(const uint8_t* data, uint32_t dataLen) {
     if (isRTCPSDESPacket(data, dataLen)) {
         // Pull out the callsign
@@ -356,10 +371,15 @@ void Conference::dropAll() {
 bool Conference::run() {
 
     // Ping the Addressing Server to keep the link up
-    // Ping the diagnostic server
     if (_pingTimer.poll()) {
         _pingTimer.reset();
         _sendPing();
+    }
+
+    // Ping the monitor server 
+    if (_monitorTimer.poll()) {
+        _monitorTimer.reset();
+        _sendMonitorPing();
     }
 
     // Station maintenance
@@ -431,6 +451,32 @@ void Conference::_sendPing() {
     }
 }
 
+void Conference::_sendMonitorPing() {
+
+    if (traceLevel > 0)
+        _log->info("Monitor Ping");
+
+    if (_monitorTxCount % 10 == 0) {
+        if (_monitorDNS->isValid()) {
+            _monitorAddr = _monitorDNS->getAddress();
+        }
+        else {
+            return;
+        }
+    }
+
+    // Make a diagnostic packet
+    const uint32_t packetSize = 128;
+    char packet[packetSize];
+    snprintf(packet, packetSize, "MicroLink,%s,%s,%lu\n", 
+        VERSION_ID, 
+        _callSign.c_str(),
+        (time_ms() - _startStamp) / 1000);
+    _output->sendText(_monitorAddr, (const uint8_t*)packet, strlen(packet));
+
+    _monitorTxCount++;
+}
+
 void Conference::_sendStationPing(StationID id) {
 
     if (traceLevel > 0)
@@ -464,6 +510,9 @@ void Conference::_sendStationPing(StationID id) {
         strcatLimited(buffer, "\r", bufferSize);
         strcatLimited(buffer, _location.c_str(), bufferSize);
         strcatLimited(buffer, "\r", bufferSize);
+        char msg[64];
+        snprintf(msg, 64, "MonitorRX %lu\r", getSecondsSinceLastMonitorRx());
+        strcatLimited(buffer, msg, bufferSize);
         uint32_t packetLen = formatOnDataPacket(buffer, 0, packet, packetSize);
         
         _output->sendAudio(id.getAddr(), 0, 0, packet, packetLen, AudioFormat::TEXT);

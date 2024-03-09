@@ -139,6 +139,7 @@ approximately 14,000 baud.
 * The DAC runs on an I2C bus running at 400 kHz.
 * The voice prompts (all letters, numbers, and a few words) take up about 40K of 
 flash. The audio is stored in GSM full-rate format for efficiency.
+* Current flash size (used) is ~650,000 bytes.
 
 # Technical/Development Notes
 

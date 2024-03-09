@@ -58,6 +58,10 @@ public:
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
     void resetOverflowCount() { _audioInBufOverflow = 0; }
 
+    int16_t getLastRawSample() const { return _lastRawSample; }
+
+    void setRawOffset(int16_t off) { _rawOffset = off; }
+
     int16_t getBias() const { return _dcBias; }
 
     /**
@@ -105,11 +109,11 @@ private:
     uint32_t _audioInBufWritePtr = 0;
     // Keep count of overflows/underflows
     uint32_t _audioInBufOverflow = 0;
+    // An offset that is added to all ADC values before anything happens.
+    int16_t _rawOffset = 0;
     // Used to trim the centering
-    // TODO: MAKE THIS ADJUSTABLE
     int16_t _dcBias = 100;
-    // This includes x16 for 12 to 16 bit PCM conversion and a gain
-    // of 0.5.
+    // This includes x16 for 12 to 16 bit PCM conversion
     int16_t _gain = 16;
 
     bool _adcEnabled = false;
@@ -119,6 +123,8 @@ private:
     volatile uint32_t _maxLen = 0;
 
     AudioAnalyzer* _analyzer = 0;
+
+    volatile int16_t _lastRawSample = 0;
 };
 
 }

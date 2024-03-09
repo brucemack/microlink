@@ -32,7 +32,7 @@ public:
 
         _squelch = sq;
 
-        std:: cout << "UserInfo: Squelch: " << _squelch << std::endl;
+        //std:: cout << "UserInfo: Squelch: " << _squelch << std::endl;
 
         // Short beep on unkey
         //if (unkey) {
