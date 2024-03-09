@@ -1,6 +1,6 @@
 # Overview
 
-Is it possible to build a full EchoLink&reg; node using a $4 microcontroller?  I'm not completely sure, but
+Is it possible to build a full EchoLink&reg; node using a $6 microcontroller?  I'm not completely sure, but
 let's find out. The goal of this project is to create the smallest, 
 cheapest way to put a radio onto the EchoLink network. If you are new 
 to the world of EchoLink please 
@@ -13,8 +13,8 @@ be interesting to someone who wants to get deep into the nuts-and-bolts of EchoL
 should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I try to avoid off-the-shelf software/components where 
 possible. This has been a huge learning opportunity.
 
-The system currently runs on a Pi Pico W (RP2040) development board. I'm pretty sure it 
-could also run on an ESP-32, or possibly an Arduino of the correct caliber. More experimentation
+The system currently runs on a Pi Pico W (RP2040) board. I'm pretty sure it 
+could also run on an ESP-32, or possibly an Arduino of sufficient caliber. More experimentation
 is needed here.
 
 Here's the current demo video:
@@ -43,8 +43,9 @@ I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any ques
 
 My goal was to build a complete station from scratch, with no strings attached to PCs/servers.  
 
-Once things are working smoothly I will integrate this onto a single PCB for 
-ease of use with radios (link mode) and/or direct integration with repeaters.
+I have made a PCB for 
+ease of use with radios (link mode) and/or direct integration with repeaters. Further refinements
+of the PCB are in process.
 
 This project required an in-depth examination of how the EchoLink protocol works. [The notes
 I created during this analysis are located here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
@@ -58,16 +59,16 @@ The hardware is used in two configurations:
 * The main processor is a Pi Pico W (RP2040) development board. This includes WIFI 
 connectivity.  $6.00 on DigiKey. Work is underway to provide a 4G cellular data option 
 using a SIM7600 module. More on this to follow.
-* The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
-filter.  The microphone part needs work. The next revision will use a TLV9161 op amp for the 
-microphone pre-amp to reduce noise.
-* Audio input sampling uses the integrated ADC in the RP2040.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
 * The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
 * Isolation transformers and optocouplers are used to eliminate the need for common ground 
 between the radio and the MicroLink system. This helps to reduce digital noise.
 * The radio link is an ICOM IC-2000H mobile rig.
+* The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
+filter.  The microphone part needs work. The next revision will use a TLV9161 op amp for the 
+microphone pre-amp to reduce noise.
+* Audio input sampling uses the integrated ADC in the RP2040.
 
 ## Current Parts List (SW)
 
@@ -78,12 +79,16 @@ in C++. Getting that to work required studying
 the European Telecommunications Standards Institute specification for GSM and a lot of testing,
 but this was extremely interesting.
 * I'm not using the Arduino development environment for this project. The toolchain is 
-CMake/GCC/GDB using the Pico 
+CMake/GCC/GDB using the Pico W 
 SDK. I like this environment a lot. The firmware is flashed via SWD using [openocd](https://openocd.org/).
 
-Here's a picture of the parts on the bench so you can tell what you're looking at.
+Here's a picture of the the current version of the prototype.  The Pi Pico W is on the top left.  The two wires on the right go to/from the radio.  The wires on the top left are the flash/debug interfaces which are not part of normal operation.
 
-![MicroLink Station](docs/demo-1.png)
+![MicroLink Station](docs/v0-board-1.jpeg)
+
+This is what the V0 PCB looks like:
+
+![MicroLink Board V0](docs/v0-board-0.jpeg)
 
 MicroLink identifies itself using a version string of **0.02MLZ**.
 
@@ -134,22 +139,6 @@ approximately 14,000 baud.
 * The DAC runs on an I2C bus running at 400 kHz.
 * The voice prompts (all letters, numbers, and a few words) take up about 40K of 
 flash. The audio is stored in GSM full-rate format for efficiency.
-
-# Test Notes
-
-## client-test-2p
-
-This is the most comprehensive demonstration that targets the RP2040. This is 
-the code shown in the video demonstration.
-
-At the moment this uses a serial console to take commands and display 
-status.
-
-## client-test-2
-
-Runs on a Windows desktop, used for testing purposes only. No TX at this time.
-
-* Set environment variables EL_CALLSIGN, EL_PASSWORD, EL_FULLNAME, EL_LOCATION.
 
 # Technical/Development Notes
 
@@ -234,9 +223,9 @@ This is the official binary that runs in production.
     mkdir build
     cd build
     export PICO_BUILD=1
-    cmake ..
-    make link-main
-    openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main.elf verify reset exit"
+    cmake -DPICO_BOARD=pico_w ..
+    make link-main-2
+    openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main-2.elf verify reset exit"
    
 ## Building Tests on Windows (CYGWIN)
 
@@ -248,18 +237,6 @@ This is the official binary that runs in production.
     mkdir build
     cd build
     cmake ..
-    make <target>
-
-## Building on PI PICO
-
-(These notes are not comprehensive yet.)
-
-    git clone https://github.com/brucemack/microlink.git
-    cd microlink
-    git submodule update --remote
-    mkdir build
-    cd build
-    cmake -DTARGET_GROUP=pico ..
     make <target>
 
 ## ESP32 AT Firmware Notes
@@ -322,6 +299,11 @@ data bits and control bits.
 justing writing 12 bits to it.  There are other control bits in the message
 being sent to the MCP4725 on the I2C bus and those need to be configured
 properly.
+
+The DAC I2C writes are done inside of the same interrupt service routine that performs 
+the ADC read. This interrupt is set to run at exactly 8kHZ by setting the ADC 
+FIFO depth to 1. The ADC and DAC are both running constantly, regardless of whether
+the system is transmitting or receiving.
 
 ### Bus Protocol
 
