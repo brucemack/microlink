@@ -30,7 +30,9 @@
 namespace kc1fsz {
 
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
-static const uint32_t TALKER_INTERVAL_MS = 1000;
+// This controls the amount of silence used to decide that 
+// someone has stopped talking.
+static const uint32_t TALKER_INTERVAL_MS = 500;
 static const uint32_t PING_INTERVAL_US = 15'000'000;
 
 uint32_t Conference::_ssrcGenerator = 0xa000;
@@ -69,6 +71,8 @@ void Conference::dumpStations(Log* log) const {
             log->info("Call: %s, ip: %s, auth: %d, lck: %d, tlk: %d/%d/%d",
                 s.id.getCall().c_str(), addr, s.authorized, s.locked, 
                 s.talker, s.secondsSinceLastAudioRx(), s.secondsSinceLastAudioTx());
+            log->info("  seqerr: %lu, maxgap: %lu", 
+                s.rxSeqErr, s.longestRxGapMs);
         }
     }
 }
@@ -137,6 +141,8 @@ void Conference::processAudio(IPAddress sourceIp,
     uint32_t ssrc, uint16_t seq,
     const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) {
 
+    const uint32_t now = time_ms();
+
     // Figure out what station this is
     StationID source;
     for (const Station& s : _stations) {
@@ -165,20 +171,33 @@ void Conference::processAudio(IPAddress sourceIp,
     for (Station& s : _stations) {
         if (s.id == source) {
             if (s.authorized) {
-                // Look for the talking transition
+                // Look for the non-talking to talking transition
                 if (!s.talker) {
                     _log->info("Station %s is talking", s.id.getCall().c_str());
+                    s.talker = true;
+                    s.audioRxPacketCount = 0;
+                } 
+                // This is continuation of talking - do some QOS checking
+                else {
+                    if (seq != 0 && seq != s.lastRxSeq + 1) {
+                        s.rxSeqErr++;
+                    }
+                    uint32_t gap = (now - s.lastAudioRxStamp);
+                    if (gap > s.longestRxGapMs) {
+                        //_log->info("Longest gap %lu", gap);
+                        s.longestRxGapMs = gap;
+                    }
                 }
-                s.talker = true;
-                s.lastRxStamp = time_ms();
-                s.lastAudioRxStamp = time_ms();
+                s.audioRxPacketCount++;
+                s.lastRxStamp = now;
+                s.lastAudioRxStamp = now;
+                s.lastRxSeq = seq;
             }
         }
         else {
             s.talker = false;
             if (s.authorized) {                
-                s.lastTxStamp = time_ms();
-                s.lastAudioTxStamp = time_ms();
+                s.lastAudioTxStamp = now;
                 _output->sendAudio(s.id.getAddr(), 
                     ssrc, s.seq++, frame, frameLen, fmt);
             }
@@ -194,7 +213,7 @@ void Conference::processText(IPAddress source,
         for (Station& s : _stations) {
             if (s.active) {
                 if (s.id.getAddr() == source) {
-                    _log->info("Station %s disconnected", s.id.getCall().c_str());
+                    _log->info("BYE from %s, disconnected", s.id.getCall().c_str());
                     s.active = false;
                     break;
                 }
@@ -243,29 +262,42 @@ void Conference::processText(IPAddress source,
     }    
 
     // Pull out the call sign from the RTCP message
-    auto sourceStationId = _extractStationID(source, data, dataLen);
-    if (sourceStationId.isNull()) {
+    auto call = _extractCallSign(data, dataLen);
+    if (call.isNull()) {
         return;
     }
 
-    // Check to see if this is a new station.
-    bool active = false;
-    for (const Station& s : _stations) {
-        if (s.active && s.id == sourceStationId) {
-            active = true;
+    // See if there is an existing Station for this call
+    Station* activeStation = 0;
+    for (Station& s : _stations) {
+        if (s.active && s.id.getCall() == call) {
+            activeStation = &s;
             break;
         }
     }
 
+    // Existing station checks
+    if (activeStation) {
+        // If the station isn't authorized yet then exit
+         if (!activeStation->authorized)
+            return;
+        // If the station is authorized using a different IP?
+        if (!(activeStation->id.getAddr() == source)) {
+            _log->info("Station %s has moved IPs", call.c_str());
+            return;
+        }
+        // Record the receive activity
+        activeStation->lastRxStamp = time_ms();
+    }
     // If this is a new station then register it and launch an 
     // authorization to find out if it is allowed to join
     // the conference.
-    if (!active) {
+    else {
         for (Station& s : _stations) {
             if (!s.active) {
                 s.reset();
                 s.active = true;
-                s.id = sourceStationId;
+                s.id = StationID(source, call);
                 s.connectStamp = time_ms();
                 // We do this to avoid an immediate timeout
                 s.lastRxStamp = time_ms();
@@ -273,55 +305,42 @@ void Conference::processText(IPAddress source,
                 s.ssrc = _ssrcGenerator++;
 
                 char buf[32];
-                sourceStationId.getAddr().formatAsDottedDecimal(buf, 32);
+                source.formatAsDottedDecimal(buf, 32);
                 _log->info("New connection request %s from %s", 
-                    sourceStationId.getCall().c_str(), buf);
+                    s.id.getCall().c_str(), buf);
 
                 // This is asynchronous
-                _authority->validate(sourceStationId);
+                _authority->validate(s.id);
 
                 break;
             }
         }    
     }
+}
 
-    // Record the receive activity
-    for (Station& s : _stations) {
-        if (s.active) {
-            if (s.id == sourceStationId) {
-                if (s.authorized) {
-                    s.lastRxStamp = time_ms();
-                }
-                break;
+CallSign Conference::_extractCallSign(const uint8_t* data, uint32_t dataLen) {
+    if (isRTCPSDESPacket(data, dataLen)) {
+        // Pull out the callsign
+        SDESItem items[8];
+        uint32_t ssrc = 0;
+        uint32_t itemCount = parseSDES(data, dataLen, &ssrc, items, 8);
+
+        for (uint32_t item = 0; item < itemCount; item++) {
+            if (items[item].type == 2) {
+                char callSignAndName[64];
+                items[item].toString(callSignAndName, 64);
+                // Strip off the call (up to the first space)
+                char callSignStr[32];
+                uint32_t i = 0;
+                // Leave space for null
+                for (i = 0; i < 31 && callSignAndName[i] != ' '; i++)
+                    callSignStr[i] = callSignAndName[i];
+                callSignStr[i] = 0;
+                return CallSign(callSignStr);
             }
         }
     }
-}
-
-StationID Conference::_extractStationID(IPAddress source, const uint8_t* data,
-    uint32_t dataLen) {
-
-    // Pull out the callsign
-    SDESItem items[8];
-    uint32_t ssrc = 0;
-    uint32_t itemCount = parseSDES(data, dataLen, &ssrc, items, 8);
-
-    for (uint32_t item = 0; item < itemCount; item++) {
-        if (items[item].type == 2) {
-            char callSignAndName[64];
-            items[item].toString(callSignAndName, 64);
-            // Strip off the call (up to the first space)
-            char callSignStr[32];
-            uint32_t i = 0;
-            // Leave space for null
-            for (i = 0; i < 31 && callSignAndName[i] != ' '; i++)
-                callSignStr[i] = callSignAndName[i];
-            callSignStr[i] = 0;
-            return StationID(source, CallSign(callSignStr));
-        }
-    }
-
-    return StationID();
+    return CallSign();
 }
 
 void Conference::dropAll() {
@@ -346,11 +365,17 @@ bool Conference::run() {
     // Station maintenance
     for (Station& s : _stations) {
         if (s.active) {
-            // Check for the need to send outbound ping
+            // Check for the need to send outbound ping text. This is very 
+            // important to keep the connection up and running.
             if (s.authorized && 
-                time_ms() - s.lastTxStamp > KEEP_ALIVE_INTERVAL_MS) {
+                time_ms() - s.lastTextTxStamp > KEEP_ALIVE_INTERVAL_MS) {
                 _sendStationPing(s.id);
-                s.lastTxStamp = time_ms();
+                s.lastTextTxStamp = time_ms();
+                //if (s.talker)
+                //    _log->info("Sent ping to %s while talking", s.id.getCall().c_str());
+                //if (s.msSinceLastAudioTx() < 500)
+                //    _log->info("Sent ping to %s while listening", s.id.getCall().c_str());
+
             }
             // Look for timeouts (technical)
             if (!s.locked && 
@@ -366,7 +391,7 @@ bool Conference::run() {
                 _sendBye(s.id);
                 s.active = false;
             }
-            // Look for timeouts (just not talking anymore)
+            // Look for timeouts (just not talking or listening anymore)
             if (!s.locked &&
                 s.secondsSinceLastAudioRx() > _idleTimeoutS &&
                 s.secondsSinceLastAudioTx() > _idleTimeoutS) {
@@ -376,9 +401,12 @@ bool Conference::run() {
             }
             // Time out talking
             if (s.talker && 
-                time_ms() - s.lastAudioRxStamp > TALKER_INTERVAL_MS) {
+                s.msSinceLastAudioRx() > TALKER_INTERVAL_MS) {
                 s.talker = false;
                 _log->info("Station %s is finished talking", s.id.getCall().c_str());
+                // Diagnostics
+                _log->info(" seqerr: %lu, maxgap: %lu",
+                    s.rxSeqErr, s.longestRxGapMs);
             }
         }
     }

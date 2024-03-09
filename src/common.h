@@ -55,12 +55,12 @@ bool isRTCPPINGPacket(const uint8_t* d, uint32_t len);
 
 bool isRTCPOPENPacket(const uint8_t* d, uint32_t len);
 
-struct RTCPOPENContents {
+struct CallAndAddress {
     CallSign call;
     IPAddress address;
 };
 
-RTCPOPENContents parseRTCPOPENPacket(const uint8_t* d, uint32_t len);
+CallAndAddress parseRTCPOPENPacket(const uint8_t* d, uint32_t len);
 
 bool isRTCPByePacket(const uint8_t* d, uint32_t len);
 

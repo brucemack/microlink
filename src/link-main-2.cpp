@@ -597,7 +597,8 @@ int main(int, const char**) {
 
         bool rigCosState = (config->useHardCos) ? 
             gpio_get(RIG_COS_PIN) : 
-            (rxAnalyzer.getRMS() - baselineRxNoise) > (int16_t)config->rxNoiseThreshold;
+                startupMode == 0 && 
+                (rxAnalyzer.getRMS() - baselineRxNoise) > (int16_t)config->rxNoiseThreshold;
 
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.

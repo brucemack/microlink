@@ -28,6 +28,8 @@
 #include "kc1fsz-tools/FixedString.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
+#include "common.h"
+
 namespace kc1fsz {
 
 class Log;
@@ -130,7 +132,7 @@ private:
     void _sendStationPing(StationID id);
     void _sendBye(StationID id);
 
-    static StationID _extractStationID(IPAddress source, const uint8_t* data,
+    static CallSign _extractCallSign(const uint8_t* data,
         uint32_t dataLen);
 
     struct Station {
@@ -139,9 +141,21 @@ private:
         StationID id;
         bool authorized = false;
         uint32_t connectStamp = 0;
+        // The time of the last data of any kind received
         uint32_t lastRxStamp = 0;
-        uint32_t lastTxStamp = 0;
+        // The time of the last audio packet received
         uint32_t lastAudioRxStamp = 0;
+        // The sequence of the last audio packet received
+        uint32_t lastRxSeq = 0;
+        // Counter of sequence errors
+        uint32_t rxSeqErr = 0;
+        // Longest gap between packets
+        uint32_t longestRxGapMs = 0;
+        // Count for current talking session
+        uint32_t audioRxPacketCount = 0;
+        // The last time we sent the RTCP/oNDATA packet
+        uint32_t lastTextTxStamp = 0;
+        // The last time we sent an audio packet
         uint32_t lastAudioTxStamp = 0;
         bool talker = false;
         // A unique number that identifies traffic from this 
@@ -156,12 +170,32 @@ private:
             connectStamp = 0;
             lastRxStamp = 0;
             lastAudioRxStamp = 0;
-            lastTxStamp = 0;
+            lastTextTxStamp = 0;
             lastAudioTxStamp = 0;
             talker = false;
             ssrc = 0;
             seq = 0;
             locked = false;
+            lastRxSeq = 0;
+            rxSeqErr = 0;
+            longestRxGapMs = 0;
+            audioRxPacketCount = 0;
+        }
+
+        /**
+         * @returns Time since we received real audio from this
+         * station (indicating that it's active)
+        */
+        uint32_t msSinceLastAudioRx() const {
+            return (time_ms() - lastAudioRxStamp);
+        }
+
+        /**
+         * @returns Time since we sent real audio to this
+         * station (indicating that it's active)
+        */
+        uint32_t msSinceLastAudioTx() const {
+            return (time_ms() - lastAudioTxStamp);
         }
 
         /**
@@ -169,7 +203,7 @@ private:
          * station (indicating that it's active)
         */
         uint32_t secondsSinceLastAudioRx() const {
-            return (time_ms() - lastAudioRxStamp) / 1000;
+            return msSinceLastAudioRx() / 1000;
         }
 
         /**

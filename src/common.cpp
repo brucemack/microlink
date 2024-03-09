@@ -196,7 +196,7 @@ bool isRTCPOPENPacket(const uint8_t* d, uint32_t len) {
     return false;
 }
 
-RTCPOPENContents parseRTCPOPENPacket(const uint8_t* d, uint32_t len) {
+CallAndAddress parseRTCPOPENPacket(const uint8_t* d, uint32_t len) {
     if (!isRTCPOPENPacket(d, len)) {
         panic_unsupported();
     }
