@@ -695,9 +695,9 @@ decode frequency and not drive the audio decoding rate by the arrival of packets
 
 (_Research in process, not complete._)
 
-(This section only applies to -L/-R nodes that need to receive unsolicited connections
+(This section only applies to -L/-R/conference nodes that need to receive unsolicited connections
 from behind a firewall. I have used explicit port forwarding on my implementation and 
-things work find without using this protocol.)
+things work fine without using this protocol.)
 
 One of the challenges of running a peer-to-peer network is the limitation on the 
 ability to pass packets
@@ -715,7 +715,8 @@ The EchoLink system has implemented a clever mechanism that greatly alleviates b
 There may still be situations where this doesn't work, but those are less common.
 
 Understanding this mechanism requires an understanding of dynamic firewall capabilities known 
-as [Stateful Packet Inspection](https://en.wikipedia.org/wiki/Stateful_firewall) and/or [UDP Hole Punching](https://en.wikipedia.org/wiki/UDP_hole_punching). A full explanation is beyond the scope of this
+as [Stateful Packet Inspection](https://en.wikipedia.org/wiki/Stateful_firewall) and/or [UDP Hole Punching](https://en.wikipedia.org/wiki/UDP_hole_punching). A full 
+explanation is beyond the scope of this
 document, but the key thing to understand is: on most "normal" internet routers **sending a UDP
 packet to a remote address will automatically grant temporary permission for the return trip.** 
 This temporary permission is sometimes called a "UDP hole" because it enables a traffic pattern
@@ -734,18 +735,19 @@ connection to the "Remote Node" which is a link or repeater (i.e. -L or -R).
 
 1. Remote nodes poll the EchoLink Server (ex: naeast.echolink.org) every 30 seconds using a 
 special RTCP SDES "PING" packet on the RTCP port.  The EchoLink Server has port 5199 
-open for all incoming traffic. Because the Remote Server is pinging on a regular basis, 
+open for all incoming traffic. Because the Remote node is pinging on a regular basis, 
 a UDP hole is being held open that allows packets to flow from the EchoLink Server to the Remote 
 node.
-2. The EchoLink Server responds to each PING on the same port using the same RTCP SDES message, using the UDP hole created in step #1.
+2. The EchoLink Server responds to each PING on the same port using the same RTCP SDES 
+message, using the UDP hole created in step #1.
 3. When the Calling node wants to connect to the Remote node, it first sends a message to the 
-EchoLink Server that contains the IP address of the Remote node it wants to contact. Note that 
+EchoLink Addressing Server that contains the IP address of the Remote node it wants to contact. Note that 
 a direct connection from the Calling node to the Remote node would normally be blocked at
-this point, *which is exactly the problem we are trying to solve*. Only the EchoLink Server 
+this point, *which is exactly the problem we are trying to solve*. Only the EchoLink Addressing Server 
 is reachable from the Calling node. (NOTE: I am not yet sure whether an explicit message
 is used in this step, or whether step #4 is triggered as a side-effect of the normal callsign 
 lookup that is used by the Calling node to resolve the IP address of the Remote node.)
-4. The EchoLink Server then sends a different RTCP message called an "OPEN packet" to the Remote 
+4. The EchoLink Addressing Server then sends a different RTCP message called an "OPEN packet" to the Remote 
 node via the UDP hole. This packet contains the IP address of the Calling node.
 5. The Remote node sends a special RTCP message called an "OVER packet" to the Calling node.
 **This packet will be blocked by the Calling node's firewall, as expected.** However, the 
@@ -763,7 +765,66 @@ were made to their NAT tables or firewall rules.
 8. Constant keep-alive traffic flows in both directions in order to keep the 
 transient UDP holes open.
 
-(Packet details to follow - analysis in process)
+The next few sections show what the various packets look like
+
+### RTCP PING Packet Format
+
+As described in step #1 above, nodes send these PING packets to the Addressing Server
+on a regular basis to keep a two-way channel open on the RTCP port. The Addressing Server echoes back an identical PING packet.
+
+This packet follows
+the regular SDES structure with the following SDES items used:
+
+* A type 1 item is sent with the station's callsign.
+* A type 2 item is sent with no contents.
+* A type 3 item is sent with no contents.
+* A type 4 item is sent with no contents.
+* A type 5 item is sent with the word "PING".
+* A type 6 item is sent with no contents.
+* A type 8 item with an unknown meaning. The values sent by the official EchoLink client are consistent over time.  I see these bytes 
+being sent (in hex), which spells "<01>P5198." 
+* A type 8 item provides an indication of whether DTMF is supported by the node. The values sent by the official EchoLink client are consistent 
+over time. I see these bytes being sent (in hex), which corresponds to ASCII "D0".
+* Two type 0 items are sent wth no contents signalling the end of the message.
+
+Here's what it looks like:
+
+![](packet-13.png)
+
+* Ethernet/IP/UDP headers can be ignored in this illustration. The relevant packet content starts at the red line.
+* The individual SDES items are marked in blue.
+
+### RTCP OPEN Packet Format
+
+This packet provides the most important function. As described in 
+step #4 above, the Addressing Server will send an OPEN packet 
+to the Remote node that provides the IP address of a Calling node
+that wants to establish two-way communication. Without this 
+heads-up from the Addressing Server, the Calling node would 
+never know about the Remote node.
+
+This packet follows
+the regular SDES structure with the following SDES items used:
+
+* A type 1 item is sent with the calling station's callsign.
+* A type 2 item is sent with no contents.
+* A type 3 item is sent with the calling station's IP
+address in dotted-decimal format. 
+* A type 4 item is sent with no contents.
+* A type 5 item is sent with the word "OPEN".
+* A type 6 item is sent with no contents.
+* A type 8 item with an unknown meaning. The values sent by the official EchoLink client are consistent over time.  I see these bytes 
+being sent (in hex), which spells "<01>P5198." 
+* A type 8 item provides an indication of whether DTMF is supported by the node. The values sent by the official EchoLink client are consistent 
+over time. I see these bytes being sent (in hex), which corresponds to ASCII "D0".
+* Two type 0 items are sent wth no contents signalling the end of the message.
+
+Here's what it looks like:
+
+![](packet-14.png)
+
+* Ethernet/IP/UDP headers can be ignored in this illustration. The relevant packet content starts at the red line.
+* The individual SDES items are marked in blue.
 
 ### RTCP OVER Packet Format
 
@@ -774,13 +835,21 @@ A standard RTCP header is sent which matches the RTCP-RR format.  Following the 
 * Four bytes: the SSRC
 * Four bytes: the word "OVER"
 
-![](packet-7.png)
+![](packet-15.png)
+
+### RTP McAd Packet Format
+
+At the same time that we send the OVER packet on the RTCP port 
+we send a McAd message on the RTP port.  This has the effect
+of opening RTP flow with the Calling node.
+
+![](packet-16.png)
 
 ### Notes From Jonathan K1RFD on PING/OPEN/OVER
 
 The EchoLink apps use some additional UDP messages to behave in a more "firewall-friendly" way. This is specifically 
 to handle the case of at least one peer being behind a NAT router which has not been configured for port forwarding.  
-(This technique works only for NAT which is not also doing PAT.)  It works similarly to one function of TURN servers.
+(This technique works only for NAT which is not also doing PAT.)  It works similarly to one function of [TURN servers](https://en.wikipedia.org/wiki/Traversal_Using_Relays_around_NAT).
 
 Whenever the app is connected to an addressing server, it also begins periodically sending RTCP packets to that 
 same server, called PING, with an SDES item like this:

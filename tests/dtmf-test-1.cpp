@@ -53,6 +53,7 @@ int main(int, const char**) {
     
     const int toneC1 = 1209;
     const int toneC2 = 1336;
+    const int toneC3 = 1477;
 
     int16_t frame[frameSize];
 
@@ -66,7 +67,7 @@ int main(int, const char**) {
         phi += omega;
     }
 
-    freqRad = (float)toneC1 * 2.0 * 3.1415926;
+    freqRad = (float)toneC3 * 2.0 * 3.1415926;
     omega = freqRad / (float)sampleRate;
     phi = 0;
     for (int i = 0; i < frameSize; i++) {
