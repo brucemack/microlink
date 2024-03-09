@@ -203,14 +203,13 @@ void Conference::processText(IPAddress source,
         return;
     }
 
-    prettyHexDump(data, dataLen, std::cout);
-
     // Look for PING back from Addressing Server and ignore
     if (isRTCPPINGPacket(data, dataLen)) {
         _lastPingRxStamp = time_ms();
         return;
     }
 
+    //prettyHexDump(data, dataLen, std::cout);
 
     // Look for OPEN packet from the Addressing Server and use
     // it to open the firewall for the incoming request. 
