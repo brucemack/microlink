@@ -142,7 +142,7 @@ bool ConferenceBridge::play(const int16_t* pcmAudio, uint32_t frameLen)  {
     return true;
 }
 
-void ConferenceBridge::sendAudio(IPAddress dest, uint32_t ssrc, uint16_t seq,
+void ConferenceBridge::sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t seq,
     const uint8_t* data, uint32_t dataLen, AudioFormat fmt) {
     if (fmt == AudioFormat::TEXT) {
         if (dest == _radio0Addr) {
@@ -191,9 +191,14 @@ void ConferenceBridge::sendAudio(IPAddress dest, uint32_t ssrc, uint16_t seq,
     }
 }
 
-void ConferenceBridge::sendText(IPAddress dest,
+void ConferenceBridge::sendText(const IPAddress& dest,
     const uint8_t* data, uint32_t dataLen) {
-    
+
+    // The radio can't handle text
+    if (dest == _radio0Addr) {
+        return;
+    }
+
     if (traceLevel > 0) {
         char addr[32];
         dest.formatAsDottedDecimal(addr, 32);

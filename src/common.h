@@ -135,8 +135,8 @@ uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
 
 uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
-    CallSign callSign, 
-    FixedString fullName,
+    const CallSign& callSign, 
+    const FixedString& fullName,
     uint32_t ssrc2,
     uint8_t* packet, uint32_t packetSize);      
 

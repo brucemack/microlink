@@ -185,6 +185,18 @@ static const uint32_t audioBufDepth = 16;
 static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 
+// Make the polling work like a Runnable
+class CYW43Task : public Runnable {
+public:
+    bool run() { 
+        // If you are using pico_cyw43_arch_poll, then you must poll periodically 
+        // from your main loop (not from a timer) to check for Wi-Fi driver or 
+        // lwIP work that needs to be done.
+        cyw43_arch_poll();
+        return true;
+    }
+};
+
 // Used for drawing a real-time 
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
@@ -194,27 +206,6 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     ostream& str);
 
 bool rigKeyFailSafe();
-
-extern "C" void set_system_time(uint32_t sec)
-{
-    cout << "Time: " << sec << endl;
-    /*
-    time_t epoch = sec;
-    struct tm *time = gmtime(&epoch);
-
-    datetime_t datetime = {
-            .year = (int16_t) (1900 + time->tm_year),
-            .month = (int8_t) (time->tm_mon + 1),
-            .day = (int8_t) time->tm_mday,
-            .hour = (int8_t) time->tm_hour,
-            .min = (int8_t) time->tm_min,
-            .sec = (int8_t) time->tm_sec,
-            .dotw = (int8_t) time->tm_wday,
-    };
-
-    rtc_set_datetime(&datetime);
-    */
-}
 
 int main(int, const char**) {
 
@@ -402,7 +393,8 @@ int main(int, const char**) {
     RXMonitor rxMonitor;
     rxMonitor.setInfo(&info);
     // RXMonitor -> DTMF detector
-    rxMonitor.setDTMFDetector(&dtmfDetector);
+    // Disabled for now for speed reasons.  Will review and optimize.
+    //rxMonitor.setDTMFDetector(&dtmfDetector);
 
     // Radio RX -> RXMonitor
     radio0In.setSink(&rxMonitor);
@@ -476,39 +468,63 @@ int main(int, const char**) {
     // Register the physical radio into the conference
     conf.addRadio(CallSign("RADIO0"), IPAddress(0xff000002));
     radio0In.setADCEnabled(true);
+    
+    CYW43Task wifiPollTask;
+
+    // These are all of the tasks that need to be run on every iteration
+    // of the main loop.
+    const uint32_t taskCount = 12;
+    Runnable* loopTasks[taskCount] = {
+        &wifiPollTask,
+        &ctx,
+        &dnsMachine1,
+        &dnsMachine2,
+        &logonMachine,
+        &lookup,
+        &confBridge,
+        // 7
+        &conf,
+        // 8
+        &radio0Out,
+        // 9
+        &radio0In,
+        // 10
+        &rxMonitor,
+        // 11
+        &log
+    };
+
+    // Performance metrics
+    uint32_t maxTaskTimeUs[taskCount];
+    for (uint32_t i = 0; i < taskCount; i++)
+        maxTaskTimeUs[i] = 0;
+    PicoPerfTimer taskTimer;
+
+    PicoPerfTimer cycleTimer;
+    uint32_t longestCycleUs = 0;
+    PicoPerfTimer otherTimer;
+    uint32_t longestOtherUs = 0;
 
     // Last thing before going into the event loop
 	watchdog_enable(WATCHDOG_DELAY_MS, true);
 
     log.info("Entering event loop");
 
-    /*
-    // TEMP
-    uint8_t packet[128];
-    uint32_t l = formatRTCPPacket_PING(0, ourCallSign, packet, 128);
-    prettyHexDump(packet, l, cout);
-    */
-
     while (true) {
 
         // Keep things alive
         watchdog_update();
 
-        // if you are using pico_cyw43_arch_poll, then you must poll periodically from your
-        // main loop (not from a timer) to check for Wi-Fi driver or lwIP work that needs to be done.
-        cyw43_arch_poll();
+        cycleTimer.reset();
 
-        ctx.run();
-        dnsMachine1.run();
-        dnsMachine2.run();
-        logonMachine.run();
-        lookup.run();
-        confBridge.run();
-        conf.run();
-        radio0Out.run();
-        radio0In.run();
-        rxMonitor.run();
-        log.run();
+        // Run the tasks, keeping track of the max time for each
+        for (uint32_t t = 0; t < taskCount; t++) {
+            taskTimer.reset();
+            loopTasks[t]->run();
+            maxTaskTimeUs[t] = std::max(maxTaskTimeUs[t], taskTimer.elapsedUs());
+        }
+
+        otherTimer.reset();
 
         // ----- Serial Commands ---------------------------------------------
         
@@ -550,10 +566,22 @@ int main(int, const char**) {
                 }
             }
             else if (c == 'i') {
+                log.info("-----------------------------------------------------------");
                 log.info("Diagnostics:");
                 log.info("RX ADC value %d", radio0In.getLastRawSample());
                 log.info("Station Count: %d", conf.getActiveStationCount());
                 conf.dumpStations(&log);
+
+                for (uint32_t t = 0; t < taskCount; t++) {
+                    log.info("Task %02lu max time (us)    %lu", t, maxTaskTimeUs[t]);
+                    maxTaskTimeUs[t] = 0;
+                }
+                log.info("Max other (us)           %lu", longestOtherUs);
+                longestOtherUs = 0;
+                log.info("Max cycle (us)           %lu", longestCycleUs);
+                longestCycleUs = 0;
+
+                log.info("-----------------------------------------------------------");
             }
         }
 
@@ -630,13 +658,13 @@ int main(int, const char**) {
             // interval."
             if (radio0Out.getSquelch() && 
                 time_ms() > (rigKeyLockoutTime + TX_LOCKOUT_MS)) {
-                if (conf.getSecondsSinceLastMonitorRx() > 60) {
-                }
-                else {
+                //if (conf.getSecondsSinceLastMonitorRx() > 60) {
+                //}
+                //else {
                     info.setStatus("Keying rig");
                     rigKeyState = true;
                     lastRigKeyTransitionTime = time_ms();
-                }
+                //}
             }
         }
         else {
@@ -755,9 +783,22 @@ int main(int, const char**) {
                     cout);
             }
         }
+
+        uint32_t ela = otherTimer.elapsedUs();
+        if (ela > longestOtherUs) {
+            longestOtherUs = ela;
+            log.info("Longest Other (us) %lu", longestOtherUs);
+        }
+
+        ela = cycleTimer.elapsedUs();
+        if (ela > longestCycleUs) {
+            longestCycleUs = ela;
+            log.info("Longest Cycle (us) %lu", longestCycleUs);
+        }
     }    
 
     log.info("Out of loop");
+
     gpio_put(RIG_KEY_PIN, 0);
 
     while (true) {

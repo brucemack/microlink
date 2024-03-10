@@ -26,6 +26,7 @@
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"
+#include "kc1fsz-tools/Runnable.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
 #include "common.h"
@@ -62,9 +63,9 @@ private:
 
 class ConferenceOutput {
 public:
-    virtual void sendAudio(IPAddress dest, uint32_t ssrc, uint16_t seq,
+    virtual void sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t seq,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) = 0;
-    virtual void sendText(IPAddress dest,
+    virtual void sendText(const IPAddress& dest,
         const uint8_t* frame, uint32_t frameLen) = 0;
 };
 
@@ -87,7 +88,7 @@ to see if someone else is already talking.  If so, the audio
 is ignored.  If not, the station becomes the talker.  Audio
 from the talking StationID is forwarded to all other Stations.
 */
-class Conference {
+class Conference : public Runnable {
 public:
 
     static int traceLevel;
@@ -140,7 +141,7 @@ private:
     void _sendPing();
 
     StationID _getTalker() const;
-    void _sendStationPing(StationID id);
+    void _sendStationPing(const StationID& id);
     void _sendBye(StationID id);
 
     static CallSign _extractCallSign(const uint8_t* data,

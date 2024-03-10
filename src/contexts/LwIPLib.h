@@ -69,7 +69,8 @@ public:
 
     virtual Channel createUDPChannel();
     virtual void bindUDPChannel(Channel c, uint32_t port);
-    virtual void sendUDPChannel(Channel c, IPAddress remoteIpAddr, uint32_t remotePort,
+    virtual void sendUDPChannel(const Channel& c, 
+        const IPAddress& remoteIpAddr, uint32_t remotePort,
         const uint8_t* b, uint16_t len);
 
     virtual void closeChannel(Channel c);
@@ -118,7 +119,7 @@ private:
     static const uint32_t _trackersSize = 6;
     Tracker _trackers[_trackersSize];
    
-    void _validateChannel(Channel c, Tracker::Type t) const;
+    void _validateChannel(const Channel& c, Tracker::Type t) const;
     Tracker* _findTracker(void* tpcb);
     int _findTracker2(void* tpcb);
 

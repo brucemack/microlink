@@ -80,10 +80,10 @@ protected:
 
 public:
 
-    virtual void sendAudio(IPAddress dest, uint32_t ssrc, uint16_t seq,
+    virtual void sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t seq,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt);
 
-    virtual void sendText(IPAddress dest,
+    virtual void sendText(const IPAddress& dest,
         const uint8_t* frame, uint32_t frameLen);
 
     // ----- From AudioProcessor -----------------------------------------------

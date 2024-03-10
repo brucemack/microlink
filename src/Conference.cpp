@@ -327,9 +327,7 @@ void Conference::processText(IPAddress source,
 
 void Conference::_processMonitorText(IPAddress source, 
     const uint8_t* data, uint32_t dataLen) {
-
-    prettyHexDump(data, dataLen, std::cout);
-
+    //prettyHexDump(data, dataLen, std::cout);
     _lastMonitorRxStamp = time_ms();
 }
 
@@ -391,11 +389,6 @@ bool Conference::run() {
                 time_ms() - s.lastTextTxStamp > KEEP_ALIVE_INTERVAL_MS) {
                 _sendStationPing(s.id);
                 s.lastTextTxStamp = time_ms();
-                //if (s.talker)
-                //    _log->info("Sent ping to %s while talking", s.id.getCall().c_str());
-                //if (s.msSinceLastAudioTx() < 500)
-                //    _log->info("Sent ping to %s while listening", s.id.getCall().c_str());
-
             }
             // Look for timeouts (technical)
             if (!s.locked && 
@@ -477,7 +470,7 @@ void Conference::_sendMonitorPing() {
     _monitorTxCount++;
 }
 
-void Conference::_sendStationPing(StationID id) {
+void Conference::_sendStationPing(const StationID& id) {
 
     if (traceLevel > 0)
         _log->info("Ping to %s", id.getCall().c_str());

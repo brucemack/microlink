@@ -221,7 +221,7 @@ Channel LwIPLib::createTCPChannel() {
     return Channel(0, false);
 }
 
-void LwIPLib::_validateChannel(Channel c, Tracker::Type t) const {
+void LwIPLib::_validateChannel(const Channel& c, Tracker::Type t) const {
     if (c.getId() >= (int)_trackersSize ||
         !_trackers[c.getId()].inUse ||
         _trackers[c.getId()].type != t) {
@@ -366,20 +366,16 @@ void LwIPLib::bindUDPChannel(Channel c, uint32_t localPort) {
     }
 }
 
-void LwIPLib::sendUDPChannel(Channel c, IPAddress remoteIpAddr, uint32_t remotePort,
+void LwIPLib::sendUDPChannel(const Channel& c, 
+    const IPAddress& remoteIpAddr, uint32_t remotePort,
     const uint8_t* b, uint16_t len) {
 
     _validateChannel(c, Tracker::Type::UDP);
 
     const Tracker* t = &(_trackers[c.getId()]);
 
-    // TODO: NEED A MORE DIRECT WAY
-    char addrStr[20];
-    formatIP4Address(remoteIpAddr.getAddr(), addrStr, 20);
-    // Here we are building an address from a string, so there will no issues
-    // related to byte ordering.
     ip4_addr_t addr;
-    ip4addr_aton(addrStr, &addr);
+    addr.addr = htonl(remoteIpAddr.getAddr());
 
     // Allocate pbuf
     struct pbuf *p = pbuf_alloc(PBUF_TRANSPORT, len, PBUF_RAM);

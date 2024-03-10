@@ -440,8 +440,8 @@ uint32_t formatRTCPPacket_PING(uint32_t ssrc,
 }      
 
 uint32_t formatRTCPPacket_SDES(uint32_t ssrc,
-    CallSign callSign, 
-    FixedString fullName,
+    const CallSign& callSign, 
+    const FixedString& fullName,
     uint32_t ssrc2,
     uint8_t* p, uint32_t packetSize) {
 
@@ -605,21 +605,21 @@ uint32_t formatRTPPacket_McAD(uint8_t* p, uint32_t packetSize) {
  */
 uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize) {
+    const uint32_t msgLen = strlen(msg);
     // Data + 0 +  32-bit ssrc
-    uint32_t len = strlen(msg) + 1 + 4;
+    uint32_t len = msgLen + 1 + 4;
     if (len > packetSize) {
         return 0;
     }
     uint32_t ptr = 0;
-    memcpy(packet + ptr,(const uint8_t*) msg, strlen(msg));
-    ptr += strlen(msg);
+    memcpy(packet + ptr,(const uint8_t*) msg, msgLen);
+    ptr += msgLen;
     packet[ptr] = 0;
     ptr++;
     writeInt32(packet + ptr, ssrc);
 
     return len;
 }
-
 
 uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     CallSign cs, FixedString pwd, FixedString loc) {
