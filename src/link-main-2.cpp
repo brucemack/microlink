@@ -119,8 +119,8 @@ Launch command:
 
 // NOTE: Physical 13 is GND
 
-// Physical pin 14 - Serial data logger reset
-#define LOGGER_RST_PIN (10)
+// Physical pin 14 - Rig power on
+#define RIG_POWER_PIN (10)
 
 // Physical pin 15. This is an output to drive an LED indicating
 // that we are in a QSO. 
@@ -256,6 +256,11 @@ int main(int, const char**) {
     gpio_set_dir(RIG_KEY_PIN, GPIO_OUT);
     gpio_put(RIG_KEY_PIN, 0);
 
+    // Rig power
+    gpio_init(RIG_POWER_PIN);
+    gpio_set_dir(RIG_POWER_PIN, GPIO_OUT);
+    gpio_put(RIG_POWER_PIN, 0);
+
     // Diag
     gpio_init(DIAG_PIN);
     gpio_set_dir(DIAG_PIN, GPIO_OUT);
@@ -287,9 +292,6 @@ int main(int, const char**) {
         //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
         sleep_ms(250);
     }
-
-    gpio_put(LOGGER_RST_PIN, 0);
-    gpio_put(LOGGER_RST_PIN, 1);
 
     SerialLog log(uart1);
     log.setStdout(true);
@@ -516,6 +518,8 @@ int main(int, const char**) {
     PicoPerfTimer otherTimer;
     uint32_t longestOtherUs = 0;
 
+    uint32_t startStamp = time_ms();
+
     // Last thing before going into the event loop
 	watchdog_enable(WATCHDOG_DELAY_MS, true);
 
@@ -534,8 +538,6 @@ int main(int, const char**) {
             loopTasks[t]->run();
             maxTaskTimeUs[t] = std::max(maxTaskTimeUs[t], taskTimer.elapsedUs());
         }
-
-        otherTimer.reset();
 
         // ----- Serial Commands ---------------------------------------------
         
@@ -578,6 +580,8 @@ int main(int, const char**) {
                 log.info("Diagnostics:");
                 log.info("RX ADC value %d", radio0In.getLastRawSample());
                 log.info("Station Count: %d", conf.getActiveStationCount());
+                log.info("Bridge Overflow: %lu", confBridge.getRadio0GSMQueueOFCount());
+
                 conf.dumpStations(&log);
 
                 for (uint32_t t = 0; t < taskCount; t++) {
@@ -592,6 +596,16 @@ int main(int, const char**) {
                 log.info("-----------------------------------------------------------");
             }
         }
+
+        otherTimer.reset();
+
+        // ----- Look for periodic reboot ----------------------------------------
+
+        if (conf.getSecondsSinceLastActivity() > 60 &&
+            (time_ms() - startStamp) > (6 * 60 * 60 * 1000)) {
+            log.info("Automatic reboot");
+            while (true);
+        }   
 
         // ----- Deal with Inbound DTMF Requests ---------------------------------
 
@@ -652,10 +666,17 @@ int main(int, const char**) {
             }
         } else {
             if (conf.getSecondsSinceLastMonitorRx() >= 60) {
-                log.info("Lost contact with monitor, no rig key allowed");
+                log.info("Lost contact with monitor, no rig allowed");
                 inContactWithMonitor = false;
             }
         }
+
+        // ----- Rig Power Management -------------------------------------------
+
+        if (inContactWithMonitor)
+            gpio_put(RIG_POWER_PIN, 1);
+        else
+            gpio_put(RIG_POWER_PIN, 0);
 
         // ----- Rig Key Management -------------------------------------------
         //
@@ -668,13 +689,14 @@ int main(int, const char**) {
             // interval."
             if (radio0Out.getSquelch() && 
                 time_ms() > (rigKeyLockoutTime + TX_LOCKOUT_MS)) {
-                //if (conf.getSecondsSinceLastMonitorRx() > 60) {
-                //}
-                //else {
+                if (!inContactWithMonitor) {
+                    // Not allowed to key
+                }
+                else {
                     info.setStatus("Keying rig");
                     rigKeyState = true;
                     lastRigKeyTransitionTime = time_ms();
-                //}
+                }
             }
         }
         else {

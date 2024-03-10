@@ -147,16 +147,25 @@ void Conference::processAudio(IPAddress sourceIp,
 
     const uint32_t now = time_ms();
 
-    // Figure out what station this is
-    StationID source;
+    // Figure out whether this packet is coming from an authorized 
+    // source and whether someone else is talking already.
+    bool isSourceAutorized = false;
+    bool isNonSourceTalking = false;
+
     for (const Station& s : _stations) {
-        if (s.active && s.authorized && s.id.getAddr() == sourceIp) {
-            source = s.id;
-            break;
+        if (s.active && s.authorized) {
+            if (s.id.getAddr() == sourceIp) {
+                isSourceAutorized = true;
+            } 
+            else {
+                if (s.talker) {
+                    isNonSourceTalking = true;
+                }
+            }
         }
     }
 
-    if (source.isNull()) {
+    if (!isSourceAutorized || isNonSourceTalking) {
         return;
     }
 
@@ -165,18 +174,12 @@ void Conference::processAudio(IPAddress sourceIp,
         return;
     }
 
-    // If someone else is already talking then ignore any new audio
-    StationID talker = _getTalker();
-    if (!talker.isNull() && !(talker == source)) {
-        return;
-    }
-
     // This is the heart of the repeater
     for (Station& s : _stations) {
         if (!s.active || !s.authorized) {
             continue;
         }
-        if (s.id == source) {
+        if (s.id.getAddr() == sourceIp) {
             // Look for the non-talking to talking transition
             if (!s.talker) {
                 _log->info("Station %s is talking", s.id.getCall().c_str());

@@ -50,7 +50,8 @@ ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log,
     _conf(0),
     _log(log),
     _radio0(radio0),
-    _radio0Addr(0xff000002) {   
+    _radio0Addr(0xff000002),
+    _delayCount(0) {   
 
     // Get UDP connections created
     _rtcpChannel = _ctx->createUDPChannel();
@@ -59,6 +60,12 @@ ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log,
     // Start the RTCP socket setup (RTCP)
     _ctx->bindUDPChannel(_rtcpChannel, RTCP_PORT);
     _setState(State::IN_SETUP_1, CHANNEL_SETUP_TIMEOUT_MS, State::FAILED);
+}
+
+bool ConferenceBridge::run() {
+     _serviceRadio0GSMQueue();
+    // Let the base class work
+    return StateMachine2::run();
 }
 
 void ConferenceBridge::bind(Channel ch) {
@@ -111,6 +118,7 @@ void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
                 remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
                     ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
                 d += 12;
+                // This is the performance-critical path
                 _conf->processAudio(fromAddr, remoteSSRC, remoteSeq,
                     d, 33 * 4, AudioFormat::GSMFR4X);
             }
@@ -154,6 +162,10 @@ void ConferenceBridge::sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t 
         }
     } else if (fmt == AudioFormat::GSMFR4X && gsmDataLen == (4 * 33)) {
         if (dest == _radio0Addr) {
+            // Queue the data headed to the radio to allow the frames going 
+            // to other non-radio nodes to bypass quickly.
+            _writeRadio0GSMQueue(gsmData, gsmDataLen);
+            /*
             // Convert the GSM data to PCM16 audio so that it can be 
             // transmitted.
             int16_t pcmAudio[160 * 4];
@@ -171,6 +183,7 @@ void ConferenceBridge::sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t 
             }
 
             _radio0->play(pcmAudio, 4 * 160);
+            */
         }
         else {
             uint8_t packet[144];
@@ -204,6 +217,68 @@ void ConferenceBridge::_process(int state, bool entry) {
     if (traceLevel > 0) {
         if (entry)
             _log->info("ConferenceBridge state %d", _getState());
+    }
+}
+
+void ConferenceBridge::_writeRadio0GSMQueue(const uint8_t* gsmFrame, uint32_t gsmFrameLen) {
+
+    if (gsmFrameLen != 4 * 33) {
+        panic_unsupported();
+    }
+
+    // Move the buffer into queue
+    memcpy(_radio0GSMQueue[_radio0GSMQueueWRPtr], gsmFrame, gsmFrameLen);
+    // Attempt to advance and manage wrap-around
+    uint32_t newPtr = _radio0GSMQueueWRPtr + 1;
+    if (newPtr == _radio0GSMQueueSize) {
+        newPtr = 0;
+    }
+    // Look for overflow. If an overflow would happen then we record it
+    // and stop the pointer from moving forward.
+    if (newPtr == _radio0GSMQueueRDPtr) {
+        _radio0GSMQueueOFCount++;
+    } else {
+        _radio0GSMQueueWRPtr = newPtr;
+    }
+
+    // Not sure exactly, but give a few cycles before servicing this queue
+    _delayCount = 2;
+}
+
+void ConferenceBridge::_serviceRadio0GSMQueue() {
+
+    uint32_t depth = 0;
+
+    if (_radio0GSMQueueWRPtr != _radio0GSMQueueRDPtr) {
+        // Convert the GSM data to PCM16 audio so that it can be 
+        // transmitted.
+        int16_t pcmAudio[160 * 4];
+        int16_t* pcmAudioPtr = pcmAudio;
+        const uint8_t* gsmAudioPtr = _radio0GSMQueue[_radio0GSMQueueRDPtr];
+
+        // It's safe for this to be re-used
+        Parameters params;
+        // Deocde the four frames 
+        for (uint32_t f = 0; f < 4; f++) {
+            params.unpack(gsmAudioPtr);
+            _gsmDecoder0.decode(&params, pcmAudioPtr);
+            pcmAudioPtr += 160;
+            gsmAudioPtr += 33;
+        }
+
+        _radio0->play(pcmAudio, 4 * 160);
+
+        // Move the read pointer and manage wrap
+        _radio0GSMQueueRDPtr++;
+        if (_radio0GSMQueueRDPtr == _radio0GSMQueueSize) {
+            _radio0GSMQueueRDPtr = 0;
+        }
+        depth++;
+    }
+
+    if (depth > _radio0GSMQueueMaxDepth) {
+        _radio0GSMQueueMaxDepth = depth;
+        _log->info("Radio0 GSM Queue max depth %lu", depth);
     }
 }
 

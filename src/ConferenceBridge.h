@@ -60,6 +60,10 @@ public:
 
     void setConference(Conference* conf) { _conf = conf; }
 
+    uint32_t getRadio0GSMQueueOFCount() const {
+        return _radio0GSMQueueOFCount;
+    }
+
     // ----- From IPLibEvents -------------------------------------------------
 
     virtual void dns(HostName name, IPAddress addr) { }
@@ -96,6 +100,10 @@ public:
     */
     virtual bool play(const int16_t* frame, uint32_t frameLen);
 
+    // ----- From Runnable ------------------------------------------------------
+
+    virtual bool run();
+
 private:
 
     enum State { 
@@ -128,7 +136,23 @@ private:
     Encoder _gsmEncoder0;
     uint32_t _radio0Ssrc = 7;
     uint16_t _radio0Seq = 0;
+
+    void _serviceRadio0GSMQueue();
+    void _writeRadio0GSMQueue(const uint8_t* gsmFrame, uint32_t gsmFrameLen);
+
+    // Used to create a small delay before servicing the radio GSM queue
+    uint32_t _delayCount = 0;
+
+    // A circular buffer of GSM frames headed to radio0
+    static const uint32_t _radio0GSMQueueSize = 16;
+    uint8_t _radio0GSMQueue[_radio0GSMQueueSize][4 * 33];
+    volatile uint32_t _radio0GSMQueueWRPtr = 0;
+    volatile uint32_t _radio0GSMQueueRDPtr = 0;
+    volatile uint32_t _radio0GSMQueueOFCount = 0;
+    volatile uint32_t _radio0GSMQueueMaxDepth = 1;
 };
+
+
 
 }
 
