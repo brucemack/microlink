@@ -74,7 +74,7 @@ uint32_t formatRTCPPacket_BYE(uint32_t ssrc,
     uint8_t* packet, uint32_t packetSize);
 
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
-    const uint8_t gsmFrames[4][33],
+    const uint8_t* gsmFrames4x33,
     uint8_t* packet, uint32_t packetSize);
 
 uint32_t addRTCPPad(uint32_t unpaddedLength, uint8_t* p, uint32_t packetSize);

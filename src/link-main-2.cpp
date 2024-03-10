@@ -197,12 +197,23 @@ public:
     }
 };
 
+static uint32_t abssub2(uint32_t a, uint32_t b) {
+    if (a > b) {
+        return a - b;
+    } else {
+        return b - a;
+    }
+}
+
 // Used for drawing a real-time 
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
-    AudioAnalyzer* txAnalyzer, int16_t baselineRxNoise, 
-    uint32_t rxNoiseThreshold, bool cosState, 
+    AudioAnalyzer* txAnalyzer, 
+    uint32_t baselineRxNoise, 
+    uint32_t rxNoiseThreshold, 
+    bool cosState, 
     bool wifiState, int wifiRssi, 
+    uint32_t lastActivity,
     ostream& str);
 
 bool rigKeyFailSafe();
@@ -310,7 +321,7 @@ int main(int, const char**) {
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
-        config.rxNoiseThreshold = 50;
+        config.rxNoiseThreshold = 8000;
         config.adcRawOffset = -19;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
@@ -320,7 +331,6 @@ int main(int, const char**) {
         restore_interrupts(ints);
     } 
     */
-
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -384,6 +394,7 @@ int main(int, const char**) {
     int16_t rxAnalyzerHistory[2048];
     AudioAnalyzer rxAnalyzer(rxAnalyzerHistory, 2048, sampleRate);
     radio0In.setAnalyzer(&rxAnalyzer);
+    rxAnalyzer.setEnabled(true);
 
     int16_t dtmfDetectorHistory[400];
     DTMFDetector dtmfDetector(dtmfDetectorHistory, 400, sampleRate);
@@ -447,7 +458,7 @@ int main(int, const char**) {
 
     int startupMode = 2;
     uint32_t startupMs = time_ms();
-    int16_t baselineRxNoise = 0;
+    uint32_t baselineRxNoise = 0;
 
     bool inContactWithMonitor = false;
 
@@ -548,19 +559,16 @@ int main(int, const char**) {
                 IPAddress addr(0);
                 StationID sid(addr, cs);
                 lookup.validate(sid);
-            } else if (c == 'b') {
-                CallSign cs("*SCARS*");
-                IPAddress addr(0);
-                StationID sid(addr, cs);
-                lookup.validate(sid);
             }
             else if (c == 'o') {
                 if (statusPage) {
-                log.setStdout(true);
+                    log.setStdout(true);
+                    txAnalyzer.setEnabled(false);
                     statusPage = false;
                     cout << "\033[2J" << endl;
                 } else {
                     log.setStdout(false);
+                    txAnalyzer.setEnabled(true);
                     statusPage = true;
                     cout << "\033[2J";
                 }
@@ -625,8 +633,10 @@ int main(int, const char**) {
         } 
         else if (startupMode == 1) {
             if (time_ms() > startupMs + 500) {
-                baselineRxNoise = rxAnalyzer.getRMS();
-                log.info("Baseline RX noise (Vrms) %d", baselineRxNoise);
+                //baselineRxNoise = rxAnalyzer.getRMS();
+                //log.info("Baseline RX noise (Vrms) %d", baselineRxNoise);
+                baselineRxNoise = rxAnalyzer.getMS();
+                log.info("Baseline RX noise power %lu", baselineRxNoise);
                 startupMode = 0;
             }
         }
@@ -696,7 +706,7 @@ int main(int, const char**) {
         bool rigCosState = (config->useHardCos) ? 
             gpio_get(RIG_COS_PIN) : 
                 startupMode == 0 && 
-                (rxAnalyzer.getRMS() - baselineRxNoise) > (int16_t)config->rxNoiseThreshold;
+                abssub2(rxAnalyzer.getMS(), baselineRxNoise) > config->rxNoiseThreshold;
 
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.
@@ -780,6 +790,7 @@ int main(int, const char**) {
                     baselineRxNoise, config->rxNoiseThreshold, cosState, 
                     wifiState,
                     rssi,
+                    conf.getSecondsSinceLastActivity(),
                     cout);
             }
         }
@@ -811,9 +822,13 @@ int main(int, const char**) {
 
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
-    AudioAnalyzer* txAnalyzer, int16_t baselineRxNoise, 
-    uint32_t rxNoiseThreshold, bool cosState, 
-    bool wifiState, int wifiRssi, ostream& str) {
+    AudioAnalyzer* txAnalyzer, 
+    uint32_t baselineRxNoise, 
+    uint32_t rxNoiseThreshold, 
+    bool cosState, 
+    bool wifiState, int wifiRssi, 
+    uint32_t lastActivity,
+    ostream& str) {
 
     // [K - Erase line
     // [2J - Clear screen
@@ -826,15 +841,19 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     str << "===== MicoLink Status =====";
     str << endl << ESC << "[K";
     str << endl << ESC << "[K";
+    str << "    Activity (sec) : " << lastActivity;
+    str << endl << ESC << "[K";
     str << "              WIFI : " << (wifiState ? "Yes" : "No");
     str << endl << ESC << "[K";
     str << "         WIFI RSSI : " << wifiRssi;
     str << endl << ESC << "[K";
     str << "               COS : " << (cosState ? "Yes" : "No");
     str << endl << ESC << "[K";
-    str << "          RX Level : " << (int)rxAnalyzer->getRMS();
+    str << "    RX Audio Power : " << rxAnalyzer->getMS();
     str << endl << ESC << "[K";
-    str << "   RX Level Excess : " << rxAnalyzer->getRMS() - baselineRxNoise;
+    str << " RX Audio Baseline : " << baselineRxNoise;
+    str << endl << ESC << "[K";
+    str << "   RX Power Excess : " << abssub2(rxAnalyzer->getMS(), baselineRxNoise);
     str << endl << ESC << "[K";
     str << "RX Noise Threshold : " << rxNoiseThreshold;
     str << endl << ESC << "[K";

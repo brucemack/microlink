@@ -127,11 +127,12 @@ bool ConferenceBridge::play(const int16_t* pcmAudio, uint32_t frameLen)  {
     uint8_t* gsmAudioPtr = gsmAudio;
     const int16_t* pcmAudioPtr = pcmAudio;
 
+    // It's safe to re-use this across frames:
+    Parameters params;
+    
     for (int f = 0; f < 4; f++) {
-        Parameters params;
         _gsmEncoder0.encode(pcmAudioPtr, &params);
-        PackingState state;
-        params.pack(gsmAudioPtr, &state);
+        params.pack(gsmAudioPtr);
         pcmAudioPtr += 160;
         gsmAudioPtr += 33;
     }
@@ -143,47 +144,37 @@ bool ConferenceBridge::play(const int16_t* pcmAudio, uint32_t frameLen)  {
 }
 
 void ConferenceBridge::sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t seq,
-    const uint8_t* data, uint32_t dataLen, AudioFormat fmt) {
+    const uint8_t* gsmData, uint32_t gsmDataLen, AudioFormat fmt) {
     if (fmt == AudioFormat::TEXT) {
         if (dest == _radio0Addr) {
-            // Radio can't handle the text
+            // Radio can't handle the text,ignore
         }
         else {
-            _ctx->sendUDPChannel(_rtpChannel, dest, RTP_PORT, data, dataLen);
+            _ctx->sendUDPChannel(_rtpChannel, dest, RTP_PORT, gsmData, gsmDataLen);
         }
-    } else if (fmt == AudioFormat::GSMFR4X && dataLen == (4 * 33)) {
+    } else if (fmt == AudioFormat::GSMFR4X && gsmDataLen == (4 * 33)) {
         if (dest == _radio0Addr) {
             // Convert the GSM data to PCM16 audio so that it can be 
             // transmitted.
             int16_t pcmAudio[160 * 4];
             int16_t* pcmAudioPtr = pcmAudio;
-            const uint8_t* gsmAudioPtr = data;
+            const uint8_t* gsmAudioPtr = gsmData;
+
+            // It's safe for this to be re-used
             Parameters params;
-
+            // Deocde the four frames 
             for (uint32_t f = 0; f < 4; f++) {
-                // TODO: PROVIDE AN UNPACK THAT CONTAINS STATE
-                kc1fsz::PackingState state;
-
-                params.unpack(gsmAudioPtr, &state);
+                params.unpack(gsmAudioPtr);
                 _gsmDecoder0.decode(&params, pcmAudioPtr);
                 pcmAudioPtr += 160;
                 gsmAudioPtr += 33;
             }
+
             _radio0->play(pcmAudio, 4 * 160);
         }
         else {
-            // TODO: CLEAN UP
-            uint8_t gsmFrames[4][33];
-            const uint8_t* s = data;
-            for (uint32_t f = 0; f < 4; f++) {
-                for (uint32_t p = 0; p < 33; p++) {
-                    gsmFrames[f][p] = *s;
-                    s++;
-                }        
-            }
-
             uint8_t packet[144];
-            uint32_t packetLen = formatRTPPacket(seq, ssrc, gsmFrames, packet, 144);
+            uint32_t packetLen = formatRTPPacket(seq, ssrc, gsmData, packet, 144);
             _ctx->sendUDPChannel(_rtpChannel, dest, RTP_PORT, packet, packetLen);
         }
     } else {

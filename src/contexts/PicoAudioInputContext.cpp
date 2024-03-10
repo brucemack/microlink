@@ -176,7 +176,8 @@ bool PicoAudioInputContext::run() {
             _analyzer->play(_audioInBuf[slot], _audioFrameSize * _audioFrameBlockFactor);
         }
 
-        // Pull down a 4xframe and try to move it into the transmitter
+        // Pull down a 4xframe and try to move it into the conference
+        // THIS IS THE TIME-CONSUMING PART:
         bool accepted = _sink->play(_audioInBuf[slot], _audioFrameSize * _audioFrameBlockFactor);
         if (accepted) {
             // Move the read pointer forward (we already know that 

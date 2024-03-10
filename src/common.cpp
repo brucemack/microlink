@@ -110,7 +110,7 @@ uint32_t readInt32(const uint8_t* buf) {
 }
 
 uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
-    const uint8_t gsmFrames[4][33],
+    const uint8_t* gsmFrames4x33,
     uint8_t* p, uint32_t packetSize) {
 
     if (packetSize < 144)
@@ -133,9 +133,9 @@ uint32_t formatRTPPacket(uint16_t seq, uint32_t ssrc,
     writeInt32(p, ssrc);
     p += 4;
 
-    for (uint16_t i = 0; i < 4; i++) {
-        memcpy((void*)(p + (i * 33)), gsmFrames[i], 33);
-    }
+    const uint8_t* g = gsmFrames4x33;
+    for (uint16_t i = 0; i < (4 * 33); i++)
+        *(p++) = *(g++);
 
     return 144;
 }

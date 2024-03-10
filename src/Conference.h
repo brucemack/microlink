@@ -129,6 +129,19 @@ public:
         }
         return (time_ms() - _lastMonitorRxStamp) / 1000; 
     }
+
+    /**
+     * @returns How long has it been since any stations 
+     * send/received audio.
+    */
+    uint32_t getSecondsSinceLastActivity() const { 
+        return (time_ms() - _lastActivityStamp) / 1000; 
+
+    }
+
+    uint32_t getSecondsSinceStart() const { 
+        return (time_ms() - _startStamp) / 1000; 
+    }
    
     // ----- From Runnable ------------------------------------------------
 
@@ -255,6 +268,7 @@ private:
     IPAddress _monitorAddr;
     uint32_t _lastMonitorTxStamp = 0;
     uint32_t _lastMonitorRxStamp = 0;
+    uint32_t _lastActivityStamp = 0;
 };
 
 }

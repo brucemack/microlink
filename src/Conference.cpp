@@ -173,38 +173,38 @@ void Conference::processAudio(IPAddress sourceIp,
 
     // This is the heart of the repeater
     for (Station& s : _stations) {
+        if (!s.active || !s.authorized) {
+            continue;
+        }
         if (s.id == source) {
-            if (s.authorized) {
-                // Look for the non-talking to talking transition
-                if (!s.talker) {
-                    _log->info("Station %s is talking", s.id.getCall().c_str());
-                    s.talker = true;
-                    s.audioRxPacketCount = 0;
-                } 
-                // This is continuation of talking - do some QOS checking
-                else {
-                    if (seq != 0 && seq != s.lastRxSeq + 1) {
-                        s.rxSeqErr++;
-                    }
-                    uint32_t gap = (now - s.lastAudioRxStamp);
-                    if (gap > s.longestRxGapMs) {
-                        //_log->info("Longest gap %lu", gap);
-                        s.longestRxGapMs = gap;
-                    }
+            // Look for the non-talking to talking transition
+            if (!s.talker) {
+                _log->info("Station %s is talking", s.id.getCall().c_str());
+                s.talker = true;
+                s.audioRxPacketCount = 0;
+            } 
+            // This is continuation of talking - do some QOS checking
+            else {
+                if (seq != 0 && seq != s.lastRxSeq + 1) {
+                    s.rxSeqErr++;
                 }
-                s.audioRxPacketCount++;
-                s.lastRxStamp = now;
-                s.lastAudioRxStamp = now;
-                s.lastRxSeq = seq;
+                uint32_t gap = (now - s.lastAudioRxStamp);
+                if (gap > s.longestRxGapMs) {
+                    //_log->info("Longest gap %lu", gap);
+                    s.longestRxGapMs = gap;
+                }
             }
+            s.audioRxPacketCount++;
+            s.lastRxStamp = now;
+            s.lastAudioRxStamp = now;
+            s.lastRxSeq = seq;
         }
         else {
             s.talker = false;
-            if (s.authorized) {                
-                s.lastAudioTxStamp = now;
-                _output->sendAudio(s.id.getAddr(), 
-                    ssrc, s.seq++, frame, frameLen, fmt);
-            }
+            s.lastAudioTxStamp = now;
+            _lastActivityStamp = now;
+            _output->sendAudio(s.id.getAddr(), ssrc, s.seq++, 
+                frame, frameLen, fmt);
         }
     }
 }
@@ -416,10 +416,8 @@ bool Conference::run() {
             if (s.talker && 
                 s.msSinceLastAudioRx() > TALKER_INTERVAL_MS) {
                 s.talker = false;
-                _log->info("Station %s is finished talking", s.id.getCall().c_str());
-                // Diagnostics
-                _log->info(" seqerr: %lu, maxgap: %lu",
-                    s.rxSeqErr, s.longestRxGapMs);
+                _log->info("Station %s finished talking %lu %lu", 
+                    s.id.getCall().c_str(), s.rxSeqErr, s.longestRxGapMs);
             }
         }
     }
@@ -504,7 +502,10 @@ void Conference::_sendStationPing(const StationID& id) {
         strcatLimited(buffer, _location.c_str(), bufferSize);
         strcatLimited(buffer, "\r", bufferSize);
         char msg[64];
-        snprintf(msg, 64, "MonitorRX %lu\r", getSecondsSinceLastMonitorRx());
+        snprintf(msg, 64, "Diag st=%lu, act=%lu, mon=%lu\r", 
+            getSecondsSinceStart(),
+            getSecondsSinceLastActivity(),
+            getSecondsSinceLastMonitorRx());
         strcatLimited(buffer, msg, bufferSize);
         uint32_t packetLen = formatOnDataPacket(buffer, 0, packet, packetSize);
         
