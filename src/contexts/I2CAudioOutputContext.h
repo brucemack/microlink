@@ -62,7 +62,8 @@ public:
 
     virtual void reset();
 
-    // IMPORTANT: This assumes 16-bit PCM audio
+    // IMPORTANT: This assumes 16-bit PCM audio.  This function 
+    // supports either 160 or 160x4 frames.
     virtual bool play(const int16_t* frame, uint32_t frameLen);
 
     virtual bool run();

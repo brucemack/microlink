@@ -51,7 +51,7 @@ ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log,
     _log(log),
     _radio0(radio0),
     _radio0Addr(0xff000002),
-    _delayCount(0) {   
+    _radio0GSMQueuePtr(_radio0GSMQueueSize) {   
 
     // Get UDP connections created
     _rtcpChannel = _ctx->createUDPChannel();
@@ -162,30 +162,17 @@ void ConferenceBridge::sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t 
         }
     } else if (fmt == AudioFormat::GSMFR4X && gsmDataLen == (4 * 33)) {
         if (dest == _radio0Addr) {
-            // Queue the data headed to the radio to allow the frames going 
-            // to other non-radio nodes to bypass quickly.
-            _writeRadio0GSMQueue(gsmData, gsmDataLen);
-            /*
-            // Convert the GSM data to PCM16 audio so that it can be 
-            // transmitted.
-            int16_t pcmAudio[160 * 4];
-            int16_t* pcmAudioPtr = pcmAudio;
-            const uint8_t* gsmAudioPtr = gsmData;
-
-            // It's safe for this to be re-used
-            Parameters params;
-            // Deocde the four frames 
+            const uint8_t* gsmDataPtr = gsmData;
             for (uint32_t f = 0; f < 4; f++) {
-                params.unpack(gsmAudioPtr);
-                _gsmDecoder0.decode(&params, pcmAudioPtr);
-                pcmAudioPtr += 160;
-                gsmAudioPtr += 33;
+                // Queue the audio data headed to the radio to allow the frames 
+                // going to other non-radio nodes to bypass quickly. Note that 
+                // there is no decoding/playing going on here - just queuing.
+                _writeRadio0GSMQueue(gsmDataPtr, 33);
+                gsmDataPtr += 33;
             }
-
-            _radio0->play(pcmAudio, 4 * 160);
-            */
         }
         else {
+            // Pass the GSMx4 data along to the other nodes
             uint8_t packet[144];
             uint32_t packetLen = formatRTPPacket(seq, ssrc, gsmData, packet, 144);
             _ctx->sendUDPChannel(_rtpChannel, dest, RTP_PORT, packet, packetLen);
@@ -222,63 +209,36 @@ void ConferenceBridge::_process(int state, bool entry) {
 
 void ConferenceBridge::_writeRadio0GSMQueue(const uint8_t* gsmFrame, uint32_t gsmFrameLen) {
 
-    if (gsmFrameLen != 4 * 33) {
+    if (gsmFrameLen != 33) {
         panic_unsupported();
     }
 
-    // Move the buffer into queue
-    memcpy(_radio0GSMQueue[_radio0GSMQueueWRPtr], gsmFrame, gsmFrameLen);
-    // Attempt to advance and manage wrap-around
-    uint32_t newPtr = _radio0GSMQueueWRPtr + 1;
-    if (newPtr == _radio0GSMQueueSize) {
-        newPtr = 0;
-    }
-    // Look for overflow. If an overflow would happen then we record it
-    // and stop the pointer from moving forward.
-    if (newPtr == _radio0GSMQueueRDPtr) {
-        _radio0GSMQueueOFCount++;
-    } else {
-        _radio0GSMQueueWRPtr = newPtr;
-    }
-
-    // Not sure exactly, but give a few cycles before servicing this queue
-    _delayCount = 2;
+    // Move the buffer into a circular queue
+    memcpy(_radio0GSMQueue[_radio0GSMQueuePtr.getAndIncWritePtr()], 
+        gsmFrame, gsmFrameLen);
 }
 
 void ConferenceBridge::_serviceRadio0GSMQueue() {
 
-    uint32_t depth = 0;
-
-    if (_radio0GSMQueueWRPtr != _radio0GSMQueueRDPtr) {
-        // Convert the GSM data to PCM16 audio so that it can be 
-        // transmitted.
-        int16_t pcmAudio[160 * 4];
-        int16_t* pcmAudioPtr = pcmAudio;
-        const uint8_t* gsmAudioPtr = _radio0GSMQueue[_radio0GSMQueueRDPtr];
-
-        // It's safe for this to be re-used
-        Parameters params;
-        // Deocde the four frames 
-        for (uint32_t f = 0; f < 4; f++) {
-            params.unpack(gsmAudioPtr);
-            _gsmDecoder0.decode(&params, pcmAudioPtr);
-            pcmAudioPtr += 160;
-            gsmAudioPtr += 33;
-        }
-
-        _radio0->play(pcmAudio, 4 * 160);
-
-        // Move the read pointer and manage wrap
-        _radio0GSMQueueRDPtr++;
-        if (_radio0GSMQueueRDPtr == _radio0GSMQueueSize) {
-            _radio0GSMQueueRDPtr = 0;
-        }
-        depth++;
+    if (_radio0GSMQueuePtr.isEmpty()) {
+        return;
     }
 
-    if (depth > _radio0GSMQueueMaxDepth) {
-        _radio0GSMQueueMaxDepth = depth;
-        _log->info("Radio0 GSM Queue max depth %lu", depth);
+    // We handle one GSM frame on each shot to avoid tying up the event
+    // look for longer than necessary.  Once 4 frames have been accumulated
+    // and decoded we pass a 160x4 PCM frame along for audio output.
+
+    // Convert the GSM data to PCM16 audio so that it can be transmitted.
+    const uint8_t* gsmAudioPtr = _radio0GSMQueue[_radio0GSMQueuePtr.getAndIncReadPtr()];
+    Parameters params;
+    params.unpack(gsmAudioPtr);
+    _gsmDecoder0.decode(&params, _pcmFrame + _pcmFramePtr);
+
+    _pcmFramePtr += 160;
+    // Check to see if we've gotten 4 frames
+    if (_pcmFramePtr == 4 * 160) {
+        _radio0->play(_pcmFrame, 160 * 4);
+        _pcmFramePtr = 0;
     }
 }
 

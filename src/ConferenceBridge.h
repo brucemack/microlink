@@ -28,6 +28,7 @@
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/IPLib.h"
 #include "kc1fsz-tools/AudioProcessor.h"
+#include "kc1fsz-tools/CircularQueuePtr.h"
 
 #include "gsm-0610-codec/Decoder.h"
 #include "gsm-0610-codec/Encoder.h"
@@ -61,7 +62,7 @@ public:
     void setConference(Conference* conf) { _conf = conf; }
 
     uint32_t getRadio0GSMQueueOFCount() const {
-        return _radio0GSMQueueOFCount;
+        return _radio0GSMQueuePtr.getOverflowCount();
     }
 
     // ----- From IPLibEvents -------------------------------------------------
@@ -138,21 +139,25 @@ private:
     uint16_t _radio0Seq = 0;
 
     void _serviceRadio0GSMQueue();
+
+    /**
+     * Puts a *single* GSM frame (i.e. 33 bytes) on a queue for later 
+     * processing by radio 0.
+    */
     void _writeRadio0GSMQueue(const uint8_t* gsmFrame, uint32_t gsmFrameLen);
 
     // Used to create a small delay before servicing the radio GSM queue
     uint32_t _delayCount = 0;
 
-    // A circular buffer of GSM frames headed to radio0
+    // A circular buffer of GSM frames headed to radio0 (pre-decode)
     static const uint32_t _radio0GSMQueueSize = 16;
-    uint8_t _radio0GSMQueue[_radio0GSMQueueSize][4 * 33];
-    volatile uint32_t _radio0GSMQueueWRPtr = 0;
-    volatile uint32_t _radio0GSMQueueRDPtr = 0;
-    volatile uint32_t _radio0GSMQueueOFCount = 0;
-    volatile uint32_t _radio0GSMQueueMaxDepth = 1;
+    uint8_t _radio0GSMQueue[_radio0GSMQueueSize][33];
+    CircularQueuePtr _radio0GSMQueuePtr;
+
+    // This is used to accumulate a complete 160x4 sample PCM audio frame
+    int16_t _pcmFrame[160 * 4];
+    uint32_t _pcmFramePtr = 0;
 };
-
-
 
 }
 

@@ -108,6 +108,7 @@ public:
 
     void processAudio(IPAddress source, uint32_t ssrc, uint16_t seq,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt);
+
     void processText(IPAddress source,
         const uint8_t* frame, uint32_t frameLen);
 
@@ -159,6 +160,9 @@ private:
 
     static CallSign _extractCallSign(const uint8_t* data,
         uint32_t dataLen);
+
+    void _processChat(IPAddress source,
+        const uint8_t* frame, uint32_t frameLen);
 
     struct Station {
         

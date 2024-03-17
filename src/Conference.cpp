@@ -27,6 +27,8 @@
 #include "Conference.h"
 #include "machines/DNSMachine.h"
 
+using namespace std;
+
 namespace kc1fsz {
 
 static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
@@ -169,8 +171,21 @@ void Conference::processAudio(IPAddress sourceIp,
         return;
     }
 
-    // TODO: HANDLE TEXT
     if (fmt == AudioFormat::TEXT) {
+        // When the oNDATA is followed by a \r this is general station 
+        // information.
+        if (frame[6] == 0x0d) {
+        } 
+        // When the onDATA is followed by "CONF" this is general station
+        // information.
+        else if (frameLen >= 10 && 
+            frame[6] == 'C' && frame[7] == 'O' && frame[8] == 'N' && frame[9] == 'F') {
+
+        } 
+        // Otherwise, this is chat
+        else {
+            _processChat(sourceIp, frame, frameLen);
+        }
         return;
     }
 
@@ -334,6 +349,11 @@ void Conference::_processMonitorText(IPAddress source,
     _lastMonitorRxStamp = time_ms();
 }
 
+void Conference::_processChat(IPAddress source,
+    const uint8_t* data, uint32_t dataLen) {
+    prettyHexDump(data, dataLen, std::cout);
+}
+
 CallSign Conference::_extractCallSign(const uint8_t* data, uint32_t dataLen) {
     if (isRTCPSDESPacket(data, dataLen)) {
         // Pull out the callsign
@@ -487,29 +507,38 @@ void Conference::_sendStationPing(const StationID& id) {
     }
 
     {
-        const uint16_t packetSize = 128;
+        const uint16_t packetSize = 256;
         uint8_t packet[packetSize];
 
         // Make the initial oNDATA message for the RTP port
-        const uint16_t bufferSize = 128;
+        const uint16_t bufferSize = 256 - 16;
         char buffer[bufferSize];
         buffer[0] = 0;
         strcatLimited(buffer, "oNDATA\r", bufferSize);
         strcatLimited(buffer, _callSign.c_str(), bufferSize);
         strcatLimited(buffer, "\r", bufferSize);
-        strcatLimited(buffer, "MicroLink V ", bufferSize);
-        strcatLimited(buffer, VERSION_ID, bufferSize);
-        strcatLimited(buffer, "\r", bufferSize);
         strcatLimited(buffer, _fullName.c_str(), bufferSize);
         strcatLimited(buffer, "\r", bufferSize);
         strcatLimited(buffer, _location.c_str(), bufferSize);
         strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, "MicroLink V ", bufferSize);
+        strcatLimited(buffer, VERSION_ID, bufferSize);
+        strcatLimited(buffer, "\r", bufferSize);
+        strcatLimited(buffer, "\rIn conference:\r", bufferSize);
+
         char msg[64];
-        snprintf(msg, 64, "Diag st=%lu, act=%lu, mon=%lu\r", 
+        for (Station& s : _stations) {
+            if (s.active && !s.locked) {
+                snprintf(msg, 64, "%s\r", s.id.getCall().c_str());
+                strcatLimited(buffer, msg, bufferSize);
+            }
+        } 
+        snprintf(msg, 64, "\rDiag st=%lu, act=%lu, mon=%lu\r", 
             getSecondsSinceStart(),
             getSecondsSinceLastActivity(),
             getSecondsSinceLastMonitorRx());
         strcatLimited(buffer, msg, bufferSize);
+
         uint32_t packetLen = formatOnDataPacket(buffer, 0, packet, packetSize);
         
         _output->sendAudio(id.getAddr(), 0, 0, packet, packetLen, AudioFormat::TEXT);
@@ -521,15 +550,6 @@ void Conference::_sendBye(StationID id) {
     uint8_t packet[packetSize];
     uint32_t packetLen = formatRTCPPacket_BYE(0, packet, packetSize);
     _output->sendText(id.getAddr(), packet, packetLen);
-}
-
-StationID Conference::_getTalker() const {
-    for (const Station& s : _stations) {
-        if (s.active && s.authorized && s.talker) {
-            return s.id;
-        }
-    }
-    return StationID();
 }
 
 }

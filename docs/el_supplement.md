@@ -593,13 +593,18 @@ Per Jonathan K1RFD: if the first byte of this text is '\r', OR the first four ch
 "station information" text packet, meant to be displayed to the client, and potentially updated during the 
 QSO.  Any other prefix denotes a "text chat" message, to be displayed in a different area.
 
-Here's an example message:
+Here's an example message with the first byte is a \r (0x0d):
 
 ![](packet-4.png)
 
 * The blue bar indicates the start of the packet.  The bytes before are the UDP/IP header which can be ignored for this analysis.
 * The official EchoLink client sends 4 additional bytes **following the null termination of the free text.**  These four bytes 
 contain the SSRC, encoded in a 32-bit integer with the most significant byte sent first.
+
+Here's what it looks like when a station sends a chat message. In this case, the station typed "test" into the chat window.  Notice that the first byte is 
+not a \r in this case:
+
+![](packet-17.png)
 
 ### RTP Audio Packet Format 
 
