@@ -49,6 +49,7 @@ add_executable(link-main-2
   src/Conference.cpp
   src/ConferenceBridge.cpp
   src/contexts/LwIPLib.cpp
+#  src/contexts/SIM7600IPLib.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
   src/machines/DNSMachine.cpp
@@ -59,6 +60,7 @@ add_executable(link-main-2
   kc1fsz-tools-cpp/src/DTMFDetector.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
+#  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
   kc1fsz-tools-cpp/src/md5/md5c.c
   gsm-0610-codec/src/fixed_math.cpp
   gsm-0610-codec/src/wav_util.cpp

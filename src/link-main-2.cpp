@@ -57,9 +57,17 @@ Launch command:
 #include "hardware/sync.h"
 #include "hardware/watchdog.h"
 #include "hardware/flash.h"
-#include "pico/cyw43_arch.h"
 
+// ======= Internet Stuff ===========
+#include "pico/cyw43_arch.h"
 #include "lwip/dns.h"
+#include "contexts/LwIPLib.h"
+// ======= Internet Stuff ===========
+
+// ======= Internet Stuff ===========
+//#include "kc1fsz-tools/rp2040/PicoUartChannel.h"
+//#include "contexts/SIM7600IPLib.h"
+// ======= Internet Stuff ===========
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
@@ -68,7 +76,6 @@ Launch command:
 
 #include "contexts/I2CAudioOutputContext.h"
 #include "contexts/PicoAudioInputContext.h"
-#include "contexts/LwIPLib.h"
 
 #include "machines/DNSMachine.h"
 #include "machines/LogonMachine2.h"
@@ -106,6 +113,11 @@ Launch command:
 // ===============
 // LEFT SIDE PINS 
 // ===============
+
+// Physical pin 1 - SIM7600 
+#define UART0_TX_PIN (0)
+// Physical pin 2 - SIM7600
+#define UART0_RX_PIN (1)
 
 // Physical pin 9. Input from physical PTT button.
 #define PTT_PIN (6)
@@ -186,7 +198,7 @@ static const uint32_t audioBufDepthLog2 = 4;
 static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 
 // Make the polling work like a Runnable
-class CYW43Task : public Runnable {
+class NetworkTask : public Runnable {
 public:
     bool run() { 
         // If you are using pico_cyw43_arch_poll, then you must poll periodically 
@@ -212,7 +224,7 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     uint32_t baselineRxNoise, 
     uint32_t rxNoiseThreshold, 
     bool cosState, 
-    bool wifiState, int wifiRssi, 
+    bool networkState, int wifiRssi, 
     uint32_t lastActivity,
     ostream& str);
 
@@ -221,7 +233,6 @@ bool rigKeyFailSafe();
 int main(int, const char**) {
 
     LogonMachine2::traceLevel = 0;
-    LwIPLib::traceLevel = 0;
     ConferenceBridge::traceLevel = 0;
     Conference::traceLevel = 0;
 
@@ -265,7 +276,18 @@ int main(int, const char**) {
     gpio_init(DIAG_PIN);
     gpio_set_dir(DIAG_PIN, GPIO_OUT);
     gpio_put(DIAG_PIN, 0);
-       
+
+    /*       
+    // UART0 setup (SIM7600)
+    uart_init(uart0, 115200);
+    gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART0_RX_PIN, GPIO_FUNC_UART);
+    uart_set_hw_flow(uart0, false, false);
+    uart_set_format(uart0, U_DATA_BITS, U_STOP_BITS, U_PARITY);
+    uart_set_fifo_enabled(uart0, true);
+    uart_set_translate_crlf(uart0, false);
+    */
+
     // UART1 setup (logging)
     uart_init(uart1, 9600);
     gpio_set_function(UART1_TX_PIN, GPIO_FUNC_UART);
@@ -279,17 +301,11 @@ int main(int, const char**) {
     i2c_init(i2c_default, 100 * 1000);
     gpio_set_function(I2C0_SDA, GPIO_FUNC_I2C);
     gpio_set_function(I2C0_SCL, GPIO_FUNC_I2C);
-    // TODO: DECIDE IF THESE ARE NEEDED OR NOT - WE HAVE PULL-UPS 
-    // ON THE ANALOG BOARD.
-    //gpio_pull_up(I2C0_SDA);
-    //gpio_pull_up(I2C0_SCL);
     i2c_set_baudrate(i2c_default, 800000);
 
     // Hello indicator on boot
     for (int i = 0; i < 4; i++) {
-        //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
         sleep_ms(250);
-        //cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
         sleep_ms(250);
     }
 
@@ -333,6 +349,7 @@ int main(int, const char**) {
         restore_interrupts(ints);
     } 
     */
+
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -363,7 +380,10 @@ int main(int, const char**) {
     log.info("Silent Timeout (s)   : %d", config->silentTimeoutS);
     log.info("ADC offset           : %d", config->adcRawOffset);
 
+    bool networkState = false;
+    
     // ====== Internet Connectivity Stuff =====================================
+    LwIPLib::traceLevel = 0;
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
         log.error("Failed to initialize WIFI");
     } else {
@@ -372,8 +392,18 @@ int main(int, const char**) {
             CYW43_AUTH_WPA2_AES_PSK);
     }
     LwIPLib ctx(&log);
-    bool wifiState = false;
     // ====== Internet Connectivity Stuff =====================================
+    
+    /*
+    // ====== Internet Connectivity Stuff =====================================
+    SIM7600IPLib::traceLevel = 1;
+    uint8_t rxBufferArea[256];
+    uint8_t txBufferArea[256];
+    PicoUartChannel uartCtx(uart0, rxBufferArea, 256, txBufferArea, 256);
+    SIM7600IPLib ctx(&log, &uartCtx);
+    ctx.reset();
+    // ====== Internet Connectivity Stuff =====================================
+    */
 
     TestUserInfo info;
 
@@ -482,7 +512,7 @@ int main(int, const char**) {
     conf.addRadio(CallSign("RADIO0"), IPAddress(0xff000002));
     radio0In.setADCEnabled(true);
     
-    CYW43Task wifiPollTask;
+    NetworkTask wifiPollTask;
 
     // These are all of the tasks that need to be run on every iteration
     // of the main loop.
@@ -524,6 +554,9 @@ int main(int, const char**) {
 	watchdog_enable(WATCHDOG_DELAY_MS, true);
 
     log.info("Entering event loop");
+
+    // TEMP TEMP TEMP
+    inContactWithMonitor = true;
 
     while (true) {
 
@@ -635,10 +668,13 @@ int main(int, const char**) {
         // At startup we wait some time to adjust a few parameters before 
         // opening the state machines for connections.
         if (startupMode == 2) {
-            if (time_ms() > startupMs + 500) {
+            if (time_ms() > startupMs + 1000) {
+
+                log.info("Raw sample %d", radio0In.getLastRawSample());
                 int16_t avg = rxAnalyzer.getAvg();
-                log.info("Baseline DC bias (V) %d", -avg);
-                radio0In.addBias(-avg);
+                log.info("Baseline DC bias (V) %d", avg);
+                // We shift by 4 because the ADC has been scaled from 12 to 16 bits
+                radio0In.setBias(-(avg >> 4));
                 radio0In.resetMax();
                 radio0In.resetOverflowCount();
                 startupMode = 1;
@@ -646,9 +682,7 @@ int main(int, const char**) {
             }
         } 
         else if (startupMode == 1) {
-            if (time_ms() > startupMs + 500) {
-                //baselineRxNoise = rxAnalyzer.getRMS();
-                //log.info("Baseline RX noise (Vrms) %d", baselineRxNoise);
+            if (time_ms() > startupMs + 1500) {
                 baselineRxNoise = rxAnalyzer.getMS();
                 log.info("Baseline RX noise power %lu", baselineRxNoise);
                 startupMode = 0;
@@ -665,10 +699,10 @@ int main(int, const char**) {
                 inContactWithMonitor = true;
             }
         } else {
-            if (conf.getSecondsSinceLastMonitorRx() >= 60) {
-                log.info("Lost contact with monitor, no rig allowed");
-                inContactWithMonitor = false;
-            }
+            //if (conf.getSecondsSinceLastMonitorRx() >= 60) {
+            //    log.info("Lost contact with monitor, no rig allowed");
+            //    inContactWithMonitor = false;
+            //}
         }
 
         // ----- Rig Power Management -------------------------------------------
@@ -780,15 +814,15 @@ int main(int, const char**) {
             secondTimer.reset();
 
             if (ctx.isLinkUp()) {
-                if (!wifiState) {
+                if (!networkState) {
                     log.info("WIFI is up");
                 }
-                wifiState = true;
+                networkState = true;
             } else {
-                if (wifiState) {
+                if (networkState) {
                     log.info("WIFI is down");
                 }
-                wifiState = false;
+                networkState = false;
             }
         }
 
@@ -810,7 +844,7 @@ int main(int, const char**) {
                 cyw43_wifi_get_rssi(&cyw43_state, &rssi);
                 renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
                     baselineRxNoise, config->rxNoiseThreshold, cosState, 
-                    wifiState,
+                    networkState,
                     rssi,
                     conf.getSecondsSinceLastActivity(),
                     cout);
@@ -848,7 +882,7 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     uint32_t baselineRxNoise, 
     uint32_t rxNoiseThreshold, 
     bool cosState, 
-    bool wifiState, int wifiRssi, 
+    bool networkState, int wifiRssi, 
     uint32_t lastActivity,
     ostream& str) {
 
@@ -865,7 +899,7 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     str << endl << ESC << "[K";
     str << "    Activity (sec) : " << lastActivity;
     str << endl << ESC << "[K";
-    str << "              WIFI : " << (wifiState ? "Yes" : "No");
+    str << "              WIFI : " << (networkState ? "Yes" : "No");
     str << endl << ESC << "[K";
     str << "         WIFI RSSI : " << wifiRssi;
     str << endl << ESC << "[K";

@@ -230,6 +230,12 @@ void Conference::processAudio(IPAddress sourceIp,
 void Conference::processText(IPAddress source, 
     const uint8_t* data, uint32_t dataLen) {
 
+    // TEMP!    
+    char by[16];
+    source.formatAsDottedDecimal(by, 16);
+    //cout << by << endl;
+    //prettyHexDump(data, dataLen, cout);
+
     if (source == _monitorAddr) {
         _processMonitorText(source, data, dataLen);
         return;

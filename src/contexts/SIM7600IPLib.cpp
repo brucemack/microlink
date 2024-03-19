@@ -45,6 +45,17 @@ SIM7600IPLib::SIM7600IPLib(Log* log, AsyncChannel* uart)
     _state(State::IDLE) {
 }
 
+void SIM7600IPLib::_write(const uint8_t* data, uint32_t dataLen) {
+    cout << "----- Sending -----------------------" << endl;
+    prettyHexDump(data, dataLen, cout);
+    _uart->write(data, dataLen);
+    cout << "-------------------------------------" << endl;
+}
+
+void SIM7600IPLib::_write(const char* cmd) {
+    _write((const uint8_t*)cmd, strlen(cmd));
+}
+
 // ----- Runnable Methods ------------------------------------------------
 
 /**
@@ -65,95 +76,260 @@ bool SIM7600IPLib::run() {
         uint32_t bufLen = _uart->read(buf, bufSize);
         prettyHexDump(buf, bufLen, cout);
 
+        // Process each character, attempting to form complete lines
         for (uint32_t i = 0; i < bufLen; i++) {
-            _rxHold[_rxHoldLen++] = buf[i];
-            if (_rxHoldLen >= 2) {
-                if (_rxHold[_rxHoldLen - 2] == 0x0d &&
-                    _rxHold[_rxHoldLen - 1] == 0x0a) {
-                    // Prune off the EOL before processing
-                    _rxHold[_rxHoldLen - 2] = 0;
-                    cout << _state << " Got line: [" << _rxHold << "]" << endl;
-                    _rxHoldLen = 0;
 
-                    if (_state == State::INIT_0) {
-                        if (strcmp((const char*)_rxHold, "OK") == 0) {
-                            _state = State::INIT_1;
-                            const char* cmd = "ATE0\r\n";
-                            uint32_t cmdLen = strlen(cmd);
-                            _uart->write((uint8_t*)cmd, cmdLen);
-                        }
-                    }
-                    else if (_state == State::INIT_1) {
-                        if (strcmp((const char*)_rxHold, "OK") == 0) {
-                            _state = State::INIT_2;
-                            const char* cmd = "AT+NETOPEN?\r\n";
-                            uint32_t cmdLen = strlen(cmd);
-                            _uart->write((uint8_t*)cmd, cmdLen);
-                        }
-                    }
-                    else if (_state == State::INIT_2) {
-                        // Look for the case where the network is already open
-                        if (strcmp((const char*)_rxHold, "+NETOPEN: 1") == 0) {
-                            _isNetOpen = true;
-                        } 
-                        else if (strcmp((const char*)_rxHold, "+NETOPEN: 0") == 0) {
-                            _isNetOpen = false;
-                        }
-                        else if (strcmp((const char*)_rxHold, "OK") == 0) {
-                            if (_isNetOpen) {
-                                _state = State::INIT_3;
-                                const char* cmd = "AT+NETCLOSE\r\n";
-                                uint32_t cmdLen = strlen(cmd);
-                                _uart->write((uint8_t*)cmd, cmdLen);
-                            } else {
-                                _state = State::INIT_5;
-                                const char* cmd = "AT+NETOPEN\r\n";
-                                uint32_t cmdLen = strlen(cmd);
-                                _uart->write((uint8_t*)cmd, cmdLen);
-                            }
-                        }
-                    }
-                    // After a close we get an OK and then a status
-                    else if (_state == State::INIT_3) {
-                        if (strcmp((const char*)_rxHold, "OK") == 0) {
-                            _state = State::INIT_4;
-                        }
-                    }
-                    else if (_state == State::INIT_4) {
-                        if (strcmp((const char*)_rxHold, "+NETCLOSE: 0") == 0) {
-                            _state = State::INIT_5;
-                            const char* cmd = "AT+NETOPEN\r\n";
-                            uint32_t cmdLen = strlen(cmd);
-                            _uart->write((uint8_t*)cmd, cmdLen);
-                        }
-                    }
-                    // After an open we get an OK and then a status
-                    else if (_state == State::INIT_5) {
-                        if (strcmp((const char*)_rxHold, "OK") == 0) {
-                            _state = State::INIT_6;
-                        }
-                    }
-                    else if (_state == State::INIT_6) {
-                        if (strcmp((const char*)_rxHold, "+NETOPEN: 0") == 0) {
-                            _state = State::INIT_7;
-                            const char* cmd = "AT+CIPOPEN=0,\"TCP\",\"monitor.w1tkz.net\",8100\r\n";
-                            uint32_t cmdLen = strlen(cmd);
-                            _uart->write((uint8_t*)cmd, cmdLen);
-                        }
-                    }
-                    else if (_state == State::INIT_7) {
-                        if (strcmp((const char*)_rxHold, "OK") == 0) {
-                            _state = State::RUN;
-                        }
-                    }
+            if (_rxHoldLen == _rxHoldSize) {
+                _log->error("Input oveflow");
+            } else {
+                _rxHold[_rxHoldLen++] = buf[i];
+            }
+
+            if (_inIpd) {
+                if (_rxHoldLen == _ipdLen) {
+                    _processIPD(_rxHold, _rxHoldLen);
+                    _inIpd = false;
+                    _rxHoldLen = 0;                
                 }
             }
-        }
+            // Look for the > prompted (used to indicate ready-for-send).
+            // Here we are cheating a bit and pretending that there is 
+            // a \r\n after the >.
+            else if (_rxHoldLen == 1 && _rxHold[0] == '>') {
+                _processLine(">", 1);
+                _rxHoldLen = 0;
+            }
+            // Look for a complete line
+            else if (_rxHoldLen >= 2 && 
+                _rxHold[_rxHoldLen - 2] == 0x0d &&
+                _rxHold[_rxHoldLen - 1] == 0x0a) {
 
-        anythingHappened = true;
+                // Prune off the EOL before processing
+                _rxHold[_rxHoldLen - 2] = 0;
+    
+                // Ignore blank lines
+                if (_rxHold[0] != 0)
+                    _processLine((const char*)_rxHold, _rxHoldLen - 2);
+
+                _rxHoldLen = 0;
+            }
+        }
     }
 
-    return anythingHappened;    
+    // Check for pending sends
+    if (_state == State::RUN) {
+        // Anything in the send queue?
+        if (_sendQueueWrPtr != _sendQueueRdPtr) {
+            // Form the write command
+            char buf[64];
+            snprintf(buf, 64, "AT+CIPSEND=0,%lu\r\n", _sendQueue[_sendQueueRdPtr].dataLen);
+            _write(buf);
+            _state = State::SEND_1;
+        }
+    }
+
+    // Do any other state maintenance
+    else if (_state == State::INIT_0) {
+        _write("ATE0\r\n");
+        _state = State::INIT_1;
+    }
+    else if (_state == State::INIT_2) {
+        _write("AT+NETCLOSE\r\n");
+        _state = State::INIT_3;
+    }
+    else if (_state == State::INIT_4) {
+        _write("AT+NETOPEN\r\n");
+        _state = State::INIT_5;
+    }
+    else if (_state == State::INIT_6) {
+        _write("AT+CIPOPEN=0,\"TCP\",\"monitor.w1tkz.net\",8100\r\n");
+        _state = State::INIT_7;
+    }
+
+    return true;
+}
+
+void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
+
+    cout << "Processing line: (" << _state << ") " << data << endl;
+
+    // Always look for +IPDnn - asynchronous receive
+    if (dataLen >= 5 &&
+        data[0] == '+' && data[1] == 'I' && data[2] == 'P' && data[3] == 'D') {
+        // Parse length
+        _ipdLen = atoi(data + 4);
+        _inIpd = true;
+    }
+    // Waiting for ATE0 be be processed
+    else if (_state == State::INIT_1) {
+        if (strcmp(data, "OK") == 0) {
+            _state = State::INIT_2;
+        } 
+    }
+    // Waiting for AT+NETCLOSE to be processed (will either succeed or fail)
+    else if (_state == State::INIT_3) {
+        if (strcmp(data, "OK") == 0) {
+            _state = State::INIT_3a;
+        } 
+        // We just ignore the ERROR here
+        else if (strcmp(data, "ERROR") == 0) {
+            _state = State::INIT_4;
+        } 
+    }
+    // Waiting for the successful AT+NETCLOSE to finish and report status
+    else if (_state == State::INIT_3a) {
+        if (strcmp(data, "+NETCLOSE: 0") == 0) {
+            _state = State::INIT_4;
+        } 
+    }
+    // Waiting for the AT+NETOPEN to be processed
+    else if (_state == State::INIT_5) {
+        if (strcmp((const char*)data, "OK") == 0) {
+            _state = State::INIT_5a;
+        } 
+        else if (strcmp((const char*)data, "ERROR") == 0) {
+            _state = State::FAILED;
+        }
+    }
+    // Waiting for the successful AT+NETOPEN to finish and report status
+    else if (_state == State::INIT_5a) {
+        if (strcmp((const char*)data, "+NETOPEN: 0") == 0) {
+            _state = State::INIT_6;
+        } 
+    }
+    // Waiting for the AT+CIPOPEN to be processed
+    else if (_state == State::INIT_7) {
+        if (strcmp((const char*)data, "OK") == 0) {
+            _state = State::INIT_7a;
+        } 
+        else if (strcmp((const char*)data, "ERROR") == 0) {
+            _state = State::FAILED;
+        }
+    }
+    // Waiting for the successful AT+CIPOPEN
+    else if (_state == State::INIT_7a) {
+        if (strcmp((const char*)data, "+CIPOPEN: 0,0") == 0) {
+            _state = State::RUN;
+        } 
+    }
+    else if (_state == State::SEND_1) {
+        if (strcmp(data, ">") == 0) {
+            _write(_sendQueue[_sendQueueRdPtr].data, _sendQueue[_sendQueueRdPtr].dataLen);
+            _state = State::SEND_2;
+        }
+    }
+    // Waiting for an AT+CIPSEND to be acknowledged
+    else if (_state == State::SEND_2) {
+        if (strcmp(data, "OK") == 0) {
+            _state = State::SEND_3;
+        }
+    }
+    else if (_state == State::SEND_3) {
+
+        // Form the send reponse we are waiting for
+        char buf[64];
+        snprintf(buf, 64, "+CIPSEND: 0,%lu,%lu", 
+            _sendQueue[_sendQueueRdPtr].dataLen,
+            _sendQueue[_sendQueueRdPtr].dataLen);
+
+        if (strcmp(data, buf) == 0) {
+            // Pop the send queue
+            _sendQueueRdPtr++;
+            // Deal with wrap
+            if (_sendQueueRdPtr == _sendQueueSize) {
+                _sendQueueRdPtr = 0;
+            }
+            _state = State::RUN;
+        }
+    }
+}
+
+void SIM7600IPLib::_processIPD(const uint8_t* data, uint32_t dataLen) {
+
+    if (_ipdHoldLen + dataLen > _ipdHoldSize) {
+        _log->error("IPD overflow");
+        return;
+    }
+
+    // Append accumulated data
+    memcpy(_ipdHold + _ipdHoldLen, data, dataLen);
+    _ipdHoldLen += dataLen;
+
+    // Check for a complete frame
+    if (_ipdHoldLen < 2) {
+        return;
+    }
+    uint16_t frameLen = _ipdHold[0] << 8 | _ipdHold[1];
+    if (_ipdHoldLen < frameLen) {
+        return;
+    }
+
+    // Pull out the frame into a stand-alone buffer
+    uint8_t frame[2048];
+    memcpy(frame, _ipdHold, frameLen);
+    // If there's anything left, shift down to the start of the hold area
+    if (_ipdHoldLen > frameLen) {
+        for (uint32_t i = 0; i < (_ipdHoldLen - frameLen); i++)
+            _ipdHold[i] = _ipdHold[frameLen + 1];
+        _ipdHoldLen -= frameLen;
+    } else {
+        _ipdHoldLen = 0;
+    }
+
+    if (frameLen >= 4) {
+
+        cout << "Frame" << endl;
+        prettyHexDump(frame, frameLen, cout);
+
+        // RESP_QUERY_DNS
+        if (frame[2] == 15) {
+            if (frameLen < 9) {
+                _log->error("Invalid DNS response");
+                return;
+            }
+            if (frame[3] != 0) {
+                return;
+            }
+            uint32_t hostNameLen = frameLen - 8;
+            if (hostNameLen > 63) {
+                return;
+            }
+
+            uint32_t addr = (frame[4] << 24) | (frame[5] << 16) | (frame[6] << 8) |
+                frame[7];
+            char hostName[64];
+            memcpyLimited((uint8_t*)hostName, frame + 8, hostNameLen, 63);
+            hostName[hostNameLen] = 0;
+
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                _events[i]->dns(HostName(hostName), IPAddress(addr));
+        }
+        // RESP_OPEN_TCP
+        else if (frame[2] == 8) {
+            if (frameLen != 6) {
+                _log->error("Invalid response");
+                return;
+            }
+            if (frame[5] != 0) {
+                return;
+            }
+            uint16_t id = frame[3] << 8 | frame[4];
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                _events[i]->conn(Channel(id));
+        }
+        else {
+            _log->info("Unsupported response type");
+        }
+    }
+}
+
+void SIM7600IPLib::_queueSend(const uint8_t* d, uint32_t dl) {
+    _sendQueue[_sendQueueWrPtr] = Send(d, dl);
+    _sendQueueWrPtr++;
+    // Deal with wrap
+    if (_sendQueueWrPtr == _sendQueueSize) {
+        _sendQueueWrPtr = 0;
+    }
 }
 
 void SIM7600IPLib::addEventSink(IPLibEvents* e) {
@@ -165,12 +341,7 @@ void SIM7600IPLib::addEventSink(IPLibEvents* e) {
 }
 
 void SIM7600IPLib::reset() {
-
     _state = State::INIT_0;
-
-    const char* cmd = "\r\nAT\r\n";
-    uint32_t cmdLen = strlen(cmd);
-    _uart->write((uint8_t*)cmd, cmdLen);
 }
 
 bool SIM7600IPLib::isLinkUp() const {
@@ -189,14 +360,12 @@ void SIM7600IPLib::queryDNS(HostName hostName) {
     buf[2] = 7;
     memcpy(buf + 3, hostName.c_str(), strlen(hostName.c_str()));
 
-    // Build the send command
-    char cmd[64];
-    snprintf(cmd, 64, "AT+CIPSEND=0,%d\r\n", totalLen);
-    _uart->write((uint8_t*)cmd, strlen(cmd));
+    // Queue for delivery
+    _queueSend(buf, totalLen);
 }
 
 Channel SIM7600IPLib::createTCPChannel() {
-    return Channel(0, false);
+    return Channel(_channelCount++, true);
 }
 
 void SIM7600IPLib::closeChannel(Channel c) {
@@ -208,10 +377,30 @@ void SIM7600IPLib::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port)
     formatIP4Address(ipAddr.getAddr(), addrStr, 20);
 
     if (traceLevel > 0)
-        _log->info("Connecting to %s:%d", addrStr, port);
+        _log->info("Connecting %d to %s:%d", c.getId(), addrStr, port);
+    
+    // Make a packet
+    uint8_t buf[11];
+    uint16_t totalLen = 11;
+    buf[0] = (totalLen & 0xff00) >> 8;
+    buf[1] = (totalLen & 0x00ff);
+    buf[2] = 2;
+    buf[3] = (c.getId() & 0xff00) >> 8;
+    buf[4] = (c.getId() & 0x00ff);
+    buf[5] = (ipAddr.getAddr() & 0xff000000) >> 24;
+    buf[6] = (ipAddr.getAddr() & 0x00ff0000) >> 16;
+    buf[7] = (ipAddr.getAddr() & 0x0000ff00) >> 8;
+    buf[8] = (ipAddr.getAddr() & 0x000000ff);
+    buf[9] = (port & 0xff00) >> 8;
+    buf[10] = (port & 0x00ff);
+
+    // Queue for delivery
+    _queueSend(buf, totalLen);
 }
 
 void SIM7600IPLib::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {    
+    if (traceLevel > 0)
+        _log->info("Sending %d", c.getId());
 }
 
 Channel SIM7600IPLib::createUDPChannel() {

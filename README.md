@@ -255,7 +255,11 @@ This is the official binary that runs in production.
 
     # Login test
     printf "lKC1FSZ\254\254xxx\rONLINE0.02MLZ(08:11)\rWellesley, MA USA\r" | nc -w 10 naeast.echolink.org 5200
-   
+
+    # SIM7600 open TCP socket in transparent mode:
+    ATE0;+CIPMODE=1;+NETOPEN;+CIPOPEN=0,"TCP","54.89.121.215",8100
+
+
 # Rig Integration Notes
 
 ## Baofeng BF-F8HP HT
@@ -441,6 +445,7 @@ enough.
 * Analog/Audio
   - [Good article from Analog Devices about noise in mixed-signal systems](https://www.analog.com/media/en/analog-dialogue/volume-46/number-2/articles/staying_well_grounded.pdf)
   - [Detailed article about audio/rig integration](https://www.zs2ez.co.za/Soundcard/Soundcard.htm)
+  - [Linear Predictive Coding of Speach](https://course.ece.cmu.edu/~ece792/handouts/RS_Chap_LPC.pdf)
 * DSP Related
   - [A useful article on implementing the Goertzel Algorithm in fixed point](https://remcycles.net/blog/goertzel.html)
   - [Very good article on Fixed Point Math by Randy Yates](http://www.digitalsignallabs.com/downloads/fp.pdf)

@@ -68,7 +68,7 @@ public:
      * The DC bias is added to every sample.  It is used to compensate for 
      * centering inaccuracies in the circuit prior to the ADC.
      */
-    void addBias(int16_t b) { _dcBias += (b >> 4); }
+    void setBias(int16_t b) { _dcBias = b; }
 
     void setAnalyzer(AudioAnalyzer* aa) { _analyzer = aa; }
 
@@ -112,7 +112,7 @@ private:
     // An offset that is added to all ADC values before anything happens.
     int16_t _rawOffset = 0;
     // Used to trim the centering
-    int16_t _dcBias = 100;
+    int16_t _dcBias = 0;
     // This includes x16 for 12 to 16 bit PCM conversion
     int16_t _gain = 16;
 

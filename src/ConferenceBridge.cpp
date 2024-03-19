@@ -52,18 +52,25 @@ ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log,
     _radio0(radio0),
     _radio0Addr(0xff000002),
     _radio0GSMQueuePtr(_radio0GSMQueueSize) {   
-
-    // Get UDP connections created
-    _rtcpChannel = _ctx->createUDPChannel();
-    _rtpChannel = _ctx->createUDPChannel();
-
-    // Start the RTCP socket setup (RTCP)
-    _ctx->bindUDPChannel(_rtcpChannel, RTCP_PORT);
-    _setState(State::IN_SETUP_1, CHANNEL_SETUP_TIMEOUT_MS, State::FAILED);
+    _setState(State::IDLE);
 }
 
 bool ConferenceBridge::run() {
-     _serviceRadio0GSMQueue();
+
+    if (_isState(State::IDLE)) {
+
+        // Get UDP connections created
+        _rtcpChannel = _ctx->createUDPChannel();
+        _rtpChannel = _ctx->createUDPChannel();
+
+        // Start the RTCP socket setup (RTCP)
+        _ctx->bindUDPChannel(_rtcpChannel, RTCP_PORT);
+        _setState(State::IN_SETUP_1, CHANNEL_SETUP_TIMEOUT_MS, State::FAILED);
+    }
+
+    // Keep delivering audio to the radio
+    _serviceRadio0GSMQueue();
+
     // Let the base class work
     return StateMachine2::run();
 }

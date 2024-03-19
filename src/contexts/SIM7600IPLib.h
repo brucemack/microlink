@@ -32,6 +32,19 @@ namespace kc1fsz {
 class Log;
 class AsyncChannel;
 
+struct Send {
+
+    Send() : dataLen(0) { }
+
+    Send(const uint8_t* d, uint32_t dl) {
+        memcpyLimited(data, d, dl, 256);
+        dataLen = dl;
+    }
+
+    uint8_t data[256];
+    uint32_t dataLen;
+};
+
 /**
  * IMPORTANT: We are assuming that this runs on an embedded processor
  * we so limit the use of C++ features.
@@ -77,6 +90,13 @@ public:
 
 private:
 
+    void _write(const uint8_t* data, uint32_t dataLen);
+    void _write(const char* cmd);
+    void _queueSend(const uint8_t* data, uint32_t dataLen);
+
+    void _processLine(const char* data, uint32_t dataLen);
+    void _processIPD(const uint8_t* data, uint32_t dataLen);
+
     Log* _log;
     AsyncChannel* _uart;
 
@@ -84,13 +104,18 @@ private:
     IPLibEvents* _events[_maxEvents];
     uint32_t _eventsLen = 0;   
 
-    static const uint32_t _sendHoldSize = 256;
-    uint8_t _sendHold[_sendHoldSize];
-    uint32_t _sendHoldLen;
+    static const uint32_t _sendQueueSize = 4;
+    Send _sendQueue[_sendQueueSize];
+    uint32_t _sendQueueWrPtr = 0;
+    uint32_t _sendQueueRdPtr = 0;
 
     static const uint32_t _rxHoldSize = 256;
     uint8_t _rxHold[_rxHoldSize];
-    uint32_t _rxHoldLen;
+    uint32_t _rxHoldLen = 0;
+
+    static const uint32_t _ipdHoldSize = 2048;
+    uint8_t _ipdHold[_ipdHoldSize];
+    uint32_t _ipdHoldLen = 0;
 
     enum State {
         IDLE,
@@ -98,16 +123,26 @@ private:
         INIT_1,
         INIT_2,
         INIT_3,
+        INIT_3a,
         INIT_4,
         INIT_5,
+        INIT_5a,
         INIT_6,
         INIT_7,
-        RUN
+        INIT_7a,
+        RUN,
+        SEND_1,
+        SEND_2,
+        SEND_3,
+        FAILED
     };
 
-    State _state;
+    State _state = State::IDLE;
     bool _isNetOpen = false;
+    bool _inIpd = false;
+    uint32_t _ipdLen = 0;
 
+    int _channelCount = 1;
 };
 
 }
