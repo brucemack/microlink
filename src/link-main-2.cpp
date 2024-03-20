@@ -327,7 +327,7 @@ int main(int, const char**) {
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
         config.rxNoiseThreshold = 8000;
-        config.adcRawOffset = -19;
+        config.adcRawOffset = -22;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
         flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
@@ -336,7 +336,6 @@ int main(int, const char**) {
         restore_interrupts(ints);
     } 
     */
-    
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -673,12 +672,11 @@ int main(int, const char**) {
         // opening the state machines for connections.
         if (startupMode == 2) {
             if (time_ms() > startupMs + 1000) {
-
                 log.info("Raw sample %d", radio0In.getLastRawSample());
                 int16_t avg = rxAnalyzer.getAvg();
                 log.info("Baseline DC bias (V) %d", avg);
                 // We shift by 4 because the ADC has been scaled from 12 to 16 bits
-                radio0In.setBias(-(avg >> 4));
+                //radio0In.setBias(-(avg >> 4));
                 radio0In.resetMax();
                 radio0In.resetOverflowCount();
                 startupMode = 1;
@@ -767,9 +765,6 @@ int main(int, const char**) {
             gpio_get(RIG_COS_PIN) : 
                 startupMode == 0 && 
                 abssub2(rxAnalyzer.getMS(), baselineRxNoise) > config->rxNoiseThreshold;
-
-        // TEMP (NO RADIO)
-        rigCosState = false;
 
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.

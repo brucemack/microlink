@@ -48,9 +48,9 @@ add_executable(link-main-2
   src/LinkUserInfo.cpp
   src/Conference.cpp
   src/ConferenceBridge.cpp
-#  src/contexts/LwIPLib.cpp
-  src/contexts/SIM7600IPLib.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+  src/contexts/LwIPLib.cpp
+  #src/contexts/SIM7600IPLib.cpp
+  #kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
   src/machines/DNSMachine.cpp
@@ -77,8 +77,8 @@ pico_enable_stdio_uart(link-main-2 0)
 pico_add_extra_outputs(link-main-2)
 target_compile_definitions(link-main-2 PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
 target_compile_definitions(link-main-2 PRIVATE PICO_BUILD=1)
-#target_link_libraries(link-main-2 pico_stdlib hardware_i2c hardware_adc pico_cyw43_arch_lwip_poll)
-target_link_libraries(link-main-2 pico_stdlib hardware_i2c hardware_adc)
+target_link_libraries(link-main-2 pico_stdlib hardware_i2c hardware_adc pico_cyw43_arch_lwip_poll)
+#target_link_libraries(link-main-2 pico_stdlib hardware_i2c hardware_adc)
 endif()
 
 target_include_directories(link-main-2 PRIVATE src)
