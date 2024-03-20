@@ -4,3 +4,6 @@
 [submodule "kc1fsz-tools-cpp"]
 	path = kc1fsz-tools-cpp
 	url = https://github.com/brucemack/kc1fsz-tools-cpp.git
+[submodule "microtunnel"]
+	path = microtunnel
+	url = https://github.com/brucemack/microtunnel.git

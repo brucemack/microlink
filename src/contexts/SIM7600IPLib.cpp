@@ -28,6 +28,8 @@
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/AsyncChannel.h"
 
+#include "microtunnel/common.h"
+
 #include "../common.h"
 #include "../BooleanHolder.h"
 
@@ -281,8 +283,7 @@ void SIM7600IPLib::_processIPD(const uint8_t* data, uint32_t dataLen) {
         cout << "Frame" << endl;
         prettyHexDump(frame, frameLen, cout);
 
-        // RESP_QUERY_DNS
-        if (frame[2] == 15) {
+        if (frame[2] == ClientFrameType::RESP_QUERY_DNS) {
             if (frameLen < 9) {
                 _log->error("Invalid DNS response");
                 return;
@@ -304,8 +305,7 @@ void SIM7600IPLib::_processIPD(const uint8_t* data, uint32_t dataLen) {
             for (uint32_t i = 0; i < _eventsLen; i++)
                 _events[i]->dns(HostName(hostName), IPAddress(addr));
         }
-        // RESP_OPEN_TCP
-        else if (frame[2] == 8) {
+        else if (frame[2] == ClientFrameType::RESP_OPEN_TCP) {
             if (frameLen != 6) {
                 _log->error("Invalid response");
                 return;
@@ -349,19 +349,17 @@ bool SIM7600IPLib::isLinkUp() const {
 }
 
 void SIM7600IPLib::queryDNS(HostName hostName) {
+
     if (traceLevel > 0)
         _log->info("DNS request for %s", hostName.c_str());
 
     // Make a packet
-    uint8_t buf[64];
-    uint16_t totalLen = 3 + strlen(hostName.c_str());
-    buf[0] = (totalLen & 0xff00) >> 8;
-    buf[1] = (totalLen & 0x00ff);
-    buf[2] = 7;
-    memcpy(buf + 3, hostName.c_str(), strlen(hostName.c_str()));
-
+    RequestQueryDNS req;
+    req.len = sizeof(req);
+    req.type = ClientFrameType::REQ_QUERY_DNS;
+    strncpy(req.name, hostName.c_str(), 64);
     // Queue for delivery
-    _queueSend(buf, totalLen);
+    _queueSend((const uint8_t*)&req, sizeof(req));
 }
 
 Channel SIM7600IPLib::createTCPChannel() {
@@ -380,27 +378,26 @@ void SIM7600IPLib::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port)
         _log->info("Connecting %d to %s:%d", c.getId(), addrStr, port);
     
     // Make a packet
-    uint8_t buf[11];
-    uint16_t totalLen = 11;
-    buf[0] = (totalLen & 0xff00) >> 8;
-    buf[1] = (totalLen & 0x00ff);
-    buf[2] = 2;
-    buf[3] = (c.getId() & 0xff00) >> 8;
-    buf[4] = (c.getId() & 0x00ff);
-    buf[5] = (ipAddr.getAddr() & 0xff000000) >> 24;
-    buf[6] = (ipAddr.getAddr() & 0x00ff0000) >> 16;
-    buf[7] = (ipAddr.getAddr() & 0x0000ff00) >> 8;
-    buf[8] = (ipAddr.getAddr() & 0x000000ff);
-    buf[9] = (port & 0xff00) >> 8;
-    buf[10] = (port & 0x00ff);
-
-    // Queue for delivery
-    _queueSend(buf, totalLen);
+    RequestOpenTCP req;
+    req.len = sizeof(req);
+    req.type = ClientFrameType::REQ_OPEN_TCP;
+    req.clientId = c.getId();
+    req.addr = ipAddr.getAddr();
+    req.port = (uint16_t)port;
+    _queueSend((const uint8_t*)&req, sizeof(req));
 }
 
 void SIM7600IPLib::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {    
     if (traceLevel > 0)
         _log->info("Sending %d", c.getId());
+    
+    RequestSendTCP req;
+    req.len = len + 6;
+    req.type = ClientFrameType::REQ_SEND_TCP;
+    req.clientId = c.getId();
+    memcpyLimited(req.contentPlaceholder, b, len, 2048 - 6);
+    // Queue for delivery
+    _queueSend((const uint8_t*)&req, req.len);
 }
 
 Channel SIM7600IPLib::createUDPChannel() {

@@ -68,7 +68,7 @@ void DNSMachine::_process(int state, bool entry) {
     }
 
     if (_isState(State::IDLE)) {
-        if (_ctx->isLinkUp()) {
+        if (_ctx->isLinkUp() && !(_hostName == "")) {
             // Launch the DNS resolution process
             _ctx->queryDNS(_hostName);
             _setState(State::DNS_WAIT, DNS_TIMEOUT_MS, State::FAILED);

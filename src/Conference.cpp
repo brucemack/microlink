@@ -403,11 +403,13 @@ bool Conference::run() {
         _sendPing();
     }
 
+    /*
     // Ping the monitor server 
     if (_monitorTimer.poll()) {
         _monitorTimer.reset();
         _sendMonitorPing();
     }
+    */
 
     // Station maintenance
     for (Station& s : _stations) {

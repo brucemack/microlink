@@ -59,14 +59,14 @@ Launch command:
 #include "hardware/flash.h"
 
 // ======= Internet Stuff ===========
-#include "pico/cyw43_arch.h"
-#include "lwip/dns.h"
-#include "contexts/LwIPLib.h"
+//#include "pico/cyw43_arch.h"
+//#include "lwip/dns.h"
+//#include "contexts/LwIPLib.h"
 // ======= Internet Stuff ===========
 
 // ======= Internet Stuff ===========
-//#include "kc1fsz-tools/rp2040/PicoUartChannel.h"
-//#include "contexts/SIM7600IPLib.h"
+#include "kc1fsz-tools/rp2040/PicoUartChannel.h"
+#include "contexts/SIM7600IPLib.h"
 // ======= Internet Stuff ===========
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
@@ -204,7 +204,7 @@ public:
         // If you are using pico_cyw43_arch_poll, then you must poll periodically 
         // from your main loop (not from a timer) to check for Wi-Fi driver or 
         // lwIP work that needs to be done.
-        cyw43_arch_poll();
+        //cyw43_arch_poll();
         return true;
     }
 };
@@ -238,10 +238,6 @@ int main(int, const char**) {
 
     // Seup PICO
     stdio_init_all();
-
-    // On-board LED
-    //gpio_init(LED_PIN);
-    //gpio_set_dir(LED_PIN, GPIO_OUT);
 
     // PTT switch
     gpio_init(PTT_PIN);
@@ -277,17 +273,6 @@ int main(int, const char**) {
     gpio_set_dir(DIAG_PIN, GPIO_OUT);
     gpio_put(DIAG_PIN, 0);
 
-    /*       
-    // UART0 setup (SIM7600)
-    uart_init(uart0, 115200);
-    gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
-    gpio_set_function(UART0_RX_PIN, GPIO_FUNC_UART);
-    uart_set_hw_flow(uart0, false, false);
-    uart_set_format(uart0, U_DATA_BITS, U_STOP_BITS, U_PARITY);
-    uart_set_fifo_enabled(uart0, true);
-    uart_set_translate_crlf(uart0, false);
-    */
-
     // UART1 setup (logging)
     uart_init(uart1, 9600);
     gpio_set_function(UART1_TX_PIN, GPIO_FUNC_UART);
@@ -322,7 +307,7 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-    /*
+    
     // TEMPORARY!
     {
         // Write flash
@@ -331,11 +316,11 @@ int main(int, const char**) {
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
         strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "xxx", 32);
+        strncpy(config.password, "warslink", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
-        strncpy(config.wifiPassword, "xxx", 16);
+        strncpy(config.wifiPassword, "emergency", 16);
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
@@ -348,8 +333,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
-    */
-
+    
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -381,7 +365,8 @@ int main(int, const char**) {
     log.info("ADC offset           : %d", config->adcRawOffset);
 
     bool networkState = false;
-    
+
+    /*    
     // ====== Internet Connectivity Stuff =====================================
     LwIPLib::traceLevel = 0;
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
@@ -393,9 +378,19 @@ int main(int, const char**) {
     }
     LwIPLib ctx(&log);
     // ====== Internet Connectivity Stuff =====================================
-    
-    /*
+    */
+
     // ====== Internet Connectivity Stuff =====================================
+
+    // UART0 setup (SIM7600)
+    uart_init(uart0, 115200);
+    gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
+    gpio_set_function(UART0_RX_PIN, GPIO_FUNC_UART);
+    uart_set_hw_flow(uart0, false, false);
+    uart_set_format(uart0, U_DATA_BITS, U_STOP_BITS, U_PARITY);
+    uart_set_fifo_enabled(uart0, true);
+    uart_set_translate_crlf(uart0, false);
+
     SIM7600IPLib::traceLevel = 1;
     uint8_t rxBufferArea[256];
     uint8_t txBufferArea[256];
@@ -403,7 +398,6 @@ int main(int, const char**) {
     SIM7600IPLib ctx(&log, &uartCtx);
     ctx.reset();
     // ====== Internet Connectivity Stuff =====================================
-    */
 
     TestUserInfo info;
 
@@ -449,7 +443,7 @@ int main(int, const char**) {
 
     DNSMachine dnsMachine2(&ctx, &info, &log, DNS_INTERVAL_MS);
     ctx.addEventSink(&dnsMachine2);
-    dnsMachine2.setHostName(MONITOR_SERVER_NAME);
+    //dnsMachine2.setHostName(MONITOR_SERVER_NAME);
 
     LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1);
     ctx.addEventSink(&logonMachine);
@@ -594,7 +588,15 @@ int main(int, const char**) {
                 IPAddress addr(0);
                 StationID sid(addr, cs);
                 lookup.validate(sid);
+            } 
+            /*
+            else if (c == 'b') {
+                CallSign cs("K6LNK-R");
+                IPAddress addr(0);
+                StationID sid(addr, cs);
+                lookup.validate(sid);
             }
+            */
             else if (c == 'o') {
                 if (statusPage) {
                     log.setStdout(true);
@@ -764,6 +766,9 @@ int main(int, const char**) {
                 startupMode == 0 && 
                 abssub2(rxAnalyzer.getMS(), baselineRxNoise) > config->rxNoiseThreshold;
 
+        // TEMP (NO RADIO)
+        rigCosState = false;
+
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.
         //
@@ -826,12 +831,12 @@ int main(int, const char**) {
             }
         }
 
-        // The key LED is steady when the rig key is down and flashing 
-        // when the rig COS is enabled
+        // The key LED is steady when COS is enabled and flashing when
+        // the rig is keyed
         if (rigKeyState) {
-            gpio_put(KEY_LED_PIN, 1);
-        } else if (cosState) {
             gpio_put(KEY_LED_PIN, flashState);
+        } else if (cosState) {
+            gpio_put(KEY_LED_PIN, 1);
         } else {
             gpio_put(KEY_LED_PIN, 0);
         }
@@ -841,7 +846,7 @@ int main(int, const char**) {
             if (renderTimer.poll()) {
                 renderTimer.reset();
                 int32_t rssi = 0;
-                cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+                //cyw43_wifi_get_rssi(&cyw43_state, &rssi);
                 renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
                     baselineRxNoise, config->rxNoiseThreshold, cosState, 
                     networkState,
