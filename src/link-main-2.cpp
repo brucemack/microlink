@@ -59,15 +59,17 @@ Launch command:
 #include "hardware/flash.h"
 
 // ======= Internet Stuff ===========
-//#include "pico/cyw43_arch.h"
-//#include "lwip/dns.h"
-//#include "contexts/LwIPLib.h"
+#include "pico/cyw43_arch.h"
+#include "lwip/dns.h"
+#include "contexts/LwIPLib.h"
 // ======= Internet Stuff ===========
 
+/*
 // ======= Internet Stuff ===========
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "contexts/SIM7600IPLib.h"
 // ======= Internet Stuff ===========
+*/
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
@@ -204,7 +206,7 @@ public:
         // If you are using pico_cyw43_arch_poll, then you must poll periodically 
         // from your main loop (not from a timer) to check for Wi-Fi driver or 
         // lwIP work that needs to be done.
-        //cyw43_arch_poll();
+        cyw43_arch_poll();
         return true;
     }
 };
@@ -307,7 +309,7 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-    
+    /*
     // TEMPORARY!
     {
         // Write flash
@@ -316,11 +318,11 @@ int main(int, const char**) {
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
         strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "warslink", 32);
+        strncpy(config.password, "xxx", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
-        strncpy(config.wifiPassword, "emergency", 16);
+        strncpy(config.wifiPassword, "xxx", 16);
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
@@ -333,6 +335,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
+    */
     
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
@@ -366,7 +369,6 @@ int main(int, const char**) {
 
     bool networkState = false;
 
-    /*    
     // ====== Internet Connectivity Stuff =====================================
     LwIPLib::traceLevel = 0;
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
@@ -378,10 +380,9 @@ int main(int, const char**) {
     }
     LwIPLib ctx(&log);
     // ====== Internet Connectivity Stuff =====================================
-    */
 
+    /*
     // ====== Internet Connectivity Stuff =====================================
-
     // UART0 setup (SIM7600)
     uart_init(uart0, 115200);
     gpio_set_function(UART0_TX_PIN, GPIO_FUNC_UART);
@@ -398,6 +399,7 @@ int main(int, const char**) {
     SIM7600IPLib ctx(&log, &uartCtx);
     ctx.reset();
     // ====== Internet Connectivity Stuff =====================================
+    */
 
     TestUserInfo info;
 
@@ -846,7 +848,7 @@ int main(int, const char**) {
             if (renderTimer.poll()) {
                 renderTimer.reset();
                 int32_t rssi = 0;
-                //cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+                cyw43_wifi_get_rssi(&cyw43_state, &rssi);
                 renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
                     baselineRxNoise, config->rxNoiseThreshold, cosState, 
                     networkState,
