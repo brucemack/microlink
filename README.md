@@ -21,11 +21,15 @@ Here's the current demo video:
 
 [![MicroLink Transmit and Receive Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
 
-The microphone/analog section still needs a lot of work. 
+The microphone/analog section still needs some work. 
 
 Here's what it sounds like over the air:
 
 [![MicroLink OTA Demo](https://img.youtube.com/vi/BMkJOykSL_8/0.jpg)](https://www.youtube.com/watch?v=BMkJOykSL_8)
+
+Here's the setup at the moment:
+
+![MicroLink Station Picture](docs/station-1.jpeg)
 
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
@@ -51,8 +55,8 @@ This project required an in-depth examination of how the EchoLink protocol works
 I created during this analysis are located here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
 
 The hardware is used in two configurations:
-* A client, with microphone and speaker for connecting to EchoLink conferences, links, and repeaters.
 * A link station, with integration to a radio to allow remote access.
+* A client, with microphone and speaker for connecting to EchoLink conferences, links, and repeaters.
 
 ## Current Parts List (HW)
 
@@ -60,15 +64,16 @@ The hardware is used in two configurations:
 connectivity.  $6.00 on DigiKey. Work is underway to provide a 4G cellular data option 
 using a SIM7600 module. More on this to follow.
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
-* Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
-* The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
 * Isolation transformers and optocouplers are used to eliminate the need for common ground 
 between the radio and the MicroLink system. This helps to reduce digital noise.
-* The radio link is an ICOM IC-2000H mobile rig.
-* The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
+* The radio link is an AZDEN PCS-6000H mobile rig.
+* When not using the radio:
+  - Audio input sampling uses the integrated ADC in the RP2040.
+  - Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
+  - The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
+  - The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
 filter.  The microphone part needs work. The next revision will use a TLV9161 op amp for the 
 microphone pre-amp to reduce noise.
-* Audio input sampling uses the integrated ADC in the RP2040.
 
 ## Current Parts List (SW)
 
@@ -122,17 +127,15 @@ This is a work in process. The performance on the low end of the audio spectrum 
 
 ## Cellular Data Interface
 
-The main reasons I used the ESP-32 for WIFI connectivity is the fact that the ESP AT
-command set is very similar to the one supported by the SIM7600 4G cellular module.
 I am currently working on a version of the MicroLink system that uses 4G internet 
-connectivity. 
+connectivity using a SIM7600 module.
 
 ## Speeds and Feeds
 
 * The standard audio sample rate for GSM-FR/EchoLink is 8 kHz at 12-bits of resolution.
 * The audio CODEC creates/consumes one 640 byte packet every 80ms.  One of these packets is moved 12.5 times per second.
-* It takes the RP2040 about 7ms to decode a 4x160 byte GSM frame.
-* It takes the RP2040 about 30ms to encode a 4x160 byte GSM frame.
+* It takes the RP2040 about 3ms to decode a 33 byte GSM frame into PCM.
+* It takes the RP2040 about 7ms to encode a 160 sample PCM frame into GSM.
 * The UDP data rate needed to sustain audio quality is 
 approximately 14,000 baud.
 * The RP2040 runs at 125 MHz. Only one of the two processors is used at this time.
