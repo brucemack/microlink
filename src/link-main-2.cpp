@@ -121,6 +121,9 @@ Launch command:
 // Physical pin 2 - SIM7600
 #define UART0_RX_PIN (1)
 
+// Physical pin 4 - SIM7600 enable
+#define SIM7600_EN_PIN (2)
+
 // Physical pin 9. Input from physical PTT button.
 #define PTT_PIN (6)
 // Physical pin 10. Output to drive an LED indicating keyed status
@@ -269,6 +272,11 @@ int main(int, const char**) {
     gpio_init(RIG_POWER_PIN);
     gpio_set_dir(RIG_POWER_PIN, GPIO_OUT);
     gpio_put(RIG_POWER_PIN, 0);
+
+    // SIM7600 module enable
+    gpio_init(SIM7600_EN_PIN);
+    gpio_set_dir(SIM7600_EN_PIN, GPIO_OUT);
+    gpio_put(SIM7600_EN_PIN, 1);
 
     // Diag
     gpio_init(DIAG_PIN);
