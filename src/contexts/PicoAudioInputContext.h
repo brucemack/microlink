@@ -56,24 +56,23 @@ public:
     void setADCEnabled(bool en);
     
     uint32_t getOverflowCount() const { return _audioInBufOverflow; }
+
     void resetOverflowCount() { _audioInBufOverflow = 0; }
 
     int16_t getLastRawSample() const { return _lastRawSample; }
-
-    void setRawOffset(int16_t off) { _rawOffset = off; }
-
-    int16_t getBias() const { return _dcBias; }
 
     /**
      * The DC bias is added to every sample.  It is used to compensate for 
      * centering inaccuracies in the circuit prior to the ADC.
      */
-    void setBias(int16_t b) { _dcBias = b; }
+    void setRawOffset(int16_t off) { _rawOffset = off; }
 
     void setAnalyzer(AudioAnalyzer* aa) { _analyzer = aa; }
 
     uint32_t getMaxSkew() const { return _maxSkew; }
+
     uint32_t getMaxLen() const { return _maxLen; }
+
     void resetMax() { _maxSkew = 0; _maxLen = 0; }
 
     // ----- From Runnable ---------------------------------------------------

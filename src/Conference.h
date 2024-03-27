@@ -143,6 +143,11 @@ public:
     uint32_t getSecondsSinceStart() const { 
         return (time_ms() - _startStamp) / 1000; 
     }
+
+    // Diagnostic stuff
+    void setWifiRssi(int16_t p) { _wifiRssi = p; }
+
+    void setRxPower(uint32_t p) { _rxPower = p; }
    
     // ----- From Runnable ------------------------------------------------
 
@@ -273,6 +278,10 @@ private:
     uint32_t _lastMonitorTxStamp = 0;
     uint32_t _lastMonitorRxStamp = 0;
     uint32_t _lastActivityStamp = 0;
+
+    // Diags
+    int16_t _wifiRssi = 0;
+    uint32_t _rxPower = 0;
 };
 
 }

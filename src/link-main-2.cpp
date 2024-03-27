@@ -334,7 +334,7 @@ int main(int, const char**) {
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
-        config.rxNoiseThreshold = 8000;
+        config.rxNoiseThreshold = 15000;
         config.adcRawOffset = -22;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
@@ -637,6 +637,8 @@ int main(int, const char**) {
                 log.info("Max cycle (us)           %lu", longestCycleUs);
                 longestCycleUs = 0;
 
+                log.info("RXAnalyzer sanity: %d", rxAnalyzer.sanityCheck());
+
                 log.info("-----------------------------------------------------------");
             }
         }
@@ -772,7 +774,7 @@ int main(int, const char**) {
         bool rigCosState = (config->useHardCos) ? 
             gpio_get(RIG_COS_PIN) : 
                 startupMode == 0 && 
-                abssub2(rxAnalyzer.getMS(), baselineRxNoise) > config->rxNoiseThreshold;
+                rxAnalyzer.getMS() > config->rxNoiseThreshold;
 
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.
@@ -834,6 +836,13 @@ int main(int, const char**) {
                 }
                 networkState = false;
             }
+
+            // Pass some information into the Conference for the 
+            // dianostic messages
+            int32_t rssi = 0;
+            cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+            conf.setWifiRssi((int16_t)rssi);
+            conf.setRxPower(rxAnalyzer.getMS() / 100);
         }
 
         // The key LED is steady when COS is enabled and flashing when

@@ -324,6 +324,8 @@ void Conference::processText(IPAddress source,
     // authorization to find out if it is allowed to join
     // the conference.
     else {
+        // Look for an open slot (if any)
+        bool good = false;
         for (Station& s : _stations) {
             if (!s.active) {
                 s.reset();
@@ -343,9 +345,17 @@ void Conference::processText(IPAddress source,
                 // This is asynchronous
                 _authority->validate(s.id);
 
+                good = true;
                 break;
             }
         }    
+        if (!good) {
+            // Jut ignore
+            char buf[32];
+            source.formatAsDottedDecimal(buf, 32);
+            _log->info("New connection request %s from %s ignored, full.", 
+                call.c_str(), buf);
+        }
     }
 }
 
@@ -545,6 +555,11 @@ void Conference::_sendStationPing(const StationID& id) {
             getSecondsSinceStart(),
             getSecondsSinceLastActivity(),
             getSecondsSinceLastMonitorRx());
+        strcatLimited(buffer, msg, bufferSize);
+
+        snprintf(msg, 64, "WIFI RSSI=%d, RX=%lu\r", 
+            _wifiRssi,
+            _rxPower);
         strcatLimited(buffer, msg, bufferSize);
 
         uint32_t packetLen = formatOnDataPacket(buffer, 0, packet, packetSize);

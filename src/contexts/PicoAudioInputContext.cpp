@@ -114,20 +114,18 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     rawSample += _rawOffset;
     // Center to give a number from -2048->2047 (12 bits)
     int16_t sample = rawSample - 2048;
-    // Adjust center
-    sample += _dcBias;
-    // Shift up to form 16-bit PCM.
-    int32_t sample32 = sample;
-    sample32 <<= 4;
-    // Saturate
-    if (sample32 > 32767) {
-        sample32 = 32767;
-    } else if (sample < -32768) {
-        sample32 = -32768;
+    // Make sure we didn't overflow
+    if (sample > 2047) {
+        sample = 2047;
+    } else if (sample < -2048) {
+        sample = -2048;
     }
+    // Shift up to form 16-bit PCM.
+    int16_t sample16 = sample;
+    sample16 = (sample16 << 4);
 
     uint32_t slot = _audioInBufWriteCount.get() & _audioInBufDepthMask;
-    _audioInBuf[slot][_audioInBufWritePtr++] = (int16_t)sample32;
+    _audioInBuf[slot][_audioInBufWritePtr++] = sample16;
 
     // Check to see if we've reached the end of the 4xframe
     if (_audioInBufWritePtr == _audioFrameSize * _audioFrameBlockFactor) {
