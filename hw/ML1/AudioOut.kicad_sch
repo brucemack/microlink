@@ -2414,9 +2414,9 @@
 		)
 		(symbol "power:+3.3VA"
 			(power)
+			(pin_numbers hide)
 			(pin_names
-				(offset 0)
-			)
+				(offset 0) hide)
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -2514,8 +2514,8 @@
 			(symbol "+3.3VA_1_1"
 				(pin power_in line
 					(at 0 0 90)
-					(length 0) hide
-					(name "+3.3VA"
+					(length 0)
+					(name "~"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2534,9 +2534,9 @@
 		)
 		(symbol "power:GNDA"
 			(power)
+			(pin_numbers hide)
 			(pin_names
-				(offset 0)
-			)
+				(offset 0) hide)
 			(exclude_from_sim no)
 			(in_bom yes)
 			(on_board yes)
@@ -2610,8 +2610,8 @@
 			(symbol "GNDA_1_1"
 				(pin power_in line
 					(at 0 0 270)
-					(length 0) hide
-					(name "GNDA"
+					(length 0)
+					(name "~"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3339,7 +3339,7 @@
 	)
 	(wire
 		(pts
-			(xy 182.88 86.36) (xy 184.15 86.36)
+			(xy 182.88 86.36) (xy 191.77 86.36)
 		)
 		(stroke
 			(width 0)
@@ -3557,7 +3557,7 @@
 		(effects
 			(font
 				(size 1.27 1.27)
-				(color 255 8 8 1)
+				(color 16 30 255 1)
 			)
 			(justify left bottom)
 		)
@@ -3621,7 +3621,7 @@
 	)
 	(text "This is the resistor that Julius W2IHY \nsuggested be removed.  It is important \nthat the transformer network be driven\nby low impedance. 0R is left in case \nof instability problems."
 		(exclude_from_sim no)
-		(at 180.34 77.47 0)
+		(at 156.972 124.46 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3806,7 +3806,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 227.33 102.87 0)
 			(effects
 				(font
@@ -3825,74 +3825,6 @@
 			(project "ML1"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/5945a24a-f13f-441c-8c0c-8b25494f737c"
 					(reference "R23")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R_US")
-		(at 187.96 86.36 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "0a4ac485-0ca1-4fa1-b12e-b7bfb0b4a34c")
-		(property "Reference" "R7"
-			(at 187.96 80.01 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "0R"
-			(at 187.96 82.55 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0805_2012Metric_Pad1.20x1.40mm_HandSolder"
-			(at 188.214 85.344 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 187.96 86.36 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 187.96 86.36 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "a7972a42-b829-4818-99cb-02e05129cf37")
-		)
-		(pin "2"
-			(uuid "71a15e15-556f-48ab-ab3e-0923d7065233")
-		)
-		(instances
-			(project "ML1"
-				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/5945a24a-f13f-441c-8c0c-8b25494f737c"
-					(reference "R7")
 					(unit 1)
 				)
 			)
@@ -3943,7 +3875,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+3.3VA\""
 			(at 57.15 58.42 0)
 			(effects
 				(font
@@ -4010,7 +3942,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 218.44 91.44 0)
 			(effects
 				(font
@@ -4078,7 +4010,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor, small symbol"
 			(at 177.8 86.36 0)
 			(effects
 				(font
@@ -4215,7 +4147,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 217.17 147.32 0)
 			(effects
 				(font
@@ -4282,7 +4214,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "test point"
 			(at 102.87 73.66 0)
 			(effects
 				(font
@@ -4348,7 +4280,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 87.63 62.23 0)
 			(effects
 				(font
@@ -4414,7 +4346,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 73.66 142.24 0)
 			(effects
 				(font
@@ -4479,7 +4411,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor, small symbol"
 			(at 177.8 96.52 0)
 			(effects
 				(font
@@ -4547,7 +4479,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Quad Low-Voltage Rail-to-Rail Output Operational Amplifier, SOIC-14/SSOP-14"
 			(at 153.67 86.36 0)
 			(effects
 				(font
@@ -4653,7 +4585,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "test point"
 			(at 166.37 62.23 0)
 			(effects
 				(font
@@ -4721,7 +4653,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "DC Optocoupler, Vce 80V, CTR 50%, SO-4"
 			(at 227.33 140.97 0)
 			(effects
 				(font
@@ -4796,7 +4728,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+3.3VA\""
 			(at 46.99 53.34 0)
 			(effects
 				(font
@@ -4863,7 +4795,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small US symbol"
 			(at 46.99 55.88 0)
 			(effects
 				(font
@@ -4933,7 +4865,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor, small symbol"
 			(at 99.06 59.69 0)
 			(effects
 				(font
@@ -5003,7 +4935,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, small US symbol"
 			(at 57.15 60.96 0)
 			(effects
 				(font
@@ -5072,7 +5004,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 191.77 96.52 0)
 			(effects
 				(font
@@ -5139,7 +5071,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 139.7 102.87 0)
 			(effects
 				(font
@@ -5207,7 +5139,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 207.01 138.43 0)
 			(effects
 				(font
@@ -5277,7 +5209,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor, small symbol"
 			(at 87.63 59.69 0)
 			(effects
 				(font
@@ -5347,7 +5279,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Potentiometer, US symbol"
 			(at 236.22 95.25 0)
 			(effects
 				(font
@@ -5418,7 +5350,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 111.76 83.82 0)
 			(effects
 				(font
@@ -5486,7 +5418,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 227.33 86.36 0)
 			(effects
 				(font
@@ -5556,7 +5488,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 241.3 104.14 0)
 			(effects
 				(font
@@ -5624,7 +5556,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Resistor, US symbol"
 			(at 132.08 83.82 0)
 			(effects
 				(font
@@ -5693,7 +5625,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"+3.3VA\""
 			(at 80.01 52.07 0)
 			(effects
 				(font
@@ -5759,7 +5691,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 139.7 106.68 0)
 			(effects
 				(font
@@ -5824,7 +5756,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Quad Low-Voltage Rail-to-Rail Output Operational Amplifier, SOIC-14/SSOP-14"
 			(at 90.17 139.7 0)
 			(effects
 				(font
@@ -5927,7 +5859,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "12-bit Digital-to-Analog Converter, integrated EEPROM, I2C interface, SOT-23-6"
 			(at 80.01 83.82 0)
 			(effects
 				(font
@@ -6008,7 +5940,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Transformer, single primary, single secondary"
 			(at 201.93 91.44 0)
 			(effects
 				(font
@@ -6083,7 +6015,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 80.01 91.44 0)
 			(effects
 				(font
@@ -6147,7 +6079,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Polarized capacitor, small US symbol"
 			(at 246.38 95.25 0)
 			(effects
 				(font
@@ -6217,7 +6149,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Unpolarized capacitor"
 			(at 121.92 91.44 0)
 			(effects
 				(font
@@ -6286,7 +6218,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 60.96 97.79 0)
 			(effects
 				(font
@@ -6352,7 +6284,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" ""
+		(property "Description" "Power symbol creates a global label with name \"GNDA\" , analog ground"
 			(at 99.06 62.23 0)
 			(effects
 				(font
