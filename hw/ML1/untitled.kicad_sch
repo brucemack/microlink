@@ -3,7 +3,14 @@
 	(generator "eeschema")
 	(generator_version "8.0")
 	(uuid "59cb9208-1a70-4815-991b-67d947d1db20")
-	(paper "A4")
+	(paper "USLetter")
+	(title_block
+		(title "MicroLink - Microcontroller")
+		(date "2024-03-28")
+		(rev "1")
+		(company "Bruce MacKinnon KC1FSZ")
+		(comment 1 "Copyright (C) 2024 - Not For Commercial Use")
+	)
 	(lib_symbols
 		(symbol "Connector_Generic:Conn_01x20"
 			(pin_names
