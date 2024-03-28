@@ -443,11 +443,13 @@ enough.
   - [TLV9161 opamp suggested by Dan](https://www.ti.com/lit/ds/symlink/tlv9161.pdf?ts=1707743140015&ref_url=https%253A%252F%252Fwww.google.de%252F)
   - [NTE3086 Optoisolator, 8-DIP](https://www.nteinc.com/specs/3000to3099/pdf/nte3086.pdf)  
   - [EL357M Optoisolator, plentiful on JLCPCB](https://jlcpcb.com/partdetail/EverlightElec-EL357N_C_TA_G/C29981#:~:text=Datasheet-,Download,-Source)
+  - [NCP1117 LDO Voltage Regulator used in circuit](https://www.onsemi.com/pdf/datasheet/ncp1117-d.pdf)
 * Rig Integration
   - [Microphone Connector Reference](https://www.secradio.org.za/zs6src/secfiles/pdf/mic_soc_info.pdf)
   - [Baofeng Cable Reference](https://ics-ctrl.com/cable-pinout-baofeng-ht/)
 * Analog/Audio
   - [Good article from Analog Devices about noise in mixed-signal systems](https://www.analog.com/media/en/analog-dialogue/volume-46/number-2/articles/staying_well_grounded.pdf)
+  - [Good article about ferrite beads, and power supply noise more generally](https://northcoastsynthesis.com/news/the-truth-about-ferrite-beads-will-shock-you/)
   - [Detailed article about audio/rig integration](https://www.zs2ez.co.za/Soundcard/Soundcard.htm)
   - [Linear Predictive Coding of Speach](https://course.ece.cmu.edu/~ece792/handouts/RS_Chap_LPC.pdf)
 * DSP Related
@@ -468,4 +470,4 @@ enough.
   - MD5 Implementation: https://www.cs.cmu.edu/~jcl/linux/seal/md5.c
   - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
   - Very interesting audio processing stuff: https://www.repeater-builder.com/tech-info/audio-processing.html
-  
+  - [Ceramic vs Tantalum Capacitors in LDOs](https://www.ti.com/lit/an/slva214a/slva214a.pdf)
