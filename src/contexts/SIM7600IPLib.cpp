@@ -48,10 +48,10 @@ SIM7600IPLib::SIM7600IPLib(Log* log, AsyncChannel* uart)
 }
 
 void SIM7600IPLib::_write(const uint8_t* data, uint32_t dataLen) {
-    cout << "----- Sending -----------------------" << endl;
-    prettyHexDump(data, dataLen, cout);
+    //cout << "----- Sending -----------------------" << endl;
+    //prettyHexDump(data, dataLen, cout);
     _uart->write(data, dataLen);
-    cout << "-------------------------------------" << endl;
+    //cout << "-------------------------------------" << endl;
 }
 
 void SIM7600IPLib::_write(const char* cmd) {
@@ -384,13 +384,12 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
 
             uint16_t id = frame[3] << 8 | frame[4];
 
-            // Grab the data we just received
-            uint8_t data[256];
-            memcpyLimited(data, frame + 5, frameLen - 5, 256);
+            _log->info("Got TCP Data %u", id);
+
             // Distribute it to the listeners
             for (uint32_t i = 0; i < _eventsLen; i++)
                 // TODO: WRONG ADDRESS!!
-                _events[i]->recv(Channel(id), data, frameLen - 5,
+                _events[i]->recv(Channel(id), frame + 5, frameLen - 5,
                     _lastAddr, _lastPort);
         }
         else if (frame[2] == 0 &&
@@ -410,7 +409,7 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
                 return;
             }
 
-            _log->info("Got UDP Data %u", packet.id);
+            //_log->info("Got UDP Data %u", (upacket.id);
 
             // Distribute it to the listeners
             for (uint32_t i = 0; i < _eventsLen; i++)
@@ -425,7 +424,7 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
 
             uint16_t id = frame[3] << 8 | frame[4];
 
-            _log->info("Got Close %u", id);
+            //_log->info("Got Close %u", id);
 
             // Distribute it to the listeners
             for (uint32_t i = 0; i < _eventsLen; i++)
@@ -459,7 +458,8 @@ void SIM7600IPLib::reset() {
 }
 
 bool SIM7600IPLib::isLinkUp() const {
-    return _state == State::RUN;
+    return _state == State::RUN || _state == State::SEND_1 ||
+        _state == State::SEND_2 || _state == State::SEND_3;
 }
 
 void SIM7600IPLib::queryDNS(HostName hostName) {

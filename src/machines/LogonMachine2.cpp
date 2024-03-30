@@ -106,6 +106,7 @@ void LogonMachine2::disc(Channel ch) {
         // Parse the response to make sure we got what we expected
         if (_logonRespPtr >= 1 && _logonResp[0] == 'O' && _logonResp[1] == 'K') {
             _lastLogonStamp = time_ms();
+            _userInfo->setStatus("Logon succeeded");
             _setState(State::SUCCEEDED);
         } else {
             _userInfo->setStatus("Logon failed");
