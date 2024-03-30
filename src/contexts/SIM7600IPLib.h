@@ -96,6 +96,7 @@ private:
 
     void _processLine(const char* data, uint32_t dataLen);
     void _processIPD(const uint8_t* data, uint32_t dataLen);
+    void _processProxyFrame(const uint8_t* data, uint32_t dataLen);
 
     Log* _log;
     AsyncChannel* _uart;
@@ -109,7 +110,7 @@ private:
     uint32_t _sendQueueWrPtr = 0;
     uint32_t _sendQueueRdPtr = 0;
 
-    static const uint32_t _rxHoldSize = 256;
+    static const uint32_t _rxHoldSize = 4096;
     uint8_t _rxHold[_rxHoldSize];
     uint32_t _rxHoldLen = 0;
 
@@ -119,6 +120,7 @@ private:
 
     enum State {
         IDLE,
+        INIT_0a,
         INIT_0,
         INIT_1,
         INIT_2,
@@ -143,6 +145,8 @@ private:
     uint32_t _ipdLen = 0;
 
     int _channelCount = 1;
+    IPAddress _lastAddr;
+    uint16_t _lastPort;
 };
 
 }

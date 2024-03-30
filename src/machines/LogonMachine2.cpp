@@ -49,15 +49,12 @@ static const uint32_t DNS_WAIT_MS = 10'000;
 int LogonMachine2::traceLevel = 0;
 
 LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
-    DNSMachine* dm)
+    DNSMachine* dm, const FixedString& versionId)
 :   _ctx(ctx),
     _userInfo(userInfo),
     _log(log),
     _dnsMachine(dm),
-    _conf(0),
-    _serverPort(0),
-    _logonRespPtr(0),
-    _lastLogonStamp(0) {
+    _versionId(versionId) {
     _channel = Channel(0, false);
     _logonRespPtr = 0;
     _setState(State::IDLE);
@@ -81,7 +78,7 @@ void LogonMachine2::conn(Channel ch) {
         // Build the logon message
         uint8_t buf[256];
         uint32_t bufLen = createOnlineMessage(buf, 256, _callSign, _password, 
-            FixedString(augmentedLocation));
+            FixedString(augmentedLocation), _versionId);
         _ctx->sendTCPChannel(_channel, buf, bufLen);
         // Get ready to accumulate the response
         _logonRespPtr = 0;

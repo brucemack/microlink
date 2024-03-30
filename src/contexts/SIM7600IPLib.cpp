@@ -76,13 +76,14 @@ bool SIM7600IPLib::run() {
         const uint32_t bufSize = 256;
         uint8_t buf[bufSize];
         uint32_t bufLen = _uart->read(buf, bufSize);
-        prettyHexDump(buf, bufLen, cout);
+
+        //_log->debugDump("From UART", buf, bufLen);
 
         // Process each character, attempting to form complete lines
         for (uint32_t i = 0; i < bufLen; i++) {
 
             if (_rxHoldLen == _rxHoldSize) {
-                _log->error("Input oveflow");
+                _log->error("Input overflow");
             } else {
                 _rxHold[_rxHoldLen++] = buf[i];
             }
@@ -153,14 +154,29 @@ bool SIM7600IPLib::run() {
 
 void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
 
-    cout << "Processing line: (" << _state << ") " << data << endl;
+    //cout << "Processing line: (" << _state << ") " << data << endl;
 
-    // Always look for +IPDnn - asynchronous receive
-    if (dataLen >= 5 &&
-        data[0] == '+' && data[1] == 'I' && data[2] == 'P' && data[3] == 'D') {
-        // Parse length
-        _ipdLen = atoi(data + 4);
-        _inIpd = true;
+    if (_state == State::RUN) {
+        // Always look for +IPDnn - asynchronous receive
+        if (dataLen >= 5 &&
+            data[0] == '+' && data[1] == 'I' && data[2] == 'P' && data[3] == 'D') {
+            // Parse length
+            _ipdLen = atoi(data + 4);
+            _inIpd = true;
+        }
+        // Look for the source IP address
+        else if (dataLen > 10 && memcmp(data, "RECV FROM:", 10) == 0) {
+            auto [addr, port] = parseAddressAndPort(data + 10);
+            _lastAddr = addr;
+            _lastPort = port;
+        }
+    } 
+    // Waiting during startup
+    else if (_state == State::INIT_0a) {
+        //if (strcmp(data, "+CPIN: READY") == 0) {
+        if (strcmp(data, "PB DONE") == 0) {
+            _state = State::INIT_0;
+        } 
     }
     // Waiting for ATE0 be be processed
     else if (_state == State::INIT_1) {
@@ -212,6 +228,9 @@ void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
     else if (_state == State::INIT_7a) {
         if (strcmp((const char*)data, "+CIPOPEN: 0,0") == 0) {
             _state = State::RUN;
+            // Let everyone know that we've reset
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                _events[i]->reset();
         } 
     }
     else if (_state == State::SEND_1) {
@@ -246,6 +265,17 @@ void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
     }
 }
 
+/*
+This is a bid tricky because the +IPD messages are just streaming 
+data in from the proxy without and regard for the alignment of 
+the proxy frames.  We accumulate the bytes that we receive from
+the proxy in _ipdHold (w/ _ipdHoldLen) and watch until we have 
+accumulated a complete proxy frame.
+
+Once a full frame has been received we process it and then 
+"shift down" any remaining bytes since they make up the next
+proxy frame.  We don't want to loose the next one!
+*/
 void SIM7600IPLib::_processIPD(const uint8_t* data, uint32_t dataLen) {
 
     if (_ipdHoldLen + dataLen > _ipdHoldSize) {
@@ -253,35 +283,41 @@ void SIM7600IPLib::_processIPD(const uint8_t* data, uint32_t dataLen) {
         return;
     }
 
-    // Append accumulated data
+    // Append received data to the accumulator in an attempt to form a 
+    // complete proxy frame.
     memcpy(_ipdHold + _ipdHoldLen, data, dataLen);
     _ipdHoldLen += dataLen;
 
-    // Check for a complete frame
-    if (_ipdHoldLen < 2) {
-        return;
-    }
-    uint16_t frameLen = _ipdHold[0] << 8 | _ipdHold[1];
-    if (_ipdHoldLen < frameLen) {
-        return;
-    }
+    // We loop where because there may be more than one proxy frame in 
+    // the +IPD message we just received.
+    while (true) {
 
-    // Pull out the frame into a stand-alone buffer
-    uint8_t frame[2048];
-    memcpy(frame, _ipdHold, frameLen);
-    // If there's anything left, shift down to the start of the hold area
-    if (_ipdHoldLen > frameLen) {
-        for (uint32_t i = 0; i < (_ipdHoldLen - frameLen); i++)
-            _ipdHold[i] = _ipdHold[frameLen + 1];
+        // Check for a complete frame
+        if (_ipdHoldLen < 2) {
+            return;
+        }
+        uint16_t frameLen = _ipdHold[0] << 8 | _ipdHold[1];
+        if (_ipdHoldLen < frameLen) {
+            return;
+        }
+
+        // Process the frame
+        _processProxyFrame(_ipdHold, frameLen);
+
+        // If there's anything left, shift down to the start of the hold area
+        if (_ipdHoldLen > frameLen) {
+            for (uint32_t i = 0; i < (_ipdHoldLen - frameLen); i++)
+                _ipdHold[i] = _ipdHold[frameLen + i];
+        }
         _ipdHoldLen -= frameLen;
-    } else {
-        _ipdHoldLen = 0;
     }
+}
+
+void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
 
     if (frameLen >= 4) {
 
-        cout << "Frame" << endl;
-        prettyHexDump(frame, frameLen, cout);
+        //_log->debugDump("Proxy Frame:", frame, frameLen);
 
         if (frame[2] == ClientFrameType::RESP_QUERY_DNS) {
             if (frameLen < 9) {
@@ -317,10 +353,88 @@ void SIM7600IPLib::_processIPD(const uint8_t* data, uint32_t dataLen) {
             for (uint32_t i = 0; i < _eventsLen; i++)
                 _events[i]->conn(Channel(id));
         }
+        else if (frame[2] == 0 &&
+                 frame[3] == ClientFrameType::RESP_BIND_UDP) {
+            if (frameLen != sizeof(ResponseBindUDP)) {
+                _log->error("Invalid response");
+                return;
+            }
+            ResponseBindUDP resp;
+            memcpy(&resp, frame, frameLen);
+            if (resp.rc != 0) {
+                return;
+            }
+            _log->info("Got bind response for %lu", resp.id);
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                _events[i]->bind(Channel(resp.id));
+        }
+        else if (frame[2] == ClientFrameType::RESP_SEND_TCP) {
+            if (frameLen != 5) {
+                _log->error("Invalid response");
+                return;
+            }
+            uint16_t id = frame[3] << 8 | frame[4];
+            _log->info("TCP send acknowledged on ID %u", id);
+        }
+        else if (frame[2] == ClientFrameType::RESP_RECV_TCP) {
+            if (frameLen < 5) {
+                _log->error("Invalid response");
+                return;
+            }
+
+            uint16_t id = frame[3] << 8 | frame[4];
+
+            // Grab the data we just received
+            uint8_t data[256];
+            memcpyLimited(data, frame + 5, frameLen - 5, 256);
+            // Distribute it to the listeners
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                // TODO: WRONG ADDRESS!!
+                _events[i]->recv(Channel(id), data, frameLen - 5,
+                    _lastAddr, _lastPort);
+        }
+        else if (frame[2] == 0 &&
+                 frame[3] == ClientFrameType::RECV_DATA) {
+
+            if (frameLen < 12) {
+                _log->error("Invalid message ignored");
+                return;
+            }
+
+            RecvData packet;
+            memcpyLimited((uint8_t*)&packet, frame, frameLen, sizeof(packet));
+            IPAddress addr(packet.addr);
+
+            if (frameLen != packet.len) {
+                _log->error("Invalid message ignored (2)");
+                return;
+            }
+
+            _log->info("Got UDP Data %u", packet.id);
+
+            // Distribute it to the listeners
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                _events[i]->recv(Channel(packet.id), packet.data, packet.len - 12,
+                    addr, packet.port);
+        }
+        else if (frame[2] == ClientFrameType::RESP_CLOSE) {
+            if (frameLen < 6) {
+                _log->error("Invalid response");
+                return;
+            }
+
+            uint16_t id = frame[3] << 8 | frame[4];
+
+            _log->info("Got Close %u", id);
+
+            // Distribute it to the listeners
+            for (uint32_t i = 0; i < _eventsLen; i++)
+                _events[i]->disc(Channel(id));
+        }
         else {
             _log->info("Unsupported response type");
         }
-    }
+    }    
 }
 
 void SIM7600IPLib::_queueSend(const uint8_t* d, uint32_t dl) {
@@ -341,7 +455,7 @@ void SIM7600IPLib::addEventSink(IPLibEvents* e) {
 }
 
 void SIM7600IPLib::reset() {
-    _state = State::INIT_0;
+    _state = State::INIT_0a;
 }
 
 bool SIM7600IPLib::isLinkUp() const {
@@ -388,6 +502,7 @@ void SIM7600IPLib::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port)
 }
 
 void SIM7600IPLib::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {    
+
     if (traceLevel > 0)
         _log->info("Sending %d", c.getId());
     
@@ -395,23 +510,44 @@ void SIM7600IPLib::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {
     req.len = len + 6;
     req.type = ClientFrameType::REQ_SEND_TCP;
     req.clientId = c.getId();
-    memcpyLimited(req.contentPlaceholder, b, len, 2048 - 6);
+    memcpyLimited(req.contentPlaceholder, b, len, 2048);
     // Queue for delivery
     _queueSend((const uint8_t*)&req, req.len);
 }
 
 Channel SIM7600IPLib::createUDPChannel() {
-    return Channel(0, false);
+    return Channel(_channelCount++, true);
 }
 
 void SIM7600IPLib::bindUDPChannel(Channel c, uint32_t localPort) {
+
     if (traceLevel > 0)
         _log->info("Binding channel %d to port %d", c.getId(), localPort);
+
+    RequestBindUDP req;
+    req.len = sizeof(req);
+    req.type = ClientFrameType::REQ_BIND_UDP;
+    req.id = c.getId();
+    req.bindPort = (uint16_t)localPort;
+    _queueSend((const uint8_t*)&req, sizeof(req));
 }
 
 void SIM7600IPLib::sendUDPChannel(const Channel& c, 
     const IPAddress& remoteIpAddr, uint32_t remotePort,
     const uint8_t* b, uint16_t len) {
+
+    if (traceLevel > 0)
+        _log->info("Sending %d", c.getId());
+    
+    RequestSendUDP req;
+    req.len = len + 12;
+    req.type = ClientFrameType::REQ_SEND_UDP;
+    req.id = c.getId();
+    req.addr = remoteIpAddr.getAddr();
+    req.port = remotePort;
+    memcpyLimited(req.data, b, len, 2048);
+    // Queue for delivery
+    _queueSend((const uint8_t*)&req, req.len);
 }
 
 }

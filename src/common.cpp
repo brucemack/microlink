@@ -42,38 +42,6 @@ namespace kc1fsz {
 // Per Jonathan K1RFD: Make sure this starts with a number and ends with Z.
 const char* VERSION_ID = "0.02MLZ";
 
-uint32_t parseIP4Address(const char* dottedAddr) {
-    uint32_t result = 0;
-    char acc[8];
-    uint32_t accLen = 0;
-    const char *p = dottedAddr;
-    uint32_t octets = 4;
-    while (true) {
-        if (*p == '.' || *p == 0) {
-            acc[accLen] = 0;
-            // Shift up
-            result <<= 8;
-            // Accumulate LSB
-            result |= (uint8_t)atoi(acc);
-            accLen = 0;
-            // Count octets
-            octets++;
-            if (octets == 4 || *p == 0) {
-                break;
-            }
-        }
-        else {
-            acc[accLen++] = *p;
-        }
-        p++;
-    }
-#ifdef PICO_BUILD
-    return result;
-#else
-    return htonl(result);
-#endif
-}
-
 #ifndef PICO_BUILD
 // trim from start (in place)
 void ltrim(std::string &s) {
@@ -622,7 +590,8 @@ uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
 }
 
 uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
-    CallSign cs, FixedString pwd, FixedString loc) {
+    CallSign cs, FixedString pwd, FixedString loc,
+    const FixedString& versionId) {
 
     uint8_t* p = buf;
 
@@ -642,8 +611,8 @@ uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     (*p++) = 0x0d;
     memcpy(p, "ONLINE", 6);
     p += 6;
-    memcpy(p, VERSION_ID, strlen(VERSION_ID));
-    p += strlen(VERSION_ID);
+    memcpy(p, versionId.c_str(), versionId.len());
+    p += versionId.len();
     (*p++) = '(';
     memcpy(p, local_time_str, 5);
     p += 5;

@@ -33,12 +33,6 @@ namespace kc1fsz {
 
 extern const char* VERSION_ID;
 
-/**
- * Converts the dotted-decimal IP address into a 32-bit integer in NETWORK order
- */
-uint32_t parseIP4Address(const char* dottedAddr);
-
-
 // trim from start (in place)
 void ltrim(std::string &s);
 
@@ -161,7 +155,8 @@ uint32_t formatRTPPacket_McAD(uint8_t* p, uint32_t packetSize);
  * A utility function for building Logon/ONLINE request messages.
 */
 uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
-    CallSign cs, FixedString pwd, FixedString loc);
+    CallSign cs, FixedString pwd, FixedString loc,
+    const FixedString& versionId);
 }
 
 

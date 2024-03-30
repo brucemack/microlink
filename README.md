@@ -432,6 +432,7 @@ enough.
 * SIM7600 Cellular
   - SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
   - SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
+  - [SIM7600 Hardware Design Guide](https://edworks.co.kr/wp-content/uploads/2022/04/SIM7600_Series_Hardware_Design_V1.08.pdf)
 * Windows Audio Related: 
   - http://www.techmind.org/wave/
   - http://midi.teragonaudio.com/tech/lowaud.htm

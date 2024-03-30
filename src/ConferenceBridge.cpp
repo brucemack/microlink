@@ -52,86 +52,79 @@ ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log,
     _radio0(radio0),
     _radio0Addr(0xff000002),
     _radio0GSMQueuePtr(_radio0GSMQueueSize) {   
-    _setState(State::IDLE);
 }
 
 bool ConferenceBridge::run() {
-
-    if (_isState(State::IDLE)) {
-
-        // Get UDP connections created
-        _rtcpChannel = _ctx->createUDPChannel();
-        _rtpChannel = _ctx->createUDPChannel();
-
-        // Start the RTCP socket setup (RTCP)
-        _ctx->bindUDPChannel(_rtcpChannel, RTCP_PORT);
-        _setState(State::IN_SETUP_1, CHANNEL_SETUP_TIMEOUT_MS, State::FAILED);
-    }
-
     // Keep delivering audio to the radio
     _serviceRadio0GSMQueue();
 
-    // Let the base class work
-    return StateMachine2::run();
+    return true;
+}
+
+void ConferenceBridge::reset() {    
+
+    _log->info("ConferenceBridge reset");
+
+    // Get UDP connections created
+    _rtcpChannel = _ctx->createUDPChannel();
+    _rtpChannel = _ctx->createUDPChannel();
+
+    // Start the RTCP socket setup (RTCP)
+    _ctx->bindUDPChannel(_rtcpChannel, RTCP_PORT);
+    // Start the RTP socket setup
+    _ctx->bindUDPChannel(_rtpChannel, RTP_PORT);
 }
 
 void ConferenceBridge::bind(Channel ch) {
-    if (_isState(State::IN_SETUP_1) && ch == _rtcpChannel) {
-        // Start the RTP socket setup
-        _ctx->bindUDPChannel(_rtpChannel, RTP_PORT);
-        _setState(State::IN_SETUP_2, CHANNEL_SETUP_TIMEOUT_MS, State::FAILED);
+    if (ch == _rtcpChannel) {
+        _log->info("RTCP bind successful");
     }
-    else if (_isState(State::IN_SETUP_2) && ch == _rtpChannel) {
-        // Start listening
-        _userInfo->setStatus("Ready to receive");
-        _setState(State::WAITING);
+    else if (ch == _rtpChannel) {
+        _log->info("RTP bind successful");
     }
 }
 
 void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen, 
     IPAddress fromAddr, uint16_t fromPort) {
 
-    if (_isState(State::WAITING)) {
+    if (ch == _rtcpChannel) {
 
-        if (ch == _rtcpChannel) {
+        if (traceLevel > 0) {
+            _log->info("ConferenceBridge: GOT RTCP DATA");
+        }
+        if (traceLevel > 1) {
+            prettyHexDump(data, dataLen, cout);
+        }
 
-            if (traceLevel > 0) {
-                _log->info("ConferenceBridge: GOT RTCP DATA");
-            }
-            if (traceLevel > 1) {
-                prettyHexDump(data, dataLen, cout);
-            }
+        _conf->processText(fromAddr, data, dataLen);
+    } 
+    else if (ch == _rtpChannel) {
 
-            _conf->processText(fromAddr, data, dataLen);
-        } 
-        else if (ch == _rtpChannel) {
+        if (traceLevel > 0) {
+            _log->info("ConferenceBridge: GOT RTP DATA");
+        }
+        if (traceLevel > 1) {
+            prettyHexDump(data, dataLen, cout);
+        }
 
-            if (traceLevel > 0) {
-                _log->info("ConferenceBridge: GOT RTP DATA");
-            }
-            if (traceLevel > 1) {
-                prettyHexDump(data, dataLen, cout);
-            }
-
-            if (isOnDataPacket(data, dataLen)) {
-                _conf->processAudio(fromAddr, 0, 0, 
-                    data, dataLen, AudioFormat::TEXT);
-            }
-            else if (dataLen == 144) {
-                const uint8_t* d = data;
-                uint16_t remoteSeq = 0;
-                uint32_t remoteSSRC = 0;
-                remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
-                remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
-                    ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
-                d += 12;
-                // This is the performance-critical path
-                _conf->processAudio(fromAddr, remoteSSRC, remoteSeq,
-                    d, 33 * 4, AudioFormat::GSMFR4X);
-            }
-            else {
-                _log->info("Unrecognized packet");
-            }
+        if (isOnDataPacket(data, dataLen)) {
+            _conf->processAudio(fromAddr, 0, 0, 
+                data, dataLen, AudioFormat::TEXT);
+        }
+        else if (dataLen == 144) {
+            const uint8_t* d = data;
+            uint16_t remoteSeq = 0;
+            uint32_t remoteSSRC = 0;
+            remoteSeq = ((uint16_t)d[2] << 8) | (uint16_t)d[3];
+            remoteSSRC = ((uint16_t)d[8] << 24) | ((uint16_t)d[9] << 16) | 
+                ((uint16_t)d[10] << 8) | ((uint16_t)d[11]);
+            d += 12;
+            // This is the performance-critical path
+            _conf->processAudio(fromAddr, remoteSSRC, remoteSeq,
+                d, 33 * 4, AudioFormat::GSMFR4X);
+        }
+        else {
+            _log->info("Unrecognized packet");
         }
     }
 }
@@ -205,13 +198,6 @@ void ConferenceBridge::sendText(const IPAddress& dest,
     }
 
     _ctx->sendUDPChannel(_rtcpChannel, dest, RTCP_PORT, data, dataLen);
-}
-
-void ConferenceBridge::_process(int state, bool entry) {
-    if (traceLevel > 0) {
-        if (entry)
-            _log->info("ConferenceBridge state %d", _getState());
-    }
 }
 
 void ConferenceBridge::_writeRadio0GSMQueue(const uint8_t* gsmFrame, uint32_t gsmFrameLen) {

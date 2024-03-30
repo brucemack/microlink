@@ -29,11 +29,10 @@
 #include "kc1fsz-tools/IPLib.h"
 #include "kc1fsz-tools/AudioProcessor.h"
 #include "kc1fsz-tools/CircularQueuePtr.h"
+#include "kc1fsz-tools/Runnable.h"
 
 #include "gsm-0610-codec/Decoder.h"
 #include "gsm-0610-codec/Encoder.h"
-
-#include "StateMachine2.h"
 
 namespace kc1fsz {
 
@@ -41,7 +40,7 @@ class UserInfo;
 class Conference;
 class AudioOutputContext;
 
-class ConferenceBridge : public StateMachine2, public IPLibEvents, 
+class ConferenceBridge : public Runnable, public IPLibEvents, 
     public ConferenceOutput, public AudioProcessor {
 
 public:
@@ -67,6 +66,7 @@ public:
 
     // ----- From IPLibEvents -------------------------------------------------
 
+    virtual void reset();
     virtual void dns(HostName name, IPAddress addr) { }
     virtual void bind(Channel ch);
     virtual void conn(Channel ch) { }
@@ -75,15 +75,7 @@ public:
         uint16_t fromPort);
     virtual void err(Channel ch, int type) { }
 
-    // ----- From StateMachine2 -----------------------------------------------
-
-protected:
-
-    virtual void _process(int state, bool entry);
-
     // ----- From ConferenceOutput ---------------------------------------------
-
-public:
 
     virtual void sendAudio(const IPAddress& dest, uint32_t ssrc, uint16_t seq,
         const uint8_t* frame, uint32_t frameLen, AudioFormat fmt);
@@ -106,22 +98,6 @@ public:
     virtual bool run();
 
 private:
-
-    enum State { 
-        IDLE, 
-        IN_SETUP_0, 
-        IN_SETUP_1, 
-        // STATE 3
-        IN_SETUP_2, 
-        // STATE 4:
-        IN_SETUP_3, 
-        // STATE 5:
-        WAITING,
-        // STATE 6:
-        SUCCEEDED, 
-        // STATE 7:
-        FAILED 
-    };
 
     IPLib* _ctx;
     UserInfo* _userInfo;

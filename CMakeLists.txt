@@ -48,15 +48,16 @@ add_executable(link-main-2
   src/LinkUserInfo.cpp
   src/Conference.cpp
   src/ConferenceBridge.cpp
-  src/contexts/LwIPLib.cpp
-  #src/contexts/SIM7600IPLib.cpp
-  #kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+  #src/contexts/LwIPLib.cpp
+  src/contexts/SIM7600IPLib.cpp
+  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
   src/machines/DNSMachine.cpp
   src/machines/LogonMachine2.cpp
   src/machines/LookupMachine3.cpp
   kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/IPAddress.cpp
   kc1fsz-tools-cpp/src/AudioAnalyzer.cpp
   kc1fsz-tools-cpp/src/DTMFDetector.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp

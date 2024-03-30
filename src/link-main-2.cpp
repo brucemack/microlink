@@ -58,18 +58,18 @@ Launch command:
 #include "hardware/watchdog.h"
 #include "hardware/flash.h"
 
+/*
 // ======= Internet Stuff ===========
 #include "pico/cyw43_arch.h"
 #include "lwip/dns.h"
 #include "contexts/LwIPLib.h"
 // ======= Internet Stuff ===========
+*/
 
-/*
 // ======= Internet Stuff ===========
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "contexts/SIM7600IPLib.h"
 // ======= Internet Stuff ===========
-*/
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
@@ -209,7 +209,7 @@ public:
         // If you are using pico_cyw43_arch_poll, then you must poll periodically 
         // from your main loop (not from a timer) to check for Wi-Fi driver or 
         // lwIP work that needs to be done.
-        cyw43_arch_poll();
+        //cyw43_arch_poll();
         return true;
     }
 };
@@ -241,7 +241,6 @@ int main(int, const char**) {
     ConferenceBridge::traceLevel = 0;
     Conference::traceLevel = 0;
 
-    // Seup PICO
     stdio_init_all();
 
     // PTT switch
@@ -272,11 +271,6 @@ int main(int, const char**) {
     gpio_init(RIG_POWER_PIN);
     gpio_set_dir(RIG_POWER_PIN, GPIO_OUT);
     gpio_put(RIG_POWER_PIN, 0);
-
-    // SIM7600 module enable
-    gpio_init(SIM7600_EN_PIN);
-    gpio_set_dir(SIM7600_EN_PIN, GPIO_OUT);
-    gpio_put(SIM7600_EN_PIN, 1);
 
     // Diag
     gpio_init(DIAG_PIN);
@@ -317,7 +311,7 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-    /*
+
     // TEMPORARY!
     {
         // Write flash
@@ -326,7 +320,9 @@ int main(int, const char**) {
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
         strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "xxx", 32);
+        strncpy(config.password, "warslink", 32);
+        //strncpy(config.callSign, "*ANALYZER*", 32);
+        //strncpy(config.password, "an1755", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
@@ -343,7 +339,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
-    */
+
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -376,6 +372,7 @@ int main(int, const char**) {
 
     bool networkState = false;
 
+    /*
     // ====== Internet Connectivity Stuff =====================================
     LwIPLib::traceLevel = 0;
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
@@ -387,8 +384,8 @@ int main(int, const char**) {
     }
     LwIPLib ctx(&log);
     // ====== Internet Connectivity Stuff =====================================
+    */
 
-    /*
     // ====== Internet Connectivity Stuff =====================================
     // UART0 setup (SIM7600)
     uart_init(uart0, 115200);
@@ -405,8 +402,17 @@ int main(int, const char**) {
     PicoUartChannel uartCtx(uart0, rxBufferArea, 256, txBufferArea, 256);
     SIM7600IPLib ctx(&log, &uartCtx);
     ctx.reset();
+
+    // SIM7600 module reset
+    gpio_init(SIM7600_EN_PIN);
+    gpio_set_dir(SIM7600_EN_PIN, GPIO_OUT);
+    gpio_put(SIM7600_EN_PIN, 1);
+    sleep_ms(50);
+    gpio_put(SIM7600_EN_PIN, 0);
+    sleep_ms(50);
+    gpio_put(SIM7600_EN_PIN, 1);
+
     // ====== Internet Connectivity Stuff =====================================
-    */
 
     TestUserInfo info;
 
@@ -454,7 +460,11 @@ int main(int, const char**) {
     ctx.addEventSink(&dnsMachine2);
     //dnsMachine2.setHostName(MONITOR_SERVER_NAME);
 
-    LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1);
+    // TODO: MOVE THIS TO CONFIG
+    //FixedString versionId("1.06B");
+    FixedString versionId(VERSION_ID);
+
+    LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1, versionId);
     ctx.addEventSink(&logonMachine);
     logonMachine.setServerPort(config->addressingServerPort);
     logonMachine.setCallSign(ourCallSign);
@@ -598,14 +608,6 @@ int main(int, const char**) {
                 StationID sid(addr, cs);
                 lookup.validate(sid);
             } 
-            /*
-            else if (c == 'b') {
-                CallSign cs("K6LNK-R");
-                IPAddress addr(0);
-                StationID sid(addr, cs);
-                lookup.validate(sid);
-            }
-            */
             else if (c == 'o') {
                 if (statusPage) {
                     log.setStdout(true);
@@ -776,6 +778,9 @@ int main(int, const char**) {
                 startupMode == 0 && 
                 rxAnalyzer.getMS() > config->rxNoiseThreshold;
 
+        // TEMP
+        rigCosState = false;
+
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.
         //
@@ -840,7 +845,7 @@ int main(int, const char**) {
             // Pass some information into the Conference for the 
             // dianostic messages
             int32_t rssi = 0;
-            cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+            //cyw43_wifi_get_rssi(&cyw43_state, &rssi);
             conf.setWifiRssi((int16_t)rssi);
             conf.setRxPower(rxAnalyzer.getMS() / 100);
         }
@@ -860,7 +865,7 @@ int main(int, const char**) {
             if (renderTimer.poll()) {
                 renderTimer.reset();
                 int32_t rssi = 0;
-                cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+                //cyw43_wifi_get_rssi(&cyw43_state, &rssi);
                 renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
                     baselineRxNoise, config->rxNoiseThreshold, cosState, 
                     networkState,

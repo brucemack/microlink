@@ -46,7 +46,7 @@ public:
     static int traceLevel;
 
     LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
-        DNSMachine* dm);
+        DNSMachine* dm, const FixedString& versionId);
 
     void setServerPort(uint32_t p) { _serverPort = p; }
     void setCallSign(CallSign cs) { _callSign = cs; }
@@ -57,6 +57,7 @@ public:
 
     // ----- From IPLibEvents -------------------------------------------------
 
+    virtual void reset() { }
     virtual void dns(HostName name, IPAddress addr) { }
     virtual void bind(Channel ch) { }
     virtual void conn(Channel ch);
@@ -83,25 +84,26 @@ private:
         SUCCEEDED,
     };
 
-    IPLib* _ctx;
-    UserInfo* _userInfo;
-    Log* _log;
-    DNSMachine* _dnsMachine;
-    Conference* _conf;
+    IPLib* _ctx = 0;
+    UserInfo* _userInfo = 0;
+    Log* _log = 0;
+    DNSMachine* _dnsMachine = 0;
+    Conference* _conf = 0;
     
-    uint32_t _serverPort;
+    uint32_t _serverPort = 0;
     CallSign _callSign;
     FixedString _password;
     FixedString _location;
+    FixedString _versionId;
 
     Channel _channel;
     
     // Here is were we collect the logon response
     static const uint16_t _logonRespSize = 32;
     uint8_t _logonResp[_logonRespSize];
-    uint16_t _logonRespPtr;
+    uint16_t _logonRespPtr = 0;
 
-    uint32_t _lastLogonStamp;
+    uint32_t _lastLogonStamp = 0;
 };
 
 }

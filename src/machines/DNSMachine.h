@@ -50,6 +50,7 @@ public:
 
     // ----- From IPLibEvents -------------------------------------------------
 
+    virtual void reset() { }
     virtual void dns(HostName name, IPAddress addr);
     virtual void bind(Channel ch) { }
     virtual void conn(Channel ch) { }
