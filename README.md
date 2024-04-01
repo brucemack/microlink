@@ -61,8 +61,8 @@ The hardware is used in two configurations:
 ## Current Parts List (HW)
 
 * The main processor is a Pi Pico W (RP2040) development board. This includes WIFI 
-connectivity.  $6.00 on DigiKey. Work is underway to provide a 4G cellular data option 
-using a SIM7600 module. More on this to follow.
+connectivity.  $6.00 on DigiKey. 
+* A 4G cellular data option is available using a SIM7600 module. 
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Isolation transformers and optocouplers are used to eliminate the need for common ground 
 between the radio and the MicroLink system. This helps to reduce digital noise.
@@ -94,6 +94,10 @@ Here's a picture of the the current version of the prototype.  The Pi Pico W is 
 This is what the V0 PCB looks like:
 
 ![MicroLink Board V0](docs/v0-board-0.jpeg)
+
+This is a picture of the cellular module:
+
+![MicroLink Cellular Connection](docs/ml-7600.jpeg)
 
 MicroLink identifies itself using a version string of **0.02MLZ**.
 
@@ -127,8 +131,31 @@ This is a work in process. The performance on the low end of the audio spectrum 
 
 ## Cellular Data Interface
 
-I am currently working on a version of the MicroLink system that uses 4G internet 
-connectivity using a SIM7600 module.
+I have a working version of the MicroLink system using 4G cellular internet 
+connectivity using an SIM7600A cellular module.  The $70 USD breakout 
+board for this module [comes from Waveshare and is linked here](https://www.waveshare.com/sim7600a-h-4g-hat.htm).  
+The Waveshare module was originally designed to plug into a full Raspberry Pi (NOT A PICO!), hence the 
+use of the term "hat," but it is possible to use the module directly via a serial 
+interface and there is no technical requirement to connect it to a Raspberry Pi.
+
+I am communicating with the module using their AT command set across a 115,200 baud serial link.  This 
+requires a pretty elaborate
+state machine to allow bi-directional UDP traffic across a protocol that was originally designed
+so support auto-dialing modems.  The Hayes people would be shocked if they saw what people were
+doing with AT commands.  I've had good luck getting the SIM7600 to maintain the UDP data rate needed to
+support EchoLink.
+
+I am using a pre-paid SIM card from [Mint Mobile](https://www.mintmobile.com/).  It turns out that 
+not all cellular providers support the "raw" SIM7600 module.  In fact, it took a few conversations
+with their help desk to get them to activate my SIM card.  The Mint Mobile activation website wants you to select
+what kind of phone you have (i.e. iPhone, Android, etc.) and apparently "homebrew EchoLink station"
+isn't a valid choice in their system yet.  Someday ... But after some back-and-forth, they activated my 
+SIM and within 30 seconds the "link" LED started flashing and I was on the Internet!
+
+The only bad thing about Mint Mobile is that they don't appear to allow inbound UDP traffic 
+into this module. Or at least I've not figured that out yet.  ARRGG! This required the use of a 
+TCP proxy to handle the traffic in/out of the cellular module.  I've not documented this part
+yet because I am still hoping to eliminate this component.
 
 ## Speeds and Feeds
 
@@ -143,6 +170,8 @@ approximately 14,000 baud.
 * The voice prompts (all letters, numbers, and a few words) take up about 40K of 
 flash. The audio is stored in GSM full-rate format for efficiency.
 * Current flash size (used) is ~650,000 bytes.
+* The RP2040 communicates with the SIM7600 4G cellular module at 115,200 baud.  This is 
+about 10x the theoretically-required bandwidth to maintain a single channel.
 
 # Technical/Development Notes
 
@@ -433,6 +462,7 @@ enough.
   - SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
   - SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
   - [SIM7600 Hardware Design Guide](https://edworks.co.kr/wp-content/uploads/2022/04/SIM7600_Series_Hardware_Design_V1.08.pdf)
+  - [The "hat" I am using](https://www.waveshare.com/sim7600a-h-4g-hat.htm)
 * Windows Audio Related: 
   - http://www.techmind.org/wave/
   - http://midi.teragonaudio.com/tech/lowaud.htm
