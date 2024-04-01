@@ -341,7 +341,7 @@ int main(int, const char**) {
         restore_interrupts(ints);
     } 
     */
-    
+
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -618,8 +618,15 @@ int main(int, const char**) {
             }
             else if (c == 'd') {
                 conf.dropAll();
-            } else if (c == 'a') {
+            } 
+            else if (c == 'a') {
                 CallSign cs("*ECHOTEST*");
+                IPAddress addr(0);
+                StationID sid(addr, cs);
+                lookup.validate(sid);
+            } 
+            else if (c == 'b') {
+                CallSign cs("W1TKZ-L");
                 IPAddress addr(0);
                 StationID sid(addr, cs);
                 lookup.validate(sid);

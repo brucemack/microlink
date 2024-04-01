@@ -26,17 +26,21 @@
 #include "kc1fsz-tools/HostName.h"
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/IPLib.h"
+#include "kc1fsz-tools/CircularQueuePtr.h"
 
 namespace kc1fsz {
 
 class Log;
 class AsyncChannel;
 
-struct Send {
+/**
+ * Used to track a send waiting to be sent to the tunnel
+ */
+struct QueuedSend {
 
-    Send() : dataLen(0) { }
+    QueuedSend() : dataLen(0) { }
 
-    Send(const uint8_t* d, uint32_t dl) {
+    QueuedSend(const uint8_t* d, uint32_t dl) {
         memcpyLimited(data, d, dl, 256);
         dataLen = dl;
     }
@@ -92,23 +96,32 @@ private:
 
     void _write(const uint8_t* data, uint32_t dataLen);
     void _write(const char* cmd);
+
+    /**
+     * Queues a packet to be sent to the tunnel.  This is 
+     * paritcularly necessary since we won't be allowed to 
+     * send commands when in the middle of a previous AT+CIPSEND sequence
+     * that involves some modal prompts.
+     */
     void _queueSend(const uint8_t* data, uint32_t dataLen);
 
     void _processLine(const char* data, uint32_t dataLen);
     void _processIPD(const uint8_t* data, uint32_t dataLen);
+    void _processProxyFrameIfPossible();
     void _processProxyFrame(const uint8_t* data, uint32_t dataLen);
 
     Log* _log;
     AsyncChannel* _uart;
+    uint32_t _resetPin;
 
     static const uint32_t _maxEvents = 16;
     IPLibEvents* _events[_maxEvents];
     uint32_t _eventsLen = 0;   
 
     static const uint32_t _sendQueueSize = 4;
-    Send _sendQueue[_sendQueueSize];
-    uint32_t _sendQueueWrPtr = 0;
-    uint32_t _sendQueueRdPtr = 0;
+    QueuedSend _sendQueue[_sendQueueSize];
+    CircularQueuePtr _sendQueuePtr;
+    QueuedSend _workingSend;
 
     static const uint32_t _rxHoldSize = 4096;
     uint8_t _rxHold[_rxHoldSize];
@@ -131,11 +144,25 @@ private:
         INIT_4,
         INIT_5,
         INIT_5a,
+        INIT_CSQ_0,
+        INIT_CSQ_1,
+        // Pause before OPEN
+        INIT_6h,
+        // Ready to send OPEN to tunnel
         INIT_6,
+        // Waiting for OK after CIOPEN 
         INIT_7,
+        // (17) Waiting for result of CIOPEN
         INIT_7a,
+        // (18) Reconnect - ready to send close
+        RECON_0,
+        // (19) Wiating for OK on cose
+        RECON_1,
+        // (20)
         RUN,
+        // (21) Waiting for the > prompt on the +CIPSEND
         SEND_1,
+        // (22) Waiting for the final OK on the +CIPSEND
         SEND_2,
         SEND_3,
         FAILED
@@ -149,7 +176,6 @@ private:
     int _channelCount = 1;
     IPAddress _lastAddr;
     uint16_t _lastPort;
-    uint32_t _resetPin;
     uint32_t _stateTime = 0;
 };
 

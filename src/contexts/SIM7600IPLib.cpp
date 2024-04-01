@@ -35,6 +35,9 @@
 
 #include "SIM7600IPLib.h"
 
+// Delay between attempts to open the connection to the tunnel
+#define OPEN_INTERVAL_MS (2000)
+
 using namespace std;
 
 namespace kc1fsz {
@@ -44,13 +47,13 @@ int SIM7600IPLib::traceLevel = 0;
 SIM7600IPLib::SIM7600IPLib(Log* log, AsyncChannel* uart, uint32_t resetPin) 
 :   _log(log),
     _uart(uart),
-    _state(State::IDLE),
-    _resetPin(resetPin) {
+    _resetPin(resetPin),
+    _sendQueuePtr(_sendQueueSize) {
 }
 
 void SIM7600IPLib::_write(const uint8_t* data, uint32_t dataLen) {
-    _log->debugDump("To UART", data, dataLen);
-     _uart->write(data, dataLen);
+    //_log->debugDump("To UART", data, dataLen);
+    _uart->write(data, dataLen);
 }
 
 void SIM7600IPLib::_write(const char* cmd) {
@@ -67,7 +70,7 @@ void SIM7600IPLib::_write(const char* cmd) {
 */
 bool SIM7600IPLib::run() {
     
-    bool anythingHappened = _uart->run();
+    _uart->run();
 
     if (_uart->isReadable()) {
 
@@ -76,7 +79,7 @@ bool SIM7600IPLib::run() {
         uint8_t buf[bufSize];
         uint32_t bufLen = _uart->read(buf, bufSize);
 
-        _log->debugDump("From UART", buf, bufLen);
+        //_log->debugDump("From UART", buf, bufLen);
 
         // Process each character, attempting to form complete lines
         for (uint32_t i = 0; i < bufLen; i++) {
@@ -88,6 +91,7 @@ bool SIM7600IPLib::run() {
             }
 
             if (_inIpd) {
+                // Look for the completion of the IPD accumulation
                 if (_rxHoldLen == _ipdLen) {
                     _processIPD(_rxHold, _rxHoldLen);
                     _inIpd = false;
@@ -118,19 +122,9 @@ bool SIM7600IPLib::run() {
         }
     }
 
-    // Check for pending sends
-    if (_state == State::RUN) {
-        // Anything in the send queue?
-        if (_sendQueueWrPtr != _sendQueueRdPtr) {
-            // Form the write command
-            char buf[64];
-            snprintf(buf, 64, "AT+CIPSEND=0,%lu\r\n", _sendQueue[_sendQueueRdPtr].dataLen);
-            _write(buf);
-            _state = State::SEND_1;
-        }
-    }
-
-    //gpio_put(SIM7600_EN_PIN, 0);
+    // Check to see if we've accumulated a complete frame from the 
+    // proxy tunnel.  If so, handle it.
+    _processProxyFrameIfPossible();
 
     // The first thing we do is force some junk output in case the 
     // module was preveiously stuck at a > prompt. The junk ends
@@ -164,12 +158,44 @@ bool SIM7600IPLib::run() {
         _state = State::INIT_1;
     }
     else if (_state == State::INIT_4) {
+        _log->info("Opening TCP network");
         _write("AT+NETOPEN\r\n");
         _state = State::INIT_5;
     }
+    else if (_state == State::INIT_CSQ_0) {
+        _write("AT+CSQ\r\n");
+        _state = State::INIT_CSQ_1;
+    }
+    // Delay before attempting to open the connection
+    else if (_state == State::INIT_6h) {
+        if ((time_ms() - _stateTime) > OPEN_INTERVAL_MS) {
+            _state = State::INIT_6;
+        }
+    }
     else if (_state == State::INIT_6) {
+        _log->info("Opening tunnel");
         _write("AT+CIPOPEN=0,\"TCP\",\"monitor.w1tkz.net\",8100\r\n");
         _state = State::INIT_7;
+    }
+    else if (_state == State::RECON_0) {
+        _log->info("Closing TCP network");
+        _write("AT+NETCLOSE\r\n");
+        _state = State::RECON_1;
+    }
+    // Check for pending sends
+    else if (_state == State::RUN) {
+        // Anything in the send queue?
+        if (!_sendQueuePtr.isEmpty()) {
+            // Pop the item off the queue immediately to avoid issues
+            // with overruns
+            _workingSend = _sendQueue[_sendQueuePtr.getAndIncReadPtr()];
+            // Form the send command based on the length
+            char buf[64];
+            snprintf(buf, 64, "AT+CIPSEND=0,%lu\r\n", _workingSend.dataLen);
+            _write(buf);
+            // In this state we wait for the prompt
+            _state = State::SEND_1;
+        }
     }
 
     return true;
@@ -180,8 +206,6 @@ static bool streq(const char* a, const char* b) {
 }
 
 void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
-
-    //cout << "Processing line: (" << _state << ") " << data << endl;
 
     if (_state == State::RUN) {
         // Always look for +IPDnn - asynchronous receive
@@ -197,33 +221,71 @@ void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
             _lastAddr = addr;
             _lastPort = port;
         }
+        // Look for the unsolicited tunnel disconnect
+        else if (streq(data, "+IPCLOSE: 0,1")) {
+            _log->info("Tunnel dropped");
+            // Go to close the network
+            _state = State::RECON_0;
+        }
+        // Look for the unsolicited network drop
+        else if (streq(data, "+CIPEVENT: NETWORK CLOSED UNEXPECTEDLY")) {
+            _log->info("Network dropped");
+            // Go to the beginning
+            _state = State::INIT_0a;
+        }
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
+        }
     } 
     // Waiting during startup
     else if (_state == State::INIT_0c) {
-        if (strcmp(data, "PB DONE") == 0) {
+        if (streq(data, "PB DONE")) {
+            _log->info("Cellular module initialized");
             _state = State::INIT_0;
         } 
     }
     // Waiting for ATE0 be be processed
     else if (_state == State::INIT_1) {
-        if (strcmp(data, "OK") == 0) {
+        if (streq(data, "OK")) {
             _state = State::INIT_4;
         } 
+        else if (streq(data, "ATE0")) {
+            // Ignore the echo of this command
+        } 
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
+        }
     }
     // Waiting for the AT+NETOPEN to be processed
     else if (_state == State::INIT_5) {
-        if (strcmp((const char*)data, "OK") == 0) {
+        if (streq(data, "OK")) {
             _state = State::INIT_5a;
         } 
         else if (strcmp((const char*)data, "ERROR") == 0) {
             _state = State::FAILED;
         }
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
+        }
     }
     // Waiting for the successful AT+NETOPEN to finish and report status
     else if (_state == State::INIT_5a) {
-        if (strcmp((const char*)data, "+NETOPEN: 0") == 0) {
+        if (streq(data, "+NETOPEN: 0")) {
+            _state = State::INIT_CSQ_0;
+        } 
+    }
+    // Waiting for the successful AT+CSQ to finish
+    else if (_state == State::INIT_CSQ_1) {
+        if (streq(data, "OK") == 0) {
             _state = State::INIT_6;
         } 
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
+        }
     }
     // Waiting for the AT+CIPOPEN to be processed
     else if (_state == State::INIT_7) {
@@ -233,26 +295,68 @@ void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
         else if (strcmp((const char*)data, "ERROR") == 0) {
             _state = State::FAILED;
         }
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
+        }
     }
     // Waiting for the successful AT+CIPOPEN
     else if (_state == State::INIT_7a) {
-        if (strcmp((const char*)data, "+CIPOPEN: 0,0") == 0) {
+        if (streq(data, "OK")) {
+            // Ignore this
+        } 
+        else if (streq(data, "+CIPOPEN: 0,0")) {
             _state = State::RUN;
             // Let everyone know that we've reset
             for (uint32_t i = 0; i < _eventsLen; i++)
                 _events[i]->reset();
         } 
+        // Look for the case where we fail to connect (tunnel is 
+        // not available)
+        else if (streq(data, "+CIPOPEN: 0,1")) {
+            // Delay before retry
+            _state = State::INIT_6h;
+            _stateTime = time_ms();
+        }
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
+        }
     }
     else if (_state == State::SEND_1) {
-        if (strcmp(data, ">") == 0) {
-            _write(_sendQueue[_sendQueueRdPtr].data, _sendQueue[_sendQueueRdPtr].dataLen);
+        if (streq(data, ">")) {
+            _write(_workingSend.data, _workingSend.dataLen);
+            // Wait for the OK that the send is fully complete
             _state = State::SEND_2;
+        }
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
         }
     }
     // Waiting for an AT+CIPSEND to be acknowledged
     else if (_state == State::SEND_2) {
-        if (strcmp(data, "OK") == 0) {
+        if (streq(data, "OK")) {
             _state = State::SEND_3;
+        }
+        // NOTE: We've discovered that +IPDnnn can come in during the 
+        // wait for an OK
+        else if (dataLen >= 5 &&
+            data[0] == '+' && data[1] == 'I' && data[2] == 'P' && data[3] == 'D') {
+            // Parse length
+            _ipdLen = atoi(data + 4);
+            _inIpd = true;
+        }
+        // NOTE: We've discovered that RECV FROM: can come in during the 
+        // wait for an OK
+        else if (dataLen > 10 && memcmp(data, "RECV FROM:", 10) == 0) {
+            auto [addr, port] = parseAddressAndPort(data + 10);
+            _lastAddr = addr;
+            _lastPort = port;
+        }
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
         }
     }
     else if (_state == State::SEND_3) {
@@ -260,23 +364,30 @@ void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
         // Form the send reponse we are waiting for
         char buf[64];
         snprintf(buf, 64, "+CIPSEND: 0,%lu,%lu", 
-            _sendQueue[_sendQueueRdPtr].dataLen,
-            _sendQueue[_sendQueueRdPtr].dataLen);
-
-        if (strcmp(data, buf) == 0) {
-            // Pop the send queue
-            _sendQueueRdPtr++;
-            // Deal with wrap
-            if (_sendQueueRdPtr == _sendQueueSize) {
-                _sendQueueRdPtr = 0;
-            }
+            _workingSend.dataLen, _workingSend.dataLen);
+        // TODO: What do do if there is no match?
+        if (streq(data, buf)) {
             _state = State::RUN;
+        }
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
+        }
+    }
+    // Waiting for the AT+NETCLOSE to be processed
+    else if (_state == State::RECON_1) {
+        if (streq(data, "+NETCLOSE: 0")) {
+            _state = State::INIT_4;
+        } 
+        else {
+            _log->info("Unexpected line: %s", data);
+            _log->info("In state %d", _state);
         }
     }
 }
 
 /*
-This is a bid tricky because the +IPD messages are just streaming 
+This is a bit tricky because the +IPD messages are just streaming 
 data in from the proxy without and regard for the alignment of 
 the proxy frames.  We accumulate the bytes that we receive from
 the proxy in _ipdHold (w/ _ipdHoldLen) and watch until we have 
@@ -297,30 +408,28 @@ void SIM7600IPLib::_processIPD(const uint8_t* data, uint32_t dataLen) {
     // complete proxy frame.
     memcpy(_ipdHold + _ipdHoldLen, data, dataLen);
     _ipdHoldLen += dataLen;
+}
 
-    // We loop where because there may be more than one proxy frame in 
-    // the +IPD message we just received.
-    while (true) {
+void SIM7600IPLib::_processProxyFrameIfPossible() {
 
-        // Check for a complete frame
-        if (_ipdHoldLen < 2) {
-            return;
-        }
-        uint16_t frameLen = _ipdHold[0] << 8 | _ipdHold[1];
-        if (_ipdHoldLen < frameLen) {
-            return;
-        }
-
-        // Process the frame
-        _processProxyFrame(_ipdHold, frameLen);
-
-        // If there's anything left, shift down to the start of the hold area
-        if (_ipdHoldLen > frameLen) {
-            for (uint32_t i = 0; i < (_ipdHoldLen - frameLen); i++)
-                _ipdHold[i] = _ipdHold[frameLen + i];
-        }
-        _ipdHoldLen -= frameLen;
+    // Check for a complete frame
+    if (_ipdHoldLen < 2) {
+        return;
     }
+    uint16_t frameLen = _ipdHold[0] << 8 | _ipdHold[1];
+    if (_ipdHoldLen < frameLen) {
+        return;
+    }
+
+    // Process the full frame
+    _processProxyFrame(_ipdHold, frameLen);
+
+    // If there's anything left, shift down to the start of the hold area
+    if (_ipdHoldLen > frameLen) {
+        for (uint32_t i = 0; i < (_ipdHoldLen - frameLen); i++)
+            _ipdHold[i] = _ipdHold[frameLen + i];
+    }
+    _ipdHoldLen -= frameLen;
 }
 
 void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
@@ -374,7 +483,7 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
             if (resp.rc != 0) {
                 return;
             }
-            _log->info("Got bind response for %lu", resp.id);
+
             for (uint32_t i = 0; i < _eventsLen; i++)
                 _events[i]->bind(Channel(resp.id));
         }
@@ -383,8 +492,7 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
                 _log->error("Invalid response");
                 return;
             }
-            uint16_t id = frame[3] << 8 | frame[4];
-            _log->info("TCP send acknowledged on ID %u", id);
+            //uint16_t id = frame[3] << 8 | frame[4];
         }
         else if (frame[2] == ClientFrameType::RESP_RECV_TCP) {
             if (frameLen < 5) {
@@ -393,8 +501,6 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
             }
 
             uint16_t id = frame[3] << 8 | frame[4];
-
-            _log->info("Got TCP Data %u", id);
 
             // Distribute it to the listeners
             for (uint32_t i = 0; i < _eventsLen; i++)
@@ -434,8 +540,6 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
 
             uint16_t id = frame[3] << 8 | frame[4];
 
-            _log->info("Got Close %u", id);
-
             // Distribute it to the listeners
             for (uint32_t i = 0; i < _eventsLen; i++)
                 _events[i]->disc(Channel(id));
@@ -447,12 +551,20 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
 }
 
 void SIM7600IPLib::_queueSend(const uint8_t* d, uint32_t dl) {
+    _sendQueue[_sendQueuePtr.getAndIncWritePtr()] = QueuedSend(d, dl);
+    // Diagnostic only
+    if (_sendQueuePtr.getOverflowCount() > 0) {
+        _log->info("Send queue overflow %u", 
+            _sendQueuePtr.getOverflowCount());
+    }
+    /*
     _sendQueue[_sendQueueWrPtr] = Send(d, dl);
     _sendQueueWrPtr++;
     // Deal with wrap
     if (_sendQueueWrPtr == _sendQueueSize) {
         _sendQueueWrPtr = 0;
     }
+    */
 }
 
 void SIM7600IPLib::addEventSink(IPLibEvents* e) {
@@ -513,7 +625,7 @@ void SIM7600IPLib::connectTCPChannel(Channel c, IPAddress ipAddr, uint32_t port)
 
 void SIM7600IPLib::sendTCPChannel(Channel c, const uint8_t* b, uint16_t len) {    
 
-    if (traceLevel > 0)
+    if (traceLevel > 1)
         _log->info("Sending %d", c.getId());
     
     RequestSendTCP req;
@@ -531,7 +643,7 @@ Channel SIM7600IPLib::createUDPChannel() {
 
 void SIM7600IPLib::bindUDPChannel(Channel c, uint32_t localPort) {
 
-    if (traceLevel > 0)
+    if (traceLevel > 1)
         _log->info("Binding channel %d to port %d", c.getId(), localPort);
 
     RequestBindUDP req;
@@ -546,7 +658,7 @@ void SIM7600IPLib::sendUDPChannel(const Channel& c,
     const IPAddress& remoteIpAddr, uint32_t remotePort,
     const uint8_t* b, uint16_t len) {
 
-    if (traceLevel > 0)
+    if (traceLevel > 1)
         _log->info("Sending %d", c.getId());
     
     RequestSendUDP req;
