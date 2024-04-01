@@ -145,6 +145,10 @@ The messages used to authenticate and establish the ONLINE or BUSY status are th
 * N bytes: The location string
 * One byte: 0x0D 
 
+Later it was discovered that one more field is also needed for conference servers:
+* N bytes: E-mail address
+* One byte: 0x0D 
+
 Here's an example of an ONLINE packet:
 
 ![](packet-5.png)
