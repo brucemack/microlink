@@ -591,7 +591,7 @@ uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
 
 uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     CallSign cs, FixedString pwd, FixedString loc,
-    const FixedString& versionId) {
+    const FixedString& versionId, const FixedString& emailAddr) {
 
     uint8_t* p = buf;
 
@@ -621,6 +621,12 @@ uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     memcpy(p, loc.c_str(), loc.len());
     p += loc.len();
     (*p++) = 0x0d;
+
+    if (emailAddr.len() > 0) {
+        memcpy(p, emailAddr.c_str(), emailAddr.len());
+        p += emailAddr.len();
+        (*p++) = 0x0d;
+    }
 
     return (p - buf);
 }

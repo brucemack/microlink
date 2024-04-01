@@ -52,6 +52,8 @@ public:
     void setCallSign(CallSign cs) { _callSign = cs; }
     void setPassword(FixedString pw) { _password = pw; }
     void setLocation(FixedString loc) { _location = loc; }
+    void setEmailAddr(const FixedString& a) { _emailAddr = a; }
+
     void setConference(Conference* conf) { _conf = conf; }
     uint32_t secondsSinceLastLogon() const;
 
@@ -95,6 +97,7 @@ private:
     FixedString _password;
     FixedString _location;
     FixedString _versionId;
+    FixedString _emailAddr;
 
     Channel _channel;
     

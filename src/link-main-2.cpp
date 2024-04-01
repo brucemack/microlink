@@ -312,6 +312,7 @@ int main(int, const char**) {
         log.info("Normal reboot");
     }
 
+    /*
     // TEMPORARY!
     {
         // Write flash
@@ -319,10 +320,10 @@ int main(int, const char**) {
         config.version = CONFIG_VERSION;
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
-        strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "xxx", 32);
-        //strncpy(config.callSign, "*ANALYZER*", 32);
+        //strncpy(config.callSign, "W1TKZ-L", 32);
         //strncpy(config.password, "xxx", 32);
+        strncpy(config.callSign, "*ANALYZER*", 32);
+        strncpy(config.password, "xxx", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
@@ -339,7 +340,8 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
-
+    */
+    
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -400,18 +402,29 @@ int main(int, const char**) {
     uint8_t rxBufferArea[256];
     uint8_t txBufferArea[256];
     PicoUartChannel uartCtx(uart0, rxBufferArea, 256, txBufferArea, 256);
-    SIM7600IPLib ctx(&log, &uartCtx);
+    SIM7600IPLib ctx(&log, &uartCtx, SIM7600_EN_PIN);
     ctx.reset();
 
-    // SIM7600 module reset
-    gpio_init(SIM7600_EN_PIN);
-    gpio_set_dir(SIM7600_EN_PIN, GPIO_OUT);
+    // SIM7600 module reset.
+    // Per the schematic for the "hat" board, the reset is 
+    // active high.
+    //gpio_init(SIM7600_EN_PIN);
+    //gpio_put(SIM7600_EN_PIN, 1);
+    //gpio_set_dir(SIM7600_EN_PIN, GPIO_OUT);
+    /*
+    sleep_ms(1000);
     gpio_put(SIM7600_EN_PIN, 1);
-    sleep_ms(50);
+    sleep_ms(1000);
     gpio_put(SIM7600_EN_PIN, 0);
-    sleep_ms(50);
+    sleep_ms(1000);
+    */
+    /*
     gpio_put(SIM7600_EN_PIN, 1);
-
+    sleep_ms(1000);
+    gpio_put(SIM7600_EN_PIN, 0);
+    sleep_ms(1000);
+    */
+    
     // ====== Internet Connectivity Stuff =====================================
 
     TestUserInfo info;
@@ -461,8 +474,10 @@ int main(int, const char**) {
     //dnsMachine2.setHostName(MONITOR_SERVER_NAME);
 
     // TODO: MOVE THIS TO CONFIG
-    //FixedString versionId("1.06B");
-    FixedString versionId(VERSION_ID);
+    FixedString versionId("1.06B");
+    FixedString emailAddr("bruce@mackinnon.com");
+    //FixedString versionId(VERSION_ID);
+    //FixedString emailAddr;
 
     LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1, versionId);
     ctx.addEventSink(&logonMachine);
@@ -470,6 +485,7 @@ int main(int, const char**) {
     logonMachine.setCallSign(ourCallSign);
     logonMachine.setPassword(ourPassword);
     logonMachine.setLocation(ourLocation);
+    logonMachine.setEmailAddr(emailAddr);
 
     LookupMachine3 lookup(&ctx, &info, &log);
     ctx.addEventSink(&lookup);

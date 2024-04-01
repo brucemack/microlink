@@ -156,7 +156,7 @@ uint32_t formatRTPPacket_McAD(uint8_t* p, uint32_t packetSize);
 */
 uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     CallSign cs, FixedString pwd, FixedString loc,
-    const FixedString& versionId);
+    const FixedString& versionId, const FixedString& emailAddr);
 }
 
 

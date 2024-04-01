@@ -54,7 +54,7 @@ public:
 
     static int traceLevel;
 
-    SIM7600IPLib(Log* log, AsyncChannel* uart);
+    SIM7600IPLib(Log* log, AsyncChannel* uart, uint32_t resetPin);
 
     // ----- Runnable Methods ------------------------------------------------
 
@@ -121,6 +121,8 @@ private:
     enum State {
         IDLE,
         INIT_0a,
+        INIT_0b,
+        INIT_0c,
         INIT_0,
         INIT_1,
         INIT_2,
@@ -147,6 +149,8 @@ private:
     int _channelCount = 1;
     IPAddress _lastAddr;
     uint16_t _lastPort;
+    uint32_t _resetPin;
+    uint32_t _stateTime = 0;
 };
 
 }

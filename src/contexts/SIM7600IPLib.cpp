@@ -41,17 +41,16 @@ namespace kc1fsz {
 
 int SIM7600IPLib::traceLevel = 0;
 
-SIM7600IPLib::SIM7600IPLib(Log* log, AsyncChannel* uart) 
+SIM7600IPLib::SIM7600IPLib(Log* log, AsyncChannel* uart, uint32_t resetPin) 
 :   _log(log),
     _uart(uart),
-    _state(State::IDLE) {
+    _state(State::IDLE),
+    _resetPin(resetPin) {
 }
 
 void SIM7600IPLib::_write(const uint8_t* data, uint32_t dataLen) {
-    //cout << "----- Sending -----------------------" << endl;
-    //prettyHexDump(data, dataLen, cout);
-    _uart->write(data, dataLen);
-    //cout << "-------------------------------------" << endl;
+    _log->debugDump("To UART", data, dataLen);
+     _uart->write(data, dataLen);
 }
 
 void SIM7600IPLib::_write(const char* cmd) {
@@ -77,7 +76,7 @@ bool SIM7600IPLib::run() {
         uint8_t buf[bufSize];
         uint32_t bufLen = _uart->read(buf, bufSize);
 
-        //_log->debugDump("From UART", buf, bufLen);
+        _log->debugDump("From UART", buf, bufLen);
 
         // Process each character, attempting to form complete lines
         for (uint32_t i = 0; i < bufLen; i++) {
@@ -131,14 +130,38 @@ bool SIM7600IPLib::run() {
         }
     }
 
-    // Do any other state maintenance
+    //gpio_put(SIM7600_EN_PIN, 0);
+
+    // The first thing we do is force some junk output in case the 
+    // module was preveiously stuck at a > prompt. The junk ends
+    // with a \r\n so it should generate an ERROR under normal 
+    // circumstances.
+    if (_state == State::INIT_0a) {
+        char junk[128];
+        for (uint8_t i = 0; i < 128; i++)
+            junk[i] = 'x';
+        junk[125] = '\r';
+        junk[126] = '\n';
+        junk[127] = 0;
+        _write(junk);
+        _state = State::INIT_0b;
+        _stateTime = time_ms();
+    }
+    // We wait for a few ms and then request a reset
+    else if (_state == State::INIT_0b) {
+        if (time_ms() - _stateTime > 100) {
+            _write("AT+CRESET\r\n");
+            _state = State::INIT_0c;
+        }
+    }
+    // Here we are waiting for the need to do a more serious
+    // reset.
+    else if (_state == State::INIT_0c) {
+    }
+    // Turn off echo
     else if (_state == State::INIT_0) {
         _write("ATE0\r\n");
         _state = State::INIT_1;
-    }
-    else if (_state == State::INIT_2) {
-        _write("AT+NETCLOSE\r\n");
-        _state = State::INIT_3;
     }
     else if (_state == State::INIT_4) {
         _write("AT+NETOPEN\r\n");
@@ -150,6 +173,10 @@ bool SIM7600IPLib::run() {
     }
 
     return true;
+}
+
+static bool streq(const char* a, const char* b) {
+    return strcmp(a, b) == 0;
 }
 
 void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
@@ -172,8 +199,7 @@ void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
         }
     } 
     // Waiting during startup
-    else if (_state == State::INIT_0a) {
-        //if (strcmp(data, "+CPIN: READY") == 0) {
+    else if (_state == State::INIT_0c) {
         if (strcmp(data, "PB DONE") == 0) {
             _state = State::INIT_0;
         } 
@@ -181,22 +207,6 @@ void SIM7600IPLib::_processLine(const char* data, uint32_t dataLen) {
     // Waiting for ATE0 be be processed
     else if (_state == State::INIT_1) {
         if (strcmp(data, "OK") == 0) {
-            _state = State::INIT_2;
-        } 
-    }
-    // Waiting for AT+NETCLOSE to be processed (will either succeed or fail)
-    else if (_state == State::INIT_3) {
-        if (strcmp(data, "OK") == 0) {
-            _state = State::INIT_3a;
-        } 
-        // We just ignore the ERROR here
-        else if (strcmp(data, "ERROR") == 0) {
-            _state = State::INIT_4;
-        } 
-    }
-    // Waiting for the successful AT+NETCLOSE to finish and report status
-    else if (_state == State::INIT_3a) {
-        if (strcmp(data, "+NETCLOSE: 0") == 0) {
             _state = State::INIT_4;
         } 
     }
@@ -424,7 +434,7 @@ void SIM7600IPLib::_processProxyFrame(const uint8_t* frame, uint32_t frameLen) {
 
             uint16_t id = frame[3] << 8 | frame[4];
 
-            //_log->info("Got Close %u", id);
+            _log->info("Got Close %u", id);
 
             // Distribute it to the listeners
             for (uint32_t i = 0; i < _eventsLen; i++)

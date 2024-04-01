@@ -38,7 +38,7 @@ namespace kc1fsz {
 static const uint32_t LOGON_INTERVAL_MS = 5 * 60 * 1000;
 // Time after a failed logon.  Used to avoid hammering the Addressing 
 // server 
-static const uint32_t PAUSE_INTERVAL_MS = 10 * 1000;
+static const uint32_t PAUSE_INTERVAL_MS = 30 * 1000;
 static const uint32_t DNS_TIMEOUT_MS = 10000;
 static const uint32_t CONNECT_TIMEOUT_MS = 5000;
 static const uint32_t LOGON_TIMEOUT_MS = 10 * 1000;
@@ -78,7 +78,7 @@ void LogonMachine2::conn(Channel ch) {
         // Build the logon message
         uint8_t buf[256];
         uint32_t bufLen = createOnlineMessage(buf, 256, _callSign, _password, 
-            FixedString(augmentedLocation), _versionId);
+            FixedString(augmentedLocation), _versionId, _emailAddr);
         _ctx->sendTCPChannel(_channel, buf, bufLen);
         // Get ready to accumulate the response
         _logonRespPtr = 0;
