@@ -46,6 +46,9 @@ int LwIPLib::traceLevel = 0;
 
 LwIPLib::LwIPLib(Log* log) 
 :   _log(log) {
+    // Make sure we fire off the reset event once we start
+    // runnning the event loop.
+    _resetPending = true;
 }
 
 // ----- Runnable Methods ------------------------------------------------
@@ -58,16 +61,23 @@ LwIPLib::LwIPLib(Log* log)
 */
 bool LwIPLib::run() {
 
+    if (_resetPending) {
+        for (uint32_t i = 0; i < _eventsLen; i++)
+            _events[i]->reset();
+        _resetPending = false;
+    }
+
     if (_dnsRespPending) {
         _dnsRespPending = false;
         for (uint32_t i = 0; i < _eventsLen; i++)
             _events[i]->dns(_lastHostNameReq, _lastAddrResp);
     }
 
-    if (_bindRespPending) {
-        _bindRespPending = false;
+    if (_bindRespQueueLen > 0) {
+        // Distribute the event to anyone interested
         for (uint32_t i = 0; i < _eventsLen; i++)
-            _events[i]->bind(_lastChannel);
+            _events[i]->bind(_bindRespQueue[_bindRespQueueLen - 1]);
+        _bindRespQueueLen--;
     }
 
     return true;
@@ -86,7 +96,7 @@ bool LwIPLib::isLinkUp() const {
 }
 
 void LwIPLib::queryDNS(HostName hostName) {
-
+ 
     if (traceLevel > 0)
         _log->info("DNS request for %s", hostName.c_str());
 
@@ -361,8 +371,11 @@ void LwIPLib::bindUDPChannel(Channel c, uint32_t localPort) {
         // TODO: NEED ERROR EVENT
     }
     else {
-        _lastChannel = c;
-        _bindRespPending = true;
+        if (_bindRespQueueLen < _bindRespQueueSize) {
+            _bindRespQueue[_bindRespQueueLen++] = c;
+        } else {
+            panic("Bind queue overflow");
+        }
     }
 }
 

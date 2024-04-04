@@ -58,18 +58,18 @@ Launch command:
 #include "hardware/watchdog.h"
 #include "hardware/flash.h"
 
-/*
 // ======= Internet Stuff ===========
 #include "pico/cyw43_arch.h"
 #include "lwip/dns.h"
 #include "contexts/LwIPLib.h"
 // ======= Internet Stuff ===========
-*/
 
+/*
 // ======= Internet Stuff ===========
 #include "kc1fsz-tools/rp2040/PicoUartChannel.h"
 #include "contexts/SIM7600IPLib.h"
 // ======= Internet Stuff ===========
+*/
 
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
@@ -209,7 +209,7 @@ public:
         // If you are using pico_cyw43_arch_poll, then you must poll periodically 
         // from your main loop (not from a timer) to check for Wi-Fi driver or 
         // lwIP work that needs to be done.
-        //cyw43_arch_poll();
+        cyw43_arch_poll();
         return true;
     }
 };
@@ -234,6 +234,12 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     ostream& str);
 
 bool rigKeyFailSafe();
+
+static int32_t getInternetRssi() {
+    int32_t rssi = 0;
+    cyw43_wifi_get_rssi(&cyw43_state, &rssi);
+    return rssi;
+}
 
 int main(int, const char**) {
 
@@ -374,7 +380,6 @@ int main(int, const char**) {
 
     bool networkState = false;
 
-    /*
     // ====== Internet Connectivity Stuff =====================================
     LwIPLib::traceLevel = 0;
     if (cyw43_arch_init_with_country(CYW43_COUNTRY_USA)) {
@@ -386,8 +391,8 @@ int main(int, const char**) {
     }
     LwIPLib ctx(&log);
     // ====== Internet Connectivity Stuff =====================================
-    */
 
+    /*
     // ====== Internet Connectivity Stuff =====================================
     // UART0 setup (SIM7600)
     uart_init(uart0, 115200);
@@ -411,21 +416,9 @@ int main(int, const char**) {
     //gpio_init(SIM7600_EN_PIN);
     //gpio_put(SIM7600_EN_PIN, 1);
     //gpio_set_dir(SIM7600_EN_PIN, GPIO_OUT);
-    /*
-    sleep_ms(1000);
-    gpio_put(SIM7600_EN_PIN, 1);
-    sleep_ms(1000);
-    gpio_put(SIM7600_EN_PIN, 0);
-    sleep_ms(1000);
-    */
-    /*
-    gpio_put(SIM7600_EN_PIN, 1);
-    sleep_ms(1000);
-    gpio_put(SIM7600_EN_PIN, 0);
-    sleep_ms(1000);
-    */
     
     // ====== Internet Connectivity Stuff =====================================
+    */
 
     TestUserInfo info;
 
@@ -474,10 +467,10 @@ int main(int, const char**) {
     //dnsMachine2.setHostName(MONITOR_SERVER_NAME);
 
     // TODO: MOVE THIS TO CONFIG
-    FixedString versionId("1.06B");
-    FixedString emailAddr("bruce@mackinnon.com");
-    //FixedString versionId(VERSION_ID);
-    //FixedString emailAddr;
+    //FixedString versionId("1.06B");
+    //FixedString emailAddr("bruce@mackinnon.com");
+    FixedString versionId(VERSION_ID);
+    FixedString emailAddr;
 
     LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1, versionId);
     ctx.addEventSink(&logonMachine);
@@ -710,8 +703,6 @@ int main(int, const char**) {
                 log.info("Raw sample %d", radio0In.getLastRawSample());
                 int16_t avg = rxAnalyzer.getAvg();
                 log.info("Baseline DC bias (V) %d", avg);
-                // We shift by 4 because the ADC has been scaled from 12 to 16 bits
-                //radio0In.setBias(-(avg >> 4));
                 radio0In.resetMax();
                 radio0In.resetOverflowCount();
                 startupMode = 1;
@@ -801,9 +792,6 @@ int main(int, const char**) {
                 startupMode == 0 && 
                 rxAnalyzer.getMS() > config->rxNoiseThreshold;
 
-        // TEMP
-        rigCosState = false;
-
         // Produce a debounced cosState, which indicates the state of
         // the carrier detect.
         //
@@ -867,9 +855,7 @@ int main(int, const char**) {
 
             // Pass some information into the Conference for the 
             // dianostic messages
-            int32_t rssi = 0;
-            //cyw43_wifi_get_rssi(&cyw43_state, &rssi);
-            conf.setWifiRssi((int16_t)rssi);
+            conf.setWifiRssi(getInternetRssi());
             conf.setRxPower(rxAnalyzer.getMS() / 100);
         }
 
@@ -887,12 +873,10 @@ int main(int, const char**) {
         if (statusPage) {
             if (renderTimer.poll()) {
                 renderTimer.reset();
-                int32_t rssi = 0;
-                //cyw43_wifi_get_rssi(&cyw43_state, &rssi);
                 renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
                     baselineRxNoise, config->rxNoiseThreshold, cosState, 
                     networkState,
-                    rssi,
+                    getInternetRssi(),
                     conf.getSecondsSinceLastActivity(),
                     cout);
             }

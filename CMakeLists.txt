@@ -48,9 +48,9 @@ add_executable(link-main-2
   src/LinkUserInfo.cpp
   src/Conference.cpp
   src/ConferenceBridge.cpp
-  #src/contexts/LwIPLib.cpp
-  src/contexts/SIM7600IPLib.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
+  src/contexts/LwIPLib.cpp
+  #src/contexts/SIM7600IPLib.cpp
+  #kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
   src/contexts/I2CAudioOutputContext.cpp
   src/contexts/PicoAudioInputContext.cpp
   src/machines/DNSMachine.cpp

@@ -445,10 +445,10 @@ void Conference::dropAll() {
 bool Conference::run() {
 
     // Ping the Addressing Server to keep the link up
-    if (_pingTimer.poll()) {
-        _pingTimer.reset();
-        _sendPing();
-    }
+    //if (_pingTimer.poll()) {
+    //    _pingTimer.reset();
+    //    _sendPing();
+    //}
 
     /*
     // Ping the monitor server 

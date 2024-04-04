@@ -89,13 +89,21 @@ private:
     IPAddress _lastAddrResp;
     Channel _lastChannel;
 
+    // At the moment we can have at most one DNS request outstanding
+    // at a time.
     bool _dnsRespPending = false;
-    bool _bindRespPending = false;
-    bool _sendRespPending = false;
+
+    // At the moment we can have at most two bind requests outstanding
+    // at a time.    
+    static const uint32_t _bindRespQueueSize = 2;
+    Channel _bindRespQueue[_bindRespQueueSize];
+    uint32_t _bindRespQueueLen = 0;
 
     static const uint32_t _sendHoldSize = 256;
     uint8_t _sendHold[_sendHoldSize];
     uint32_t _sendHoldLen;
+
+    bool _resetPending = false;
 
     struct Tracker {
 
