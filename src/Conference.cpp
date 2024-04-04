@@ -184,7 +184,41 @@ void Conference::processAudio(IPAddress sourceIp,
         } 
         // Otherwise, this is chat
         else {
-            _processChat(sourceIp, frame, frameLen);
+            _log->debugDump("Chat", frame, frameLen);
+
+            // Extract the call and message (oNDATAxxxxxx>mmmmm\r)
+            int state = 0;
+            char call[32] = { 0 };
+            uint32_t callLen = 0;
+            char msg[64] = { 0 };
+            uint32_t msgLen = 0;
+            
+            for (uint32_t p = 6; p < frameLen; p++) {
+                if (state == 0) {
+                    if (frame[p] == '>') {
+                        state = 1;
+                    } else {
+                        if (callLen < 31) {
+                            call[callLen] = frame[p];
+                            call[callLen + 1] = 0;
+                            callLen++;
+                        }
+                    }
+                }
+                else if (state == 1) {
+                    if (frame[p] == 0x0d) {
+                        state = 2;
+                    } else {
+                        if (msgLen < 63) {
+                            msg[msgLen] = frame[p];
+                            msg[msgLen + 1] = 0;
+                            msgLen++;
+                        }
+                    }
+                }
+            }
+
+            _processChat(sourceIp, call, msg);
         }
         return;
     }
@@ -365,46 +399,48 @@ void Conference::_processMonitorText(IPAddress source,
     _lastMonitorRxStamp = time_ms();
 }
 
-void Conference::_processChat(IPAddress source,
-    const uint8_t* data, uint32_t dataLen) {
+void Conference::_processChat(const IPAddress& source,
+    const char* call, const char* msg) {
 
-    _log->debugDump("Chat", data, dataLen);
-    
-    // Find the ">" delimiter
-    uint32_t start = 0;
-    for (uint32_t i = 0; i < dataLen; i++) {
-        if (data[i] == '>') {
-            start = i;
-        }
-    }
-    if (start == 0) {
-        return;
-    }
-
-    // Look for add
-    uint32_t msgLen = dataLen - start - 1;
-    const char* msg = (const char*)data + start + 1;
-
-    if (msgLen > 5 && msg[0] == 'c' && msg[1] == 'a' && 
+    // Look for "call xxxxxx"
+    if (strlen(msg) > 5 && msg[0] == 'c' && msg[1] == 'a' && 
         msg[2] == 'l' && msg[3] == 'l' && msg[4] == ' ') {
-        // Isolate the callsign without spaces, all upper case
-        char call[32];
-        uint32_t callPtr = 0;
+        // Isolate the target callsign without spaces, all upper case
+        char targetCall[32];
+        uint32_t targetCallLen = 0;
         for (uint32_t msgPtr = 5; 
-            msg[msgPtr] != 0x0d && msgPtr < msgLen && callPtr < 30; msgPtr++) {
+            msg[msgPtr] != 0 && targetCallLen < 31; 
+            msgPtr++) {
             if (msg[msgPtr] != ' ') {
-                call[callPtr++] = std::toupper(msg[msgPtr]);
+                targetCall[targetCallLen++] = std::toupper(msg[msgPtr]);
             }
         }
-        call[callPtr++] = 0;
+        targetCall[targetCallLen++] = 0;
 
-        _log->info("Calling %s ...", call);
-        StationID id(IPAddress(0), CallSign(call));
+        _log->info("Calling %s ...", targetCall);
+        // TODO: NEED TONE CONFIRMATION!
         
         // This is asynchronous
-        _authority->validate(id);
+        _authority->validate(StationID(IPAddress(0), CallSign(targetCall)));
     }
+    // Look for "drop xxxxxx"
+    else if (strlen(msg) > 5 && msg[0] == 'd' && msg[1] == 'r' && 
+        msg[2] == 'o' && msg[3] == 'p' && msg[4] == ' ') {
+        // Isolate the target callsign without spaces, all upper case
+        char targetCall[32];
+        uint32_t targetCallLen = 0;
+        for (uint32_t msgPtr = 5; 
+            msg[msgPtr] != 0 && targetCallLen < 31; 
+            msgPtr++) {
+            if (msg[msgPtr] != ' ') {
+                targetCall[targetCallLen++] = std::toupper(msg[msgPtr]);
+            }
+        }
+        targetCall[targetCallLen++] = 0;
 
+        _drop(CallSign(targetCall));
+        // TODO: NEED TONE CONFIRMATION!
+    }
 }
 
 CallSign Conference::_extractCallSign(const uint8_t* data, uint32_t dataLen) {
@@ -435,6 +471,16 @@ CallSign Conference::_extractCallSign(const uint8_t* data, uint32_t dataLen) {
 void Conference::dropAll() {
     for (Station& s : _stations) {
         if (s.active && !s.locked) {
+            _log->info("Dropping station %s", s.id.getCall().c_str());
+            _sendBye(s.id);
+            s.active = false;
+        }
+    }
+}
+
+void Conference::_drop(const CallSign& cs) {
+    for (Station& s : _stations) {
+        if (s.active && !s.locked && s.id.getCall() == cs) {
             _log->info("Dropping station %s", s.id.getCall().c_str());
             _sendBye(s.id);
             s.active = false;

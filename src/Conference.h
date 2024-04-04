@@ -166,8 +166,10 @@ private:
     static CallSign _extractCallSign(const uint8_t* data,
         uint32_t dataLen);
 
-    void _processChat(IPAddress source,
-        const uint8_t* frame, uint32_t frameLen);
+    void _processChat(const IPAddress& source,
+        const char* callSign, const char* message);
+
+    void _drop(const CallSign& cs);
 
     struct Station {
         
