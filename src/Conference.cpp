@@ -367,7 +367,44 @@ void Conference::_processMonitorText(IPAddress source,
 
 void Conference::_processChat(IPAddress source,
     const uint8_t* data, uint32_t dataLen) {
-    prettyHexDump(data, dataLen, std::cout);
+
+    _log->debugDump("Chat", data, dataLen);
+    
+    // Find the ">" delimiter
+    uint32_t start = 0;
+    for (uint32_t i = 0; i < dataLen; i++) {
+        if (data[i] == '>') {
+            start = i;
+        }
+    }
+    if (start == 0) {
+        return;
+    }
+
+    // Look for add
+    uint32_t msgLen = dataLen - start - 1;
+    const char* msg = (const char*)data + start + 1;
+
+    if (msgLen > 5 && msg[0] == 'c' && msg[1] == 'a' && 
+        msg[2] == 'l' && msg[3] == 'l' && msg[4] == ' ') {
+        // Isolate the callsign without spaces, all upper case
+        char call[32];
+        uint32_t callPtr = 0;
+        for (uint32_t msgPtr = 5; 
+            msg[msgPtr] != 0x0d && msgPtr < msgLen && callPtr < 30; msgPtr++) {
+            if (msg[msgPtr] != ' ') {
+                call[callPtr++] = std::toupper(msg[msgPtr]);
+            }
+        }
+        call[callPtr++] = 0;
+
+        _log->info("Calling %s ...", call);
+        StationID id(IPAddress(0), CallSign(call));
+        
+        // This is asynchronous
+        _authority->validate(id);
+    }
+
 }
 
 CallSign Conference::_extractCallSign(const uint8_t* data, uint32_t dataLen) {
@@ -407,13 +444,11 @@ void Conference::dropAll() {
 
 bool Conference::run() {
 
-    /* TODO - BRING BACK
     // Ping the Addressing Server to keep the link up
     if (_pingTimer.poll()) {
         _pingTimer.reset();
         _sendPing();
     }
-    */
 
     /*
     // Ping the monitor server 

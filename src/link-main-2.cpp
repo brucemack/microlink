@@ -855,12 +855,12 @@ int main(int, const char**) {
 
             if (ctx.isLinkUp()) {
                 if (!networkState) {
-                    log.info("WIFI is up");
+                    log.info("The Internet is up");
                 }
                 networkState = true;
             } else {
                 if (networkState) {
-                    log.info("WIFI is down");
+                    log.info("The Internet is down");
                 }
                 networkState = false;
             }
