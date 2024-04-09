@@ -121,6 +121,12 @@ struct StationConfig {
     uint32_t rxNoiseThreshold;
     // Used for ADC calibration
     int32_t adcRawOffset;
+    // Controls soft COS behavior.  How long we wait before assuming
+    // that the carrier has really been detected.
+    //uin32_t cosDebounceOnMs;
+    // Controls soft COS behavior.  How long we wait before assuming
+    // that the carrier has really dropped.
+    //uin32_t cosDebounceOffMs;
 
     char padding[512 - (4 + 4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 32 + 4 + 4 + 4 + 4)];
 };

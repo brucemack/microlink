@@ -92,9 +92,9 @@ Launch command:
 // Monitor Server
 #define MONITOR_SERVER_NAME ("monitor.w1tkz.net")
 // The time the raw COS needs to be active to be consered "on"
-#define COS_DEBOUNCE_ON_MS 5
+#define COS_DEBOUNCE_ON_MS 10
 // The time the raw COS needs to be inactive to be considered "off"
-#define COS_DEBOUNCE_OFF_MS 250
+#define COS_DEBOUNCE_OFF_MS 400
 // The time the COS is ignore immediate after a TX cycle (to avoid 
 // having the transmitter interfering with the receiver
 #define LINGER_AFTER_TX_MS 500
@@ -126,8 +126,10 @@ Launch command:
 
 // Physical pin 9. Input from physical PTT button.
 #define PTT_PIN (6)
+
 // Physical pin 10. Output to drive an LED indicating keyed status
-#define KEY_LED_PIN (7)
+// Green LED on ML0 board
+//#define KEY_LED_PIN (7)
 
 // Physical pin 11 - Serial data logger
 #define UART1_TX_PIN (8)
@@ -165,8 +167,9 @@ Launch command:
 // receive carrier from the rig. 
 #define RIG_COS_PIN (19)
 
-// No physical pin on board
-//#define LED_PIN (25)
+// Physical pin 10. Output to drive an LED indicating keyed status
+// Green LED on ML1 board
+#define KEY_LED_PIN (22)
 
 // Physical pin 31 - ADC input from analog section
 #define ADC0_PIN (26)
@@ -317,7 +320,6 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-
     /*
     // TEMPORARY!
     {
@@ -326,10 +328,10 @@ int main(int, const char**) {
         config.version = CONFIG_VERSION;
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
-        //strncpy(config.callSign, "W1TKZ-L", 32);
-        //strncpy(config.password, "xxx", 32);
-        strncpy(config.callSign, "*ANALYZER*", 32);
+        strncpy(config.callSign, "W1TKZ-L", 32);
         strncpy(config.password, "xxx", 32);
+        //strncpy(config.callSign, "*ANALYZER*", 32);
+        //strncpy(config.password, "xxx", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
@@ -337,8 +339,10 @@ int main(int, const char**) {
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
-        config.rxNoiseThreshold = 15000;
-        config.adcRawOffset = -22;
+        //config.rxNoiseThreshold = 15000;
+        config.rxNoiseThreshold = 3000;
+        //config.adcRawOffset = -22;
+        config.adcRawOffset = -163;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
         flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
@@ -347,7 +351,6 @@ int main(int, const char**) {
         restore_interrupts(ints);
     } 
     */
-
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -379,6 +382,7 @@ int main(int, const char**) {
     log.info("ADC offset           : %d", config->adcRawOffset);
 
     bool networkState = false;
+    IPAddress currentIp;
 
     // ====== Internet Connectivity Stuff =====================================
     LwIPLib::traceLevel = 0;
@@ -386,8 +390,8 @@ int main(int, const char**) {
         log.error("Failed to initialize WIFI");
     } else {
         cyw43_arch_enable_sta_mode();
-        cyw43_arch_wifi_connect_async(config->wifiSsid, config->wifiPassword, 
-            CYW43_AUTH_WPA2_AES_PSK);
+        //cyw43_arch_wifi_connect_async(config->wifiSsid, config->wifiPassword, 
+        //    CYW43_AUTH_WPA2_AES_PSK);
     }
     LwIPLib ctx(&log);
     // ====== Internet Connectivity Stuff =====================================
@@ -837,20 +841,39 @@ int main(int, const char**) {
             flashState = !flashState;
         }
 
-        // Displays that happen on a slow pol
+        // Maintenance that happens on a slow pol
+
         if (secondTimer.poll()) {
             secondTimer.reset();
 
-            if (ctx.isLinkUp()) {
+            int st = cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_STA);
+
+            if (st == CYW43_LINK_JOIN) {
                 if (!networkState) {
                     log.info("The Internet is up");
                 }
                 networkState = true;
-            } else {
+            }
+            else {
                 if (networkState) {
                     log.info("The Internet is down");
                 }
                 networkState = false;
+            }
+
+            if (st == CYW43_LINK_DOWN || st == CYW43_LINK_FAIL) {
+                log.info("Attempting to connect to WIFI");
+                cyw43_arch_wifi_connect_async(config->wifiSsid, config->wifiPassword, 
+                    CYW43_AUTH_WPA2_AES_PSK);
+            }
+
+            // Get the IP address and see if it's changed 
+            IPAddress myIp(ntohl(cyw43_state.netif[0].ip_addr.addr));
+            if (!(currentIp == myIp)) {
+                char buf[32];
+                myIp.formatAsDottedDecimal(buf, 32);
+                log.info("Assigned IP address: %s", buf);
+                currentIp = myIp;
             }
 
             // Pass some information into the Conference for the 

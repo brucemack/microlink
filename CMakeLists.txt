@@ -88,6 +88,26 @@ target_include_directories(link-main-2 PRIVATE gsm-0610-codec/include)
 target_include_directories(link-main-2 PRIVATE microtunnel/include)
 target_include_directories(link-main-2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
+# ------ hello-world ---------------------------------------------------------
+#
+add_executable(hello-world
+  tests/hello-world.cpp
+)
+
+if(DEFINED ENV{PICO_BUILD})
+pico_enable_stdio_usb(hello-world 1)
+# Watch out!  Don't let the STDIO get sent to the UART
+pico_enable_stdio_uart(hello-world 0)
+# ADDED FOR PICO W
+pico_add_extra_outputs(hello-world)
+target_compile_definitions(hello-world PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
+target_compile_definitions(hello-world PRIVATE PICO_BUILD=1)
+target_link_libraries(hello-world pico_stdlib hardware_i2c hardware_adc pico_cyw43_arch_lwip_poll)
+endif()
+
+target_include_directories(hello-world PRIVATE src)
+target_include_directories(hello-world PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+
 # ------ server-test-1 -------------------------------------------------------
 
 add_executable(server-test-1
@@ -161,51 +181,6 @@ pico_enable_stdio_uart(exception-test-1 0)
 target_compile_definitions(exception-test-1 PUBLIC PICO_BUILD=1)
 target_link_libraries(exception-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
 endif()
-
-# ------ esp32at-test-1 ------------------------------------------------------
-
-add_executable(esp32at-test-1
-  tests/esp32at-test-1.cpp
-  src/ATResponseProcessor.cpp
-  kc1fsz-tools-cpp/src/Common.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
-)
-
-if(DEFINED ENV{PICO_BUILD})
-pico_enable_stdio_usb(esp32at-test-1 1)
-# Watch out!  Don't let the STDIO get sent to the UART
-pico_enable_stdio_uart(esp32at-test-1 0)
-target_compile_definitions(esp32at-test-1 PUBLIC PICO_BUILD=1)
-target_link_libraries(esp32at-test-1 pico_stdlib hardware_i2c hardware_adc pico_multicore)
-endif()
-
-target_include_directories(esp32at-test-1 PRIVATE src)
-target_include_directories(esp32at-test-1 PRIVATE kc1fsz-tools-cpp/include)
-
-# ------ esp32at-test-2 ------------------------------------------------------
-
-add_executable(esp32at-test-2
-  tests/esp32at-test-2.cpp
-  src/ATResponseProcessor.cpp
-  kc1fsz-tools-cpp/src/Common.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
-  kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp
-)
-
-if(DEFINED ENV{PICO_BUILD})
-pico_enable_stdio_usb(esp32at-test-2 1)
-# Watch out!  Don't let the STDIO get sent to the UART
-pico_enable_stdio_uart(esp32at-test-2 0)
-target_compile_definitions(esp32at-test-2 PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
-target_compile_definitions(esp32at-test-2 PRIVATE PICO_BUILD=1)
-target_link_libraries(esp32at-test-2 pico_stdlib hardware_i2c hardware_adc pico_multicore)
-endif()
-
-target_include_directories(esp32at-test-2 PRIVATE src)
-target_include_directories(esp32at-test-2 PRIVATE kc1fsz-tools-cpp/include)
 
 # ------ build-prompts -------------------------------------------------------
 
