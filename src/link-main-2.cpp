@@ -167,8 +167,11 @@ Launch command:
 // receive carrier from the rig. 
 #define RIG_COS_PIN (19)
 
-// Physical pin 10. Output to drive an LED indicating keyed status
-// Green LED on ML1 board
+// Output to drive an LED indicating link status
+// Blue LED0 on ML1 board
+#define LINK_LED_PIN (21)
+// Output to drive an LED indicating keyed status
+// Green LED1 on ML1 board
 #define KEY_LED_PIN (22)
 
 // Physical pin 31 - ADC input from analog section
@@ -266,6 +269,11 @@ int main(int, const char**) {
     gpio_set_dir(KEY_LED_PIN, GPIO_OUT);
     gpio_put(KEY_LED_PIN, 0);
 
+    // Link indicator LED
+    gpio_init(LINK_LED_PIN);
+    gpio_set_dir(LINK_LED_PIN, GPIO_OUT);
+    gpio_put(LINK_LED_PIN, 0);
+
     // QSO indicator LED
     gpio_init(QSO_LED_PIN);
     gpio_set_dir(QSO_LED_PIN, GPIO_OUT);
@@ -320,7 +328,7 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-    /*
+    
     // TEMPORARY!
     {
         // Write flash
@@ -329,20 +337,21 @@ int main(int, const char**) {
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
         strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "xxx", 32);
+        strncpy(config.password, "warslink", 32);
         //strncpy(config.callSign, "*ANALYZER*", 32);
         //strncpy(config.password, "xxx", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
-        strncpy(config.wifiPassword, "xxx", 16);
+        strncpy(config.wifiPassword, "emergency", 16);
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
         //config.rxNoiseThreshold = 15000;
-        config.rxNoiseThreshold = 3000;
+        config.rxNoiseThreshold = 4000;
         //config.adcRawOffset = -22;
-        config.adcRawOffset = -163;
+        //config.adcRawOffset = -163;
+        config.adcRawOffset = -157;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
         flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
@@ -350,7 +359,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
-    */
+    
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -704,7 +713,12 @@ int main(int, const char**) {
         // opening the state machines for connections.
         if (startupMode == 2) {
             if (time_ms() > startupMs + 1000) {
-                log.info("Raw sample %d", radio0In.getLastRawSample());
+
+                int16_t rawSample = radio0In.getLastRawSample();
+                log.info("Raw sample %d", rawSample);
+                int16_t adj = 2048 - rawSample;
+                radio0In.setRawOffset(adj);
+
                 int16_t avg = rxAnalyzer.getAvg();
                 log.info("Baseline DC bias (V) %d", avg);
                 radio0In.resetMax();
@@ -851,12 +865,14 @@ int main(int, const char**) {
             if (st == CYW43_LINK_JOIN) {
                 if (!networkState) {
                     log.info("The Internet is up");
+                    gpio_put(LINK_LED_PIN, 1);
                 }
                 networkState = true;
             }
             else {
                 if (networkState) {
                     log.info("The Internet is down");
+                    gpio_put(LINK_LED_PIN, 0);
                 }
                 networkState = false;
             }
@@ -880,6 +896,7 @@ int main(int, const char**) {
             // dianostic messages
             conf.setWifiRssi(getInternetRssi());
             conf.setRxPower(rxAnalyzer.getMS() / 100);
+            conf.setRxSample(radio0In.getLastRawSample());
         }
 
         // The key LED is steady when COS is enabled and flashing when
@@ -958,6 +975,8 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     str << "         WIFI RSSI : " << wifiRssi;
     str << endl << ESC << "[K";
     str << "               COS : " << (cosState ? "Yes" : "No");
+    str << endl << ESC << "[K";
+    str << "     RX Raw Sample : " << inCtx->getLastRawSample();
     str << endl << ESC << "[K";
     str << "    RX Audio Power : " << rxAnalyzer->getMS();
     str << endl << ESC << "[K";

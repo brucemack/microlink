@@ -640,8 +640,9 @@ void Conference::_sendStationPing(const StationID& id) {
             getSecondsSinceLastMonitorRx());
         strcatLimited(buffer, msg, bufferSize);
 
-        snprintf(msg, 64, "WIFI RSSI=%d, RX=%lu\r", 
+        snprintf(msg, 64, "WIFI RSSI=%d, RxS=%d, RxP=%lu\r", 
             _wifiRssi,
+            _rxSample,
             _rxPower);
         strcatLimited(buffer, msg, bufferSize);
 

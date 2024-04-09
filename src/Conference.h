@@ -146,8 +146,8 @@ public:
 
     // Diagnostic stuff
     void setWifiRssi(int16_t p) { _wifiRssi = p; }
-
     void setRxPower(uint32_t p) { _rxPower = p; }
+    void setRxSample(int16_t s) { _rxSample = s; }
    
     // ----- From Runnable ------------------------------------------------
 
@@ -284,6 +284,7 @@ private:
     // Diags
     int16_t _wifiRssi = 0;
     uint32_t _rxPower = 0;
+    int16_t _rxSample = 0;
 };
 
 }
