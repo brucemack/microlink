@@ -113,6 +113,7 @@ public:
         const uint8_t* frame, uint32_t frameLen);
 
     void dropAll();
+    void drop(const CallSign& cs) { _drop(cs); }
 
     void addRadio(CallSign cs, IPAddress addr);
 

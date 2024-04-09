@@ -631,5 +631,59 @@ uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     return (p - buf);
 }
 
+uint32_t parseCommand(const char* cmd, 
+    FixedString tokens[], uint32_t tokensSize) {
+
+    uint32_t tokenCount = 0;
+    uint32_t i = 0;
+    bool inToken = false;
+    bool inQuote = false;
+
+    while (tokenCount < tokensSize && cmd[i] != 0) {
+        if (!inToken) {
+            if (cmd[i] == ' ') {                
+                // Ignore spaces between tokens
+            }
+            else {
+                inToken = true;
+                // Look for case where the quote starts the token.  In 
+                // which case we ignore the opening quote.
+                if (cmd[i] == '"') {
+                    inQuote = true;
+                } else {
+                    tokens[tokenCount].append(cmd[i]);
+                }
+            }
+        }
+        else {
+            if (inQuote) {
+                // Look for the close quote
+                if (cmd[i] == '"') {
+                    inQuote = false;
+                    inToken = false;
+                    tokenCount++;
+                } 
+                else {
+                    tokens[tokenCount].append(cmd[i]);
+                }
+            } 
+            else {
+                if (cmd[i] == ' ') {
+                    inToken = false;
+                    tokenCount++;
+                }
+                else {
+                    tokens[tokenCount].append(cmd[i]);
+                }
+            }
+        }
+        i++;
+    }
+    // Terminate the final token
+    if (inToken) {
+        tokenCount++;
+    }
+    return tokenCount;
+}
 
 }

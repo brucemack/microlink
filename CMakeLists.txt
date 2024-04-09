@@ -60,6 +60,7 @@ add_executable(link-main-2
   kc1fsz-tools-cpp/src/IPAddress.cpp
   kc1fsz-tools-cpp/src/AudioAnalyzer.cpp
   kc1fsz-tools-cpp/src/DTMFDetector.cpp
+  kc1fsz-tools-cpp/src/CommandShell.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPollTimer.cpp
   kc1fsz-tools-cpp/src/rp2040/PicoPerfTimer.cpp
   kc1fsz-tools-cpp/src/md5/md5c.c
@@ -107,6 +108,30 @@ endif()
 
 target_include_directories(hello-world PRIVATE src)
 target_include_directories(hello-world PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+
+# ------ shell-test ------------------------------------------------------------
+#
+add_executable(shell-test
+  tests/shell-test.cpp
+  src/common.cpp
+  kc1fsz-tools-cpp/src/Common.cpp
+  kc1fsz-tools-cpp/src/CommandShell.cpp
+)
+
+if(DEFINED ENV{PICO_BUILD})
+pico_enable_stdio_usb(shell-test 1)
+# Watch out!  Don't let the STDIO get sent to the UART
+pico_enable_stdio_uart(shell-test 0)
+# ADDED FOR PICO W
+pico_add_extra_outputs(shell-test)
+target_compile_definitions(shell-test PRIVATE PARAM_ASSERTIONS_ENABLE_ALL=1)
+target_compile_definitions(shell-test PRIVATE PICO_BUILD=1)
+target_link_libraries(shell-test pico_stdlib hardware_i2c hardware_adc pico_cyw43_arch_lwip_poll)
+endif()
+
+target_include_directories(shell-test PRIVATE src)
+target_include_directories(shell-test PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(shell-test PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # ------ server-test-1 -------------------------------------------------------
 

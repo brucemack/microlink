@@ -47,6 +47,7 @@ Launch command:
 #include <chrono>
 #include <cmath>
 #include <atomic>
+#include <functional>
 
 #include "pico/stdlib.h"
 #include "pico/time.h"
@@ -74,6 +75,8 @@ Launch command:
 #include "kc1fsz-tools/rp2040/SerialLog.h"
 #include "kc1fsz-tools/AudioAnalyzer.h"
 #include "kc1fsz-tools/DTMFDetector.h"
+#include "kc1fsz-tools/OutStream.h"
+#include "kc1fsz-tools/CommandShell.h"
 #include "kc1fsz-tools/rp2040/PicoPollTimer.h"
 
 #include "contexts/I2CAudioOutputContext.h"
@@ -220,6 +223,32 @@ public:
     }
 };
 
+class LinkOutStream : public OutStream {
+public:
+
+    virtual int write(uint8_t b) {
+        cout.write((const char *)&b, 1);
+        cout.flush();
+        return 1;
+    }
+
+    virtual bool isWritable() const {
+        return true;
+    }
+};
+
+class LinkCommandSink : public CommandSink {
+public:
+
+    virtual void process(const char* cmd) {
+        if (handler) {
+            handler(cmd);
+        }
+    }
+
+    std::function<void(const char*)> handler = 0;
+};
+
 // Used for drawing a real-time 
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
@@ -236,6 +265,40 @@ static int32_t getInternetRssi() {
     int32_t rssi = 0;
     cyw43_wifi_get_rssi(&cyw43_state, &rssi);
     return rssi;
+}
+
+static bool streq(const char* a, const char* b) {
+    return strcmp(a, b) == 0;
+}
+
+static void saveConfig(const StationConfig* cfg) {
+    uint32_t ints = save_and_disable_interrupts();
+    // Must erase a full sector first (4096 bytes)
+    flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
+    // IMPORTANT: Must be a multiple of 256!
+    flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)cfg, 512);
+    restore_interrupts(ints);
+}
+
+static void setDefaultConfig() {
+    StationConfig config;
+    config.version = CONFIG_VERSION;
+    strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
+    config.addressingServerPort = 5200;
+    strncpy(config.callSign, "UNKNOWN", 32);
+    strncpy(config.password, "xxx", 32);
+    strncpy(config.fullName, "Unknown", 32);
+    strncpy(config.location, "Unknown", 32);
+    strncpy(config.wifiSsid, "Unknown", 64);
+    strncpy(config.wifiPassword, "Unknown", 16);
+    config.useHardCos = false;
+    config.silentTimeoutS = 30 * 60;
+    config.idleTimeoutS = 5 * 60;
+    config.rxNoiseThreshold = 2000;
+    config.adcRawOffset = -166;
+    config.cosDebounceOnMs = 10;
+    config.cosDebounceOffMs = 400;
+    saveConfig(&config);
 }
 
 int main(int, const char**) {
@@ -320,40 +383,6 @@ int main(int, const char**) {
         log.info("Normal reboot");
     }
 
-    /*    
-    // TEMPORARY!
-    {
-        // Write flash
-        StationConfig config;
-        config.version = CONFIG_VERSION;
-        strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
-        config.addressingServerPort = 5200;
-        strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "xxx", 32);
-        //strncpy(config.callSign, "*ANALYZER*", 32);
-        //strncpy(config.password, "xxx", 32);
-        strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
-        strncpy(config.location, "Wellesley, MA USA", 32);
-        strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
-        strncpy(config.wifiPassword, "xxx", 16);
-        config.useHardCos = false;
-        config.silentTimeoutS = 30 * 60;
-        config.idleTimeoutS = 5 * 60;
-        //config.rxNoiseThreshold = 15000;
-        config.rxNoiseThreshold = 2000;
-        //config.adcRawOffset = -22;
-        //config.adcRawOffset = -163;
-        // Self-contained power
-        config.adcRawOffset = -166;
-        uint32_t ints = save_and_disable_interrupts();
-        // Must erase a full sector first (4096 bytes)
-        flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
-        // IMPORTANT: Must be a multiple of 256!
-        flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
-        restore_interrupts(ints);
-    } 
-    */
-    
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
     // The very last sector of flash is used. Compute the memory-mapped address, 
@@ -361,9 +390,8 @@ int main(int, const char**) {
     const uint8_t* addr = (uint8_t*)(XIP_BASE + (PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE));
     auto config = (const StationConfig*)addr;
     if (config->version != CONFIG_VERSION) {
-        log.error("Configuration data is invalid");
-        panic_unsupported();
-        return -1;
+        // Setup the default configuration 
+        setDefaultConfig();        
     } 
 
     HostName ourAddressingServerHost(config->addressingServerHost);
@@ -522,7 +550,6 @@ int main(int, const char**) {
 
     bool inContactWithMonitor = false;
 
-    bool statusPage = false;
     PicoPollTimer renderTimer;
     renderTimer.setIntervalUs(500000);
     PicoPollTimer flashTimer;
@@ -573,10 +600,145 @@ int main(int, const char**) {
 
     PicoPerfTimer cycleTimer;
     uint32_t longestCycleUs = 0;
-    PicoPerfTimer otherTimer;
-    uint32_t longestOtherUs = 0;
 
     uint32_t startStamp = time_ms();
+
+    // ===== Command Shell Stuff =============================================
+
+    enum ShellMode {
+        LOG,
+        PROMPT,
+        STATUS,
+        QUIT
+    } shellMode = ShellMode::LOG;
+
+    LinkOutStream shellOut;
+    LinkCommandSink shellSink;
+    CommandShell shell;
+    shell.setOutput(&shellOut);
+    shell.setSink(&shellSink);
+
+    // Setup the command-handling function.  We do this as a lambda
+    // so that we can access local variables in main().
+    shellSink.handler = [&log, &shellMode, &radio0Out, &lookup, &conf, &txAnalyzer,
+        &radio0In, &confBridge, &maxTaskTimeUs, &longestCycleUs, &rxAnalyzer,
+        config]
+        (const char* cmd)-> void {
+        log.setStdout(true);
+        if (streq(cmd, "quit")) {
+            shellMode = ShellMode::QUIT;
+        } 
+        else if (streq(cmd, "log")) {
+            shellMode = ShellMode::LOG;
+        } 
+        else if (streq(cmd, "reboot")) {
+            // Hang the watchdog
+            while (true);
+        } 
+        else if (streq(cmd, "tone")) {
+            radio0Out.tone(800, 1000);
+        }
+        else if (streq(cmd, "dropall")) {
+            conf.dropAll();
+        }
+        else if (streq(cmd, "status")) {
+            shellMode = ShellMode::STATUS;
+            txAnalyzer.setEnabled(true);
+            cout << "\033[2J" << endl;
+        }
+        else if (strncmp(cmd, "add ", 4) == 0) { 
+            // Parse
+            FixedString tokens[2];
+            uint32_t c = parseCommand(cmd, tokens, 2);
+            if (c == 2) {
+                tokens[1].toUpper();
+                CallSign cs(tokens[1].c_str());
+                IPAddress addr(0);
+                StationID sid(addr, cs);
+                lookup.validate(sid);
+            }
+        }
+        else if (strncmp(cmd, "drop ", 5) == 0) { 
+            // Parse
+            FixedString tokens[2];
+            uint32_t c = parseCommand(cmd, tokens, 2);
+            if (c == 2) {
+                tokens[1].toUpper();
+                CallSign cs(tokens[1].c_str());
+                conf.drop(cs);
+            }
+        }
+        else if (strncmp(cmd, "set ", 4) == 0) { 
+            // Parse
+            FixedString tokens[3];
+            uint32_t c = parseCommand(cmd, tokens, 3);
+            if (c == 3) {
+                StationConfig c;
+                c.copyFrom(config);
+                if (tokens[1] == "hardcos") {
+                    c.useHardCos = atoi(tokens[2].c_str());
+                }
+                else if (tokens[1] == "wifissid") {
+                    strcpyLimited(c.wifiSsid, tokens[2].c_str(), 64);
+                }
+                else if (tokens[1] == "wifipassword") {
+                    strcpyLimited(c.wifiPassword, tokens[2].c_str(), 32);
+                }
+                else if (tokens[1] == "addressingserver") {
+                    strcpyLimited(c.addressingServerHost, tokens[2].c_str(), 32);
+                }
+                else if (tokens[1] == "callsign") {
+                    strcpyLimited(c.callSign, tokens[2].c_str(), 32);
+                }
+                else if (tokens[1] == "password") {
+                    strcpyLimited(c.password, tokens[2].c_str(), 32);
+                }
+                else if (tokens[1] == "fullname") {
+                    strcpyLimited(c.fullName, tokens[2].c_str(), 32);
+                }
+                else if (tokens[1] == "location") {
+                    strcpyLimited(c.location, tokens[2].c_str(), 32);
+                }
+                else if (tokens[1] == "coson") {
+                    c.cosDebounceOnMs = atol(tokens[2].c_str());
+                }
+                else if (tokens[1] == "cosoff") {
+                    c.cosDebounceOffMs = atol(tokens[2].c_str());
+                } 
+                else {
+                    cout << "Unrecognized configuration paramter" << endl;
+                }
+                saveConfig(&c);
+            }
+        }
+        else if (streq(cmd, "info")) {
+
+            cout << "Configuration:" << endl;
+            config->dump(cout);
+            cout << "Diagnostics:" << endl;
+            cout << "Station count " << conf.getActiveStationCount() << endl;
+            cout << "RX ADC value " << radio0In.getLastRawSample() << endl;
+            cout << "Bridge overflow count " << confBridge.getRadio0GSMQueueOFCount() << endl;
+
+            conf.dumpStations(&log);
+
+            for (uint32_t t = 0; t < taskCount; t++) {
+                cout << "Task " << t << " max time (us) " << maxTaskTimeUs[t] << endl;
+                maxTaskTimeUs[t] = 0;
+            }
+            cout << "Max cycle (us) " << longestCycleUs << endl;
+            longestCycleUs = 0;
+
+            cout << "RXAnalyzer sanity " << rxAnalyzer.sanityCheck() << endl;
+        }
+        else {
+            cout << "Unreognized command " << cmd << endl;
+        }
+
+        log.setStdout(false);
+    };
+
+    log.setStdout(true);
 
     // Last thing before going into the event loop
 	watchdog_enable(WATCHDOG_DELAY_MS, true);
@@ -586,7 +748,7 @@ int main(int, const char**) {
     // TEMP TEMP TEMP
     inContactWithMonitor = true;
 
-    while (true) {
+    while (shellMode != ShellMode::QUIT) {
 
         // Keep things alive
         watchdog_update();
@@ -600,74 +762,47 @@ int main(int, const char**) {
             maxTaskTimeUs[t] = std::max(maxTaskTimeUs[t], taskTimer.elapsedUs());
         }
 
-        // ----- Serial Commands ---------------------------------------------
-        
         int c = getchar_timeout_us(0);
-        if (c > 0) {
-            if (c == 'q') {
-                break;
-            } 
-            else if (c == 'r') {
-                log.info("Manual reboot");
-                // Force the watchdog timer to catch
-                while (true);
-            } 
-            else if (c == 'z') {
-                radio0Out.tone(800, 1000);
-            }
-            else if (c == 'd') {
-                conf.dropAll();
-            } 
-            else if (c == 'a') {
-                CallSign cs("*ECHOTEST*");
-                IPAddress addr(0);
-                StationID sid(addr, cs);
-                lookup.validate(sid);
-            } 
-            else if (c == 'b') {
-                CallSign cs("W1TKZ-L");
-                IPAddress addr(0);
-                StationID sid(addr, cs);
-                lookup.validate(sid);
-            } 
-            else if (c == 'o') {
-                if (statusPage) {
+
+        // Serial shell processing 
+        if (shellMode == ShellMode::PROMPT) {        
+            if (c > 0) {
+                shell.process((char)c);
+                // If we entered log mode then make adjustments
+                if (shellMode == ShellMode::LOG) {
                     log.setStdout(true);
-                    txAnalyzer.setEnabled(false);
-                    statusPage = false;
-                    cout << "\033[2J" << endl;
-                } else {
-                    log.setStdout(false);
-                    txAnalyzer.setEnabled(true);
-                    statusPage = true;
-                    cout << "\033[2J";
                 }
-            }
-            else if (c == 'i') {
-                log.info("-----------------------------------------------------------");
-                log.info("Diagnostics:");
-                log.info("RX ADC value %d", radio0In.getLastRawSample());
-                log.info("Station Count: %d", conf.getActiveStationCount());
-                log.info("Bridge Overflow: %lu", confBridge.getRadio0GSMQueueOFCount());
-
-                conf.dumpStations(&log);
-
-                for (uint32_t t = 0; t < taskCount; t++) {
-                    log.info("Task %02lu max time (us)    %lu", t, maxTaskTimeUs[t]);
-                    maxTaskTimeUs[t] = 0;
-                }
-                log.info("Max other (us)           %lu", longestOtherUs);
-                longestOtherUs = 0;
-                log.info("Max cycle (us)           %lu", longestCycleUs);
-                longestCycleUs = 0;
-
-                log.info("RXAnalyzer sanity: %d", rxAnalyzer.sanityCheck());
-
-                log.info("-----------------------------------------------------------");
             }
         }
-
-        otherTimer.reset();
+        else if (shellMode == ShellMode::LOG) {
+            if (c > 0) {
+                if (c == 27) {
+                    shellMode = ShellMode::PROMPT;
+                    log.setStdout(false);
+                    shell.reset();
+                }
+            }
+        }
+        else if (shellMode == ShellMode::STATUS) {
+            if (c == 27) {
+                shellMode = ShellMode::LOG;
+                log.setStdout(true);
+                txAnalyzer.setEnabled(false);
+                cout << "\033[2J" << endl;
+            } 
+            else {
+                // Provide a live-updating dashboard of system status/audio/etc.
+                if (renderTimer.poll()) {
+                    renderTimer.reset();
+                    renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
+                        config->rxNoiseThreshold, cosState, 
+                        networkState,
+                        getInternetRssi(),
+                        conf.getSecondsSinceLastActivity(),
+                        cout);
+                }
+            }
+        }
 
         // ----- Look for periodic reboot ----------------------------------------
 
@@ -898,32 +1033,14 @@ int main(int, const char**) {
             gpio_put(KEY_LED_PIN, 0);
         }
 
-        // Provide a live-updating dashboard of system status/audio/etc.
-        if (statusPage) {
-            if (renderTimer.poll()) {
-                renderTimer.reset();
-                renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
-                    config->rxNoiseThreshold, cosState, 
-                    networkState,
-                    getInternetRssi(),
-                    conf.getSecondsSinceLastActivity(),
-                    cout);
-            }
-        }
-
-        uint32_t ela = otherTimer.elapsedUs();
-        if (ela > longestOtherUs) {
-            longestOtherUs = ela;
-            log.info("Longest Other (us) %lu", longestOtherUs);
-        }
-
-        ela = cycleTimer.elapsedUs();
+        uint32_t ela = cycleTimer.elapsedUs();
         if (ela > longestCycleUs) {
             longestCycleUs = ela;
             log.info("Longest Cycle (us) %lu", longestCycleUs);
         }
     }    
 
+    log.setStdout(true);
     log.info("Out of loop");
 
     gpio_put(RIG_KEY_PIN, 0);

@@ -98,11 +98,25 @@ uint32_t parseSDES(const uint8_t* packet, uint32_t packetLen,
 // IMPORTANT: MUST BE EXACTLY 512 BYTES!!
 struct StationConfig {
     
+    void dump(std::ostream& str) const {
+        str << "hardcos          [" << useHardCos << "]" << std::endl;
+        str << "addressingserver [" << addressingServerHost << "]" << std::endl;
+        str << "callsign         [" << callSign << "]" << std::endl;
+        str << "password         [" << password << "]" << std::endl;
+        str << "fullname         [" << fullName << "]" << std::endl;
+        str << "location         [" << location << "]" << std::endl;
+        str << "wifissid         [" << wifiSsid << "]" << std::endl;
+        str << "wifipassword     [" << wifiPassword << "]" << std::endl;
+        str << "silenttimeout    [" << silentTimeoutS << "]" << std::endl;
+        str << "idletimeout      [" << idleTimeoutS << "]" << std::endl;
+        str << "costhreshold     [" << rxNoiseThreshold << "]" << std::endl;
+        str << "adcoffset        [" << adcRawOffset << "]" << std::endl;
+        str << "cosondelay       [" << cosDebounceOnMs << "]" << std::endl;
+        str << "cosoffdelay      [" << cosDebounceOffMs << "]" << std::endl;
+    }
+
     uint32_t version;
-    uint8_t useHardCos;
-    uint8_t pad1;
-    uint8_t pad2;
-    uint8_t pad3;
+    uint32_t useHardCos;
     char addressingServerHost[32];
     uint32_t addressingServerPort;
     char callSign[32];
@@ -123,12 +137,16 @@ struct StationConfig {
     int32_t adcRawOffset;
     // Controls soft COS behavior.  How long we wait before assuming
     // that the carrier has really been detected.
-    //uin32_t cosDebounceOnMs;
+    uint32_t cosDebounceOnMs;
     // Controls soft COS behavior.  How long we wait before assuming
     // that the carrier has really dropped.
-    //uin32_t cosDebounceOffMs;
+    uint32_t cosDebounceOffMs;
 
-    char padding[512 - (4 + 4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 32 + 4 + 4 + 4 + 4)];
+    char padding[512 - (4 + 4 + 32 + 4 + 32 + 32 + 32 + 32 + 64 + 32 + 4 + 4 + 4 + 4 + 4 + 4)];
+
+    void copyFrom(const StationConfig* from) {
+        memcpy((void*)this, (const void*)from, 512);
+    }
 };
 
 uint32_t formatOnDataPacket(const char* msg, uint32_t ssrc,
@@ -163,6 +181,10 @@ uint32_t formatRTPPacket_McAD(uint8_t* p, uint32_t packetSize);
 uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
     CallSign cs, FixedString pwd, FixedString loc,
     const FixedString& versionId, const FixedString& emailAddr);
+
+uint32_t parseCommand(const char* cmd, 
+    FixedString tokens[], uint32_t tokensSize);
+
 }
 
 
