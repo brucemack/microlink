@@ -337,13 +337,13 @@ int main(int, const char**) {
         strncpy(config.addressingServerHost, "naeast.echolink.org", 32);
         config.addressingServerPort = 5200;
         strncpy(config.callSign, "W1TKZ-L", 32);
-        strncpy(config.password, "warslink", 32);
+        strncpy(config.password, "xxx", 32);
         //strncpy(config.callSign, "*ANALYZER*", 32);
         //strncpy(config.password, "xxx", 32);
         strncpy(config.fullName, "Wellesley Amateur Radio Society", 32);
         strncpy(config.location, "Wellesley, MA USA", 32);
         strncpy(config.wifiSsid, "Gloucester Island Municipal WIFI", 64);
-        strncpy(config.wifiPassword, "emergency", 16);
+        strncpy(config.wifiPassword, "xxx", 16);
         config.useHardCos = false;
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
@@ -351,6 +351,7 @@ int main(int, const char**) {
         config.rxNoiseThreshold = 4000;
         //config.adcRawOffset = -22;
         //config.adcRawOffset = -163;
+        // Self-contained power
         config.adcRawOffset = -157;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
