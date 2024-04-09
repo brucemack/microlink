@@ -220,19 +220,10 @@ public:
     }
 };
 
-static uint32_t abssub2(uint32_t a, uint32_t b) {
-    if (a > b) {
-        return a - b;
-    } else {
-        return b - a;
-    }
-}
-
 // Used for drawing a real-time 
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
     AudioAnalyzer* txAnalyzer, 
-    uint32_t baselineRxNoise, 
     uint32_t rxNoiseThreshold, 
     bool cosState, 
     bool networkState, int wifiRssi, 
@@ -328,7 +319,8 @@ int main(int, const char**) {
     } else {
         log.info("Normal reboot");
     }
-    
+
+    /*    
     // TEMPORARY!
     {
         // Write flash
@@ -348,11 +340,11 @@ int main(int, const char**) {
         config.silentTimeoutS = 30 * 60;
         config.idleTimeoutS = 5 * 60;
         //config.rxNoiseThreshold = 15000;
-        config.rxNoiseThreshold = 4000;
+        config.rxNoiseThreshold = 2000;
         //config.adcRawOffset = -22;
         //config.adcRawOffset = -163;
         // Self-contained power
-        config.adcRawOffset = -157;
+        config.adcRawOffset = -166;
         uint32_t ints = save_and_disable_interrupts();
         // Must erase a full sector first (4096 bytes)
         flash_range_erase((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), FLASH_SECTOR_SIZE);
@@ -360,6 +352,7 @@ int main(int, const char**) {
         flash_range_program((PICO_FLASH_SIZE_BYTES - FLASH_SECTOR_SIZE), (uint8_t*)&config, 512);
         restore_interrupts(ints);
     } 
+    */
     
     // ----- READ CONFIGURATION FROM FLASH ------------------------------------
 
@@ -526,7 +519,6 @@ int main(int, const char**) {
 
     int startupMode = 2;
     uint32_t startupMs = time_ms();
-    uint32_t baselineRxNoise = 0;
 
     bool inContactWithMonitor = false;
 
@@ -729,11 +721,7 @@ int main(int, const char**) {
             }
         } 
         else if (startupMode == 1) {
-            if (time_ms() > startupMs + 1500) {
-                baselineRxNoise = rxAnalyzer.getMS();
-                log.info("Baseline RX noise power %lu", baselineRxNoise);
-                startupMode = 0;
-            }
+            startupMode = 0;
         }
 
         // ----- Monitor State -----------------------------------------------
@@ -808,7 +796,7 @@ int main(int, const char**) {
 
         bool rigCosState = (config->useHardCos) ? 
             gpio_get(RIG_COS_PIN) : 
-                startupMode == 0 && 
+            startupMode == 0 && 
                 rxAnalyzer.getMS() > config->rxNoiseThreshold;
 
         // Produce a debounced cosState, which indicates the state of
@@ -896,7 +884,7 @@ int main(int, const char**) {
             // Pass some information into the Conference for the 
             // dianostic messages
             conf.setWifiRssi(getInternetRssi());
-            conf.setRxPower(rxAnalyzer.getMS() / 100);
+            conf.setRxPower(rxAnalyzer.getMS());
             conf.setRxSample(radio0In.getLastRawSample());
         }
 
@@ -915,7 +903,7 @@ int main(int, const char**) {
             if (renderTimer.poll()) {
                 renderTimer.reset();
                 renderStatus(&radio0In, &rxAnalyzer, &txAnalyzer, 
-                    baselineRxNoise, config->rxNoiseThreshold, cosState, 
+                    config->rxNoiseThreshold, cosState, 
                     networkState,
                     getInternetRssi(),
                     conf.getSecondsSinceLastActivity(),
@@ -951,7 +939,6 @@ int main(int, const char**) {
 static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* rxAnalyzer, 
     AudioAnalyzer* txAnalyzer, 
-    uint32_t baselineRxNoise, 
     uint32_t rxNoiseThreshold, 
     bool cosState, 
     bool networkState, int wifiRssi, 
@@ -980,10 +967,6 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     str << "     RX Raw Sample : " << inCtx->getLastRawSample();
     str << endl << ESC << "[K";
     str << "    RX Audio Power : " << rxAnalyzer->getMS();
-    str << endl << ESC << "[K";
-    str << " RX Audio Baseline : " << baselineRxNoise;
-    str << endl << ESC << "[K";
-    str << "   RX Power Excess : " << abssub2(rxAnalyzer->getMS(), baselineRxNoise);
     str << endl << ESC << "[K";
     str << "RX Noise Threshold : " << rxNoiseThreshold;
     str << endl << ESC << "[K";
