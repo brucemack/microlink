@@ -53,7 +53,7 @@ private:
     Log* _log = 0;
     bool _squelch = false;
     AudioOutputContext* _audioOutCtx = 0;
-    uint32_t _lastSquelchCloseTime = 0;
+    timestamp _lastSquelchCloseTime;
 };
 
 }

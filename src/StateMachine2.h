@@ -37,7 +37,7 @@ public:
 
     // ----- From Runnable ---------------------------------------------------
 
-    virtual bool run() {
+    virtual void run() {
         if (_isTimedOut()) {
             //std::cout << "Timed out from " << _state << "->" << _timeoutState << std::endl;
             _setState(_timeoutState);
@@ -45,7 +45,6 @@ public:
         bool entry = _state != _lastState;
         _lastState = _state;
         _process(_state, entry);
-        return true;
     }
 
 protected:
@@ -58,22 +57,23 @@ protected:
 
     void _setState(int state) {        
         _state = state;
-        _timeoutTargetMs = 0;
+        _timeoutTarget.reset();
         _timeoutState = 0;
     }
 
     void _setState(int state, uint32_t timeoutMs, int timeoutState) {        
         _state = state;
-        _timeoutTargetMs = time_ms() + timeoutMs;
+        _timeoutTarget = time_ms();
+        _timeoutTarget.advanceMs(timeoutMs);
         _timeoutState = timeoutState;
     }
 
-    void _setTimeoutMs(uint32_t t) {
-        _timeoutTargetMs = t;
+    void _setTimeout(timestamp t) {
+        _timeoutTarget = t;
     }
 
     bool _isTimedOut() const {
-        return (_timeoutTargetMs != 0 && time_ms() > _timeoutTargetMs);
+        return (!_timeoutTarget.isZero() && ms_since(_timeoutTarget) > 0);
     }
 
     int _getState() const { return _state; }
@@ -84,7 +84,7 @@ private:
 
     int _state = 0;
     int _lastState = 0;
-    uint32_t _timeoutTargetMs = 0;
+    timestamp _timeoutTarget = 0;
     int _timeoutState = 0;
 };
 

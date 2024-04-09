@@ -61,7 +61,7 @@ LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
 }
 
 uint32_t LogonMachine2::secondsSinceLastLogon() const {
-    return (time_ms() - _lastLogonStamp) / 1000;
+    return ms_since(_lastLogonStamp) / 1000;
 }
 
 void LogonMachine2::conn(Channel ch) {

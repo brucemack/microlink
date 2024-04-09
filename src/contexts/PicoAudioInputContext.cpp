@@ -158,14 +158,10 @@ void __not_in_flash_func(PicoAudioInputContext::_interruptHandler)() {
     _maxLen = std::max((uint32_t)_maxLen, t);
 }    
 
-bool PicoAudioInputContext::run() {
-
-    bool activity = false;
+void PicoAudioInputContext::run() {
 
     // Check to see if we have data availble 
     if (_audioInBufWriteCount.get() > _audioInBufReadCount.get()) {
-
-        activity = true;
 
         uint32_t slot = _audioInBufReadCount.get() & _audioInBufDepthMask;
 
@@ -186,8 +182,6 @@ bool PicoAudioInputContext::run() {
     else if (_audioInBufWriteCount.get() < _audioInBufReadCount.get()) {
         panic("Sanity check 2");
     }
-
-    return activity;
 }
 
 }

@@ -42,8 +42,6 @@ public:
         int16_t* audioArea, int16_t* silenceArea);
     virtual ~W32AudioOutputContext();
 
-    virtual bool run();
-
     /**
      * @param frame Assumed to be a 160x4 frame.
     */
@@ -52,6 +50,8 @@ public:
     virtual uint32_t getAudioQueueUsed() const {
         return _audioQueueUsed;
     }
+
+    virtual void run();
 
 private:
 

@@ -29,11 +29,11 @@
 #include "UserInfo.h"
 #include "I2CAudioOutputContext.h"
 
-namespace kc1fsz {
-
 // How long we wait in silence before deciding that the audio
 // output has stopped.
-static const uint32_t SQUELCH_INTERVAL_MS = 1000;
+#define SQUELCH_INTERVAL_MS (1000)
+
+namespace kc1fsz {
 
 I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sampleRate,
     uint32_t bufferDepthLog2, int16_t* audioBuf,
@@ -52,8 +52,7 @@ I2CAudioOutputContext::I2CAudioOutputContext(uint32_t frameSize, uint32_t sample
     _idleCount(0),
     _overflowCount(0),
     _playing(false),
-    _squelchOpen(false),
-    _lastAudioTime(0)
+    _squelchOpen(false)
 {
     _dacAddr = 0x60;
     _triggerDepth = (1 << _bufferDepthLog2) / 2;
@@ -81,7 +80,7 @@ void I2CAudioOutputContext::reset() {
     _inTone = false;
     _toneCount = 0;
     _squelchOpen = false;
-    _lastAudioTime = 0;
+    _lastAudioTime.reset();
     // Park DAC at middle of range
     _play(0);
 }
@@ -98,8 +97,10 @@ void I2CAudioOutputContext::tone(uint32_t freq, uint32_t durationMs) {
 
     _openSquelchIfNecessary();
 
-    // Keep track of time for squelch purposes
-    _lastAudioTime = time_ms() + durationMs;
+    // Keep track of time for squelch purposes.  Notice here
+    // that we are setting the time into the future.
+    _lastAudioTime = time_ms();
+    _lastAudioTime.advanceMs(durationMs);
 }
 
 bool I2CAudioOutputContext::play(const int16_t* frame, uint32_t frameLen) {
@@ -146,21 +147,14 @@ bool I2CAudioOutputContext::play(const int16_t* frame, uint32_t frameLen) {
     return true;
 }
 
-bool I2CAudioOutputContext::run() {    
-
-    bool activity = false;
-
+void I2CAudioOutputContext::run() {    
     // Manage squelch off
     if (_squelchOpen && 
         // Watch out, sometimes the _lastAudioTime is in the future
-        (time_ms() > _lastAudioTime) &&
-        (time_ms() - _lastAudioTime) > SQUELCH_INTERVAL_MS ) {
+        (ms_since(_lastAudioTime) > SQUELCH_INTERVAL_MS )) {
         _squelchOpen = false;
         _userInfo->setSquelchOpen(_squelchOpen);
-        activity = true;
     }
-
-    return activity;
 }
 
 void I2CAudioOutputContext::_openSquelchIfNecessary() {

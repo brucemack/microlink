@@ -39,7 +39,9 @@ public:
     bool isFinished() const { return !_running; }
     void generate(const char* str);
 
-    bool run();
+    // ----- From Runnable ---------------------------------------------------
+    
+    void run();
 
 private:
 

@@ -54,12 +54,10 @@ LwIPLib::LwIPLib(Log* log)
 // ----- Runnable Methods ------------------------------------------------
 
 /**
-    * This should be called from the event loop.  It attempts to make forward
-    * progress and passes all events to the event processor.
-    * 
-    * @returns true if any events were dispatched.
+ * This should be called from the event loop.  It attempts to make forward
+ * progress and passes all events to the event processor.
 */
-bool LwIPLib::run() {
+void LwIPLib::run() {
 
     if (_resetPending) {
         for (uint32_t i = 0; i < _eventsLen; i++)
@@ -79,8 +77,6 @@ bool LwIPLib::run() {
             _events[i]->bind(_bindRespQueue[_bindRespQueueLen - 1]);
         _bindRespQueueLen--;
     }
-
-    return true;
 }
 
 void LwIPLib::addEventSink(IPLibEvents* e) {

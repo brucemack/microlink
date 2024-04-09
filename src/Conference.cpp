@@ -27,11 +27,12 @@
 #include "Conference.h"
 #include "machines/DNSMachine.h"
 
+#define KEEP_ALIVE_INTERVAL_MS (10 * 1000)
+
 using namespace std;
 
 namespace kc1fsz {
 
-static const uint32_t KEEP_ALIVE_INTERVAL_MS = 10 * 1000;
 // This controls the amount of silence used to decide that 
 // someone has stopped talking.
 static const uint32_t TALKER_INTERVAL_MS = 500;
@@ -147,7 +148,7 @@ void Conference::processAudio(IPAddress sourceIp,
     uint32_t ssrc, uint16_t seq,
     const uint8_t* frame, uint32_t frameLen, AudioFormat fmt) {
 
-    const uint32_t now = time_ms();
+    const timestamp now = time_ms();
 
     // Figure out whether this packet is coming from an authorized 
     // source and whether someone else is talking already.
@@ -240,9 +241,8 @@ void Conference::processAudio(IPAddress sourceIp,
                 if (seq != 0 && seq != s.lastRxSeq + 1) {
                     s.rxSeqErr++;
                 }
-                uint32_t gap = (now - s.lastAudioRxStamp);
-                if (gap > s.longestRxGapMs) {
-                    //_log->info("Longest gap %lu", gap);
+                int32_t gap = ms_between(s.lastAudioRxStamp, now);
+                if (gap > (int32_t)s.longestRxGapMs) {
                     s.longestRxGapMs = gap;
                 }
             }
@@ -488,7 +488,7 @@ void Conference::_drop(const CallSign& cs) {
     }
 }
 
-bool Conference::run() {
+void Conference::run() {
 
     // Ping the Addressing Server to keep the link up
     //if (_pingTimer.poll()) {
@@ -510,14 +510,15 @@ bool Conference::run() {
             // Check for the need to send outbound ping text. This is very 
             // important to keep the connection up and running.
             if (s.authorized && 
-                time_ms() - s.lastTextTxStamp > KEEP_ALIVE_INTERVAL_MS) {
+                ms_since(s.lastTextTxStamp) > KEEP_ALIVE_INTERVAL_MS) {
                 _sendStationPing(s.id);
                 s.lastTextTxStamp = time_ms();
             }
             // Look for timeouts (technical)
             if (!s.locked && 
-                time_ms() - s.lastRxStamp > (KEEP_ALIVE_INTERVAL_MS * 3)) {
-                _log->info("Timing out disconnected station %s", s.id.getCall().c_str());
+                ms_since(s.lastRxStamp) > (KEEP_ALIVE_INTERVAL_MS * 3)) {
+                _log->info("Timing out disconnected station %s", 
+                    s.id.getCall().c_str());
                 _sendBye(s.id);
                 s.active = false;
             }
@@ -545,7 +546,6 @@ bool Conference::run() {
             }
         }
     }
-    return true;
 }
 
 void Conference::_sendPing() {
@@ -586,7 +586,7 @@ void Conference::_sendMonitorPing() {
     snprintf(packet, packetSize, "MicroLink,%s,%s,%lu\n", 
         VERSION_ID, 
         _callSign.c_str(),
-        (time_ms() - _startStamp) / 1000);
+        ms_since(_startStamp) / 1000);
     _output->sendText(_monitorAddr, (const uint8_t*)packet, strlen(packet));
 
     _monitorTxCount++;

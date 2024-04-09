@@ -23,6 +23,7 @@
 
 #include <cstdint>
 
+#include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/AudioOutputContext.h"
 
 namespace kc1fsz {
@@ -66,7 +67,7 @@ public:
     // supports either 160 or 160x4 frames.
     virtual bool play(const int16_t* frame, uint32_t frameLen);
 
-    virtual bool run();
+    virtual void run();
 
     virtual uint32_t getSyncErrorCount() { return _idleCount + _overflowCount; }
 
@@ -105,7 +106,7 @@ private:
     bool _squelchOpen;
     // The last time we saw audio which can be used to 
     // manage squelch.
-    uint32_t _lastAudioTime;
+    timestamp _lastAudioTime;
 
     // Tone features
     volatile uint32_t _toneCount = 0;

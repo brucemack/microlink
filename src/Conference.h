@@ -23,6 +23,7 @@
 
 #include <cstdint>
 
+#include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/IPAddress.h"
 #include "kc1fsz-tools/CallSign.h"
 #include "kc1fsz-tools/FixedString.h"
@@ -126,10 +127,11 @@ public:
     */
     uint32_t getSecondsSinceLastMonitorRx() const { 
         // Dummy result for startup
-        if (_lastMonitorRxStamp == 0) {
+        if (_lastMonitorRxStamp.isZero()) {
             return 1000;
+        } else {
+            return ms_since(_lastMonitorRxStamp) / 1000; 
         }
-        return (time_ms() - _lastMonitorRxStamp) / 1000; 
     }
 
     /**
@@ -137,12 +139,12 @@ public:
      * send/received audio.
     */
     uint32_t getSecondsSinceLastActivity() const { 
-        return (time_ms() - _lastActivityStamp) / 1000; 
+        return ms_since(_lastActivityStamp) / 1000; 
 
     }
 
     uint32_t getSecondsSinceStart() const { 
-        return (time_ms() - _startStamp) / 1000; 
+        return ms_since(_startStamp) / 1000; 
     }
 
     // Diagnostic stuff
@@ -152,7 +154,7 @@ public:
    
     // ----- From Runnable ------------------------------------------------
 
-    bool run();
+    void run();
 
 private:
 
@@ -177,11 +179,11 @@ private:
         bool active = false;
         StationID id;
         bool authorized = false;
-        uint32_t connectStamp = 0;
+        timestamp connectStamp;
         // The time of the last data of any kind received
-        uint32_t lastRxStamp = 0;
+        timestamp lastRxStamp;
         // The time of the last audio packet received
-        uint32_t lastAudioRxStamp = 0;
+        timestamp lastAudioRxStamp;
         // The sequence of the last audio packet received
         uint32_t lastRxSeq = 0;
         // Counter of sequence errors
@@ -191,9 +193,10 @@ private:
         // Count for current talking session
         uint32_t audioRxPacketCount = 0;
         // The last time we sent the RTCP/oNDATA packet
-        uint32_t lastTextTxStamp = 0;
+        timestamp lastTextTxStamp;
         // The last time we sent an audio packet
-        uint32_t lastAudioTxStamp = 0;
+        timestamp lastAudioTxStamp;
+        // Indicates that this station is actively transmitting audio
         bool talker = false;
         // A unique number that identifies traffic from this 
         // station.
@@ -204,11 +207,11 @@ private:
         void reset() {
             active = false;
             authorized = false;
-            connectStamp = 0;
-            lastRxStamp = 0;
-            lastAudioRxStamp = 0;
-            lastTextTxStamp = 0;
-            lastAudioTxStamp = 0;
+            connectStamp.reset();
+            lastRxStamp.reset();
+            lastAudioRxStamp.reset();
+            lastTextTxStamp.reset();
+            lastAudioTxStamp.reset();
             talker = false;
             ssrc = 0;
             seq = 0;
@@ -224,7 +227,7 @@ private:
          * station (indicating that it's active)
         */
         uint32_t msSinceLastAudioRx() const {
-            return (time_ms() - lastAudioRxStamp);
+            return ms_since(lastAudioRxStamp);
         }
 
         /**
@@ -232,7 +235,7 @@ private:
          * station (indicating that it's active)
         */
         uint32_t msSinceLastAudioTx() const {
-            return (time_ms() - lastAudioTxStamp);
+            return ms_since(lastAudioTxStamp);
         }
 
         /**
@@ -248,7 +251,7 @@ private:
          * station (indicating that it's active)
         */
         uint32_t secondsSinceLastAudioTx() const {
-            return (time_ms() - lastAudioTxStamp) / 1000;
+            return ms_since(lastAudioTxStamp) / 1000;
         }
     };
 
@@ -267,20 +270,20 @@ private:
     uint32_t _silentTimeoutS = 30 * 1000;
     uint32_t _idleTimeoutS = 5 * 1000;
     PicoPollTimer _pingTimer;
-    uint32_t _lastPingRxStamp = 0;
+    timestamp _lastPingRxStamp;
 
     // Monitor related
     void _sendMonitorPing();
     void _processMonitorText(IPAddress source,
         const uint8_t* frame, uint32_t frameLen);
 
-    uint32_t _startStamp;
+    timestamp _startStamp;
     PicoPollTimer _monitorTimer;
     uint32_t _monitorTxCount = 0;
     IPAddress _monitorAddr;
-    uint32_t _lastMonitorTxStamp = 0;
-    uint32_t _lastMonitorRxStamp = 0;
-    uint32_t _lastActivityStamp = 0;
+    timestamp _lastMonitorTxStamp;
+    timestamp _lastMonitorRxStamp;
+    timestamp _lastActivityStamp;
 
     // Diags
     int16_t _wifiRssi = 0;

@@ -63,12 +63,10 @@ void SIM7600IPLib::_write(const char* cmd) {
 // ----- Runnable Methods ------------------------------------------------
 
 /**
-    * This should be called from the event loop.  It attempts to make forward
-    * progress and passes all events to the event processor.
-    * 
-    * @returns true if any events were dispatched.
+ * This should be called from the event loop.  It attempts to make forward
+ * progress and passes all events to the event processor.
 */
-bool SIM7600IPLib::run() {
+void SIM7600IPLib::run() {
     
     _uart->run();
 
@@ -143,7 +141,7 @@ bool SIM7600IPLib::run() {
     }
     // We wait for a few ms and then request a reset
     else if (_state == State::INIT_0b) {
-        if (time_ms() - _stateTime > 100) {
+        if (ms_since(_stateTime) > 100) {
             _write("AT+CRESET\r\n");
             _state = State::INIT_0c;
         }
@@ -168,7 +166,7 @@ bool SIM7600IPLib::run() {
     }
     // Delay before attempting to open the connection
     else if (_state == State::INIT_6h) {
-        if ((time_ms() - _stateTime) > OPEN_INTERVAL_MS) {
+        if (ms_since(_stateTime) > OPEN_INTERVAL_MS) {
             _state = State::INIT_6;
         }
     }
@@ -197,8 +195,6 @@ bool SIM7600IPLib::run() {
             _state = State::SEND_1;
         }
     }
-
-    return true;
 }
 
 static bool streq(const char* a, const char* b) {

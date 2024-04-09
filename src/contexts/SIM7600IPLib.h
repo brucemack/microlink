@@ -65,10 +65,8 @@ public:
     /**
      * This should be called from the event loop.  It attempts to make forward
      * progress and passes all events to the event processor.
-     * 
-     * @returns true if any events were dispatched.
     */
-    virtual bool run();
+    virtual void run();
 
     // ----- From IPLib ------------------------------------------------------
 
@@ -176,7 +174,7 @@ private:
     int _channelCount = 1;
     IPAddress _lastAddr;
     uint16_t _lastPort;
-    uint32_t _stateTime = 0;
+    timestamp _stateTime;
 };
 
 }

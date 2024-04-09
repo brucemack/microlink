@@ -54,11 +54,9 @@ ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log,
     _radio0GSMQueuePtr(_radio0GSMQueueSize) {   
 }
 
-bool ConferenceBridge::run() {
+void ConferenceBridge::run() {
     // Keep delivering audio to the radio
     _serviceRadio0GSMQueue();
-
-    return true;
 }
 
 void ConferenceBridge::reset() {    

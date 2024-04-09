@@ -21,6 +21,7 @@
 #ifndef _LogonMachine2_h
 #define _LogonMachine2_h
 
+#include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/HostName.h"
 #include "kc1fsz-tools/Channel.h"
 #include "kc1fsz-tools/CallSign.h"
@@ -106,7 +107,7 @@ private:
     uint8_t _logonResp[_logonRespSize];
     uint16_t _logonRespPtr = 0;
 
-    uint32_t _lastLogonStamp = 0;
+    timestamp _lastLogonStamp;
 };
 
 }

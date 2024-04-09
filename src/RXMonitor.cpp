@@ -45,8 +45,7 @@ bool RXMonitor::play(const int16_t* frame, uint32_t frameLen) {
     }
 }
 
-bool RXMonitor::run() {    
-    return false;
+void RXMonitor::run() {    
 }
 
 }

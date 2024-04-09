@@ -56,7 +56,7 @@ bool LinkUserInfo::getSquelch() const {
 }
 
 uint32_t LinkUserInfo::getMsSinceLastSquelchClose() const { 
-    return time_ms() - _lastSquelchCloseTime; 
+    return ms_since(_lastSquelchCloseTime); 
 }
 
 }

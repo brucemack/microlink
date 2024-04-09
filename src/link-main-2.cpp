@@ -214,12 +214,11 @@ static int16_t audioBuf[audioFrameSize * 4 * audioBufDepth];
 // Make the polling work like a Runnable
 class NetworkTask : public Runnable {
 public:
-    bool run() { 
+    void run() { 
         // If you are using pico_cyw43_arch_poll, then you must poll periodically 
         // from your main loop (not from a timer) to check for Wi-Fi driver or 
         // lwIP work that needs to be done.
         cyw43_arch_poll();
-        return true;
     }
 };
 
@@ -255,8 +254,9 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     AudioAnalyzer* txAnalyzer, 
     uint32_t rxNoiseThreshold, 
     bool cosState, 
-    bool networkState, int wifiRssi, 
-    uint32_t lastActivity,
+    bool networkState, 
+    int wifiRssi, 
+    uint32_t secondsSinceLastActivity,
     ostream& str);
 
 bool rigKeyFailSafe();
@@ -536,17 +536,17 @@ int main(int, const char**) {
     logonMachine.setConference(&conf);
 
     bool rigKeyState = false;
-    uint32_t lastRigKeyTransitionTime = 0;
-    uint32_t rigKeyLockoutTime = 0;
+    timestamp lastRigKeyTransitionTime;
+    timestamp rigKeyLockoutTime;
     uint32_t rigKeyLockoutCount = 0;
 
-    uint32_t lastCosOn = 0;
+    timestamp lastCosOn;
+    timestamp lastCosTransition;
     bool cosState = false;
     bool lastCosState = false;
-    uint32_t lastCosTransition = 0;
 
     int startupMode = 2;
-    uint32_t startupMs = time_ms();
+    timestamp startupTime = time_ms();
 
     bool inContactWithMonitor = false;
 
@@ -561,7 +561,7 @@ int main(int, const char**) {
     const uint32_t dtmfAccumulatorSize = 16;
     char dtmfAccumulator[dtmfAccumulatorSize];
     uint32_t dtmfAccumulatorLen = 0;
-    uint32_t lastDtmfActivity = 0;
+    timestamp lastDtmfActivity;
 
     // Register the physical radio into the conference
     conf.addRadio(CallSign("RADIO0"), IPAddress(0xff000002));
@@ -600,8 +600,6 @@ int main(int, const char**) {
 
     PicoPerfTimer cycleTimer;
     uint32_t longestCycleUs = 0;
-
-    uint32_t startStamp = time_ms();
 
     // ===== Command Shell Stuff =============================================
 
@@ -705,6 +703,10 @@ int main(int, const char**) {
                 else if (tokens[1] == "cosoff") {
                     c.cosDebounceOffMs = atol(tokens[2].c_str());
                 } 
+                else if (tokens[1] == "adcoffset") {
+                    c.adcRawOffset = atol(tokens[2].c_str());
+                    radio0In.setRawOffset(c.adcRawOffset);
+                } 
                 else {
                     cout << "Unrecognized configuration paramter" << endl;
                 }
@@ -804,18 +806,20 @@ int main(int, const char**) {
             }
         }
 
+        /*
         // ----- Look for periodic reboot ----------------------------------------
 
         if (conf.getSecondsSinceLastActivity() > 60 &&
-            (time_ms() - startStamp) > (6 * 60 * 60 * 1000)) {
+            ms_since(startTime) > (6 * 60 * 60 * 1000)) {
             log.info("Automatic reboot");
             while (true);
-        }   
+        } 
+        */  
 
         // ----- Deal with Inbound DTMF Requests ---------------------------------
 
         if (dtmfAccumulatorLen > 0 &&
-            time_ms() - lastDtmfActivity > DMTF_ACCUMULATOR_TIMEOUT_MS) {
+            ms_since(lastDtmfActivity) > DMTF_ACCUMULATOR_TIMEOUT_MS) {
             dtmfAccumulatorLen = 0;
             log.info("Discarding DTMF activity");
         }
@@ -840,24 +844,16 @@ int main(int, const char**) {
         // At startup we wait some time to adjust a few parameters before 
         // opening the state machines for connections.
         if (startupMode == 2) {
-            if (time_ms() > startupMs + 1000) {
-
+            if (ms_since(startupTime) > 1000) {
                 int16_t rawSample = radio0In.getLastRawSample();
                 log.info("Raw sample %d", rawSample);
-                int16_t adj = 2048 - rawSample;
-                radio0In.setRawOffset(adj);
-
                 int16_t avg = rxAnalyzer.getAvg();
                 log.info("Baseline DC bias (V) %d", avg);
                 radio0In.resetMax();
                 radio0In.resetOverflowCount();
-                startupMode = 1;
-                startupMs = time_ms();
+                startupMode = 0;
             }
         } 
-        else if (startupMode == 1) {
-            startupMode = 0;
-        }
 
         // ----- Monitor State -----------------------------------------------
 
@@ -892,7 +888,7 @@ int main(int, const char**) {
             // to the rig and (b) we are not inside of the "lockout 
             // interval."
             if (radio0Out.getSquelch() && 
-                time_ms() > (rigKeyLockoutTime + TX_LOCKOUT_MS)) {
+                ms_since(rigKeyLockoutTime) > TX_LOCKOUT_MS) {
                 if (!inContactWithMonitor) {
                     // Not allowed to key
                 }
@@ -912,7 +908,7 @@ int main(int, const char**) {
                 info.setStatus("Unkeying rig");
             }
             // Look for timeout case where the rig has been keyed for too long
-            else if (time_ms() > lastRigKeyTransitionTime + TX_TIMEOUT_MS) {
+            else if (ms_since(lastRigKeyTransitionTime) > TX_TIMEOUT_MS) {
                 info.setStatus("TX lockout triggered");
                 rigKeyState = false;
                 lastRigKeyTransitionTime = time_ms();
@@ -941,7 +937,7 @@ int main(int, const char**) {
         if (rigCosState && cosState == false) {
             // Debounce.  The LOW->HI transition is taken very quickly,
             // so long as we are not just finishing up a transmission.
-            if ((time_ms() - lastCosTransition) > LINGER_AFTER_TX_MS &&
+            if (ms_since(lastCosTransition) > LINGER_AFTER_TX_MS &&
                 !info.getSquelch() &&
                 info.getMsSinceLastSquelchClose() > LINGER_AFTER_TX_MS) {
                 cosState = true;
@@ -951,7 +947,7 @@ int main(int, const char**) {
         else if (!rigCosState && cosState == true) {
             // The HI->LO transition is fully debounced and is less
             // agressive.
-            if ((time_ms() - lastCosOn) > COS_DEBOUNCE_OFF_MS) {
+            if (ms_since(lastCosOn) > COS_DEBOUNCE_OFF_MS) {
                 cosState = false;
             }
         }
@@ -1059,7 +1055,7 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     uint32_t rxNoiseThreshold, 
     bool cosState, 
     bool networkState, int wifiRssi, 
-    uint32_t lastActivity,
+    uint32_t secondsSinceLastActivity,
     ostream& str) {
 
     // [K - Erase line
@@ -1073,7 +1069,7 @@ static void renderStatus(PicoAudioInputContext* inCtx,
     str << "===== MicoLink Status =====";
     str << endl << ESC << "[K";
     str << endl << ESC << "[K";
-    str << "    Activity (sec) : " << lastActivity;
+    str << "    Activity (sec) : " << secondsSinceLastActivity;
     str << endl << ESC << "[K";
     str << "              WIFI : " << (networkState ? "Yes" : "No");
     str << endl << ESC << "[K";

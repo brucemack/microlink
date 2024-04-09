@@ -77,7 +77,7 @@ public:
 
     // ----- From Runnable ---------------------------------------------------
 
-    virtual bool run();
+    virtual void run();
 
 private:   
 

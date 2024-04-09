@@ -124,16 +124,12 @@ W32AudioOutputContext::~W32AudioOutputContext() {
     CloseHandle(_event);
 }
 
-bool W32AudioOutputContext::run() {
-
-    bool anythingHappened = false;
+void W32AudioOutputContext::run() {
 
     // Check the status of the event (and un-signal it atomically if it is set)
     // Timeout is zero
     DWORD r = ::WaitForSingleObject(_event, 0);
     if (r == 0) {
-
-        anythingHappened = true;
 
         // Figure out whether it's time to switch between silence and audio
         if (_inSilence) {
@@ -165,8 +161,6 @@ bool W32AudioOutputContext::run() {
             waveOutWrite(_waveOut, &(_audioHdr[_audioQueuePtr]), sizeof(WAVEHDR));
         }
     }
-
-    return anythingHappened;
 }
 
 bool W32AudioOutputContext::play(const int16_t* frame) {

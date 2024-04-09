@@ -47,13 +47,11 @@ void Synth::generate(const char* str) {
     _decoder.reset();
 }
 
-bool Synth::run() {
+void Synth::run() {
 
     if (!_running) {
-        return false;
+        return;
     }
-
-    bool activity = false;
 
     int s = Sound::findSound(_str[_strPtr]);
 
@@ -77,7 +75,6 @@ bool Synth::run() {
             _framePtr++;
         }
         _workingFrameReady = true;
-        activity = true;
     }
 
     // Attempt to play some sound
@@ -97,11 +94,8 @@ bool Synth::run() {
                     _running = false;
                 }
             }
-            activity = true;
         }
     }
-
-    return activity;
 }
 
 }

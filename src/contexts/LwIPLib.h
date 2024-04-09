@@ -53,7 +53,7 @@ public:
      * 
      * @returns true if any events were dispatched.
     */
-    virtual bool run();
+    virtual void run();
 
     // ----- From IPLib ------------------------------------------------------
 
