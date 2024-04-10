@@ -157,6 +157,24 @@ into this module. Or at least I've not figured that out yet.  ARRGG! This requir
 TCP proxy to handle the traffic in/out of the cellular module.  I've not documented this part
 yet because I am still hoping to eliminate this component.
 
+### Notes on MVNOs
+
+Mint Mobile is an example of what is called a "Mobile Virtual Network Operator," or MVNO for short.
+The real mobile cellular infrastructure is built/run by Verizon, T-Mobile (including the remnants of 
+Sprint), AT&T, and US Cellular. 
+All of the other low-cost "providers" are essentially renting bandwidth from the big firms. In the
+case of Mint Mobile, they are using the T-Mobile network.
+
+One interesting facet of the MVMO service is that the traffic is de-prioritized vs. the "real" 
+carrier's traffic.  So during congested times you might find that T-Mobile service is 
+better than Mint Mobile's.  You get what you pay for.
+
+The mechanics of the prioritization is managed through the assignment of QCI levels.  According to one 
+article I saw, T-Mobile uses QCI 6, 7, 8, and 9 for their normal consumer plans.   *The lower numbers 
+have higher priority.* T-Mobile uses 6 (the best) for their "real" customers (i.e. pre-paid subscribers) and 7 for 
+Mint Mobile.  Interestingly, T-Mobile branded hot-spots run on level 9 (the worst).
+
+
 ## Speeds and Feeds
 
 * The standard audio sample rate for GSM-FR/EchoLink is 8 kHz at 12-bits of resolution.
