@@ -36,14 +36,10 @@ static const uint32_t CONNECT_TIMEOUT_MS = 2000;
 static const uint32_t DNS_TIMEOUT_MS = 5000;
 static const uint32_t VERIFY_TIMEOUT_MS = 5000;
 
-static const char* SUCCESSFUL_MSG = "Lookup successful";
-static const char* UNSUCCESSFUL_MSG = "Callsign not valid or not online";
-
 int LookupMachine3::traceLevel = 0;
 
-LookupMachine3::LookupMachine3(IPLib* ctx, UserInfo* userInfo, Log* log)
+LookupMachine3::LookupMachine3(IPLib* ctx, Log* log)
 :   _ctx(ctx),
-    _userInfo(userInfo),
     _log(log),
     _serverPort(0) { 
     _setState(State::IDLE);
@@ -58,6 +54,8 @@ void LookupMachine3::validate(StationID id) {
     _targetAddr.formatAsDottedDecimal(buf, 16);
     _log->info("Request to validate %s from %s", _targetCallSign.c_str(), buf);
 
+    // This counter is used to manage retries
+    _stateCount = 3;
     _setState(State::REQUEST);
 }
 
@@ -130,7 +128,7 @@ void LookupMachine3::disc(Channel ch) {
                 IPAddress authAddr = parseIP4Address(ipAddr);
 
                 if (authAddr == _targetAddr) {
-                    _userInfo->setStatus(SUCCESSFUL_MSG);
+                    _log->info("Authorized");
                     _conf->authorize(StationID(_targetAddr, _targetCallSign));
                     _setState(State::SUCCEEDED);
                 } 
@@ -138,17 +136,25 @@ void LookupMachine3::disc(Channel ch) {
                 // address then the address is not considered in the validation.
                 // This is what allows us to manually join stations to the conference.
                 else if (_targetAddr == IPAddress(0)) {
+                    _log->info("Authorized (manual)");
                     _conf->authorize(StationID(authAddr, _targetCallSign));
                     _setState(State::SUCCEEDED);
-                } else {
-                    _userInfo->setStatus(UNSUCCESSFUL_MSG);                        
+                } 
+                else {
+                    _log->info("Unauthorized, address mismatch");
                     _conf->deAuthorize(StationID(_targetAddr, _targetCallSign));
-                    _setState(State::FAILED);
+                    // Even though the station was not authorized, the state
+                    // machine ran to completion, so this is a success.
+                    _setState(State::SUCCEEDED);
                 }
-            } else {
-                _userInfo->setStatus(UNSUCCESSFUL_MSG);                        
-                    _conf->deAuthorize(StationID(_targetAddr, _targetCallSign));
-                _setState(State::FAILED);
+            } 
+            // We get into this case when the response is malformed
+            else {
+                _log->error("Invalid response from addressing server");
+                _conf->deAuthorize(StationID(_targetAddr, _targetCallSign));
+                // Even though the station was not authorized, the state
+                // machine ran to completion, so this is a success.
+                _setState(State::SUCCEEDED);
             }
         }
     }
@@ -178,7 +184,15 @@ void LookupMachine3::_process(int state, bool entry) {
             _ctx->closeChannel(_channel);
             _channel = Channel(0, false);
         }
-        _setState(State::IDLE);
+        if (_stateCount > 0) {
+            _stateCount--;
+            _setState(State::REQUEST);
+            _log->info("LookupMachine3 retrying");
+        }
+        else {
+            _setState(State::IDLE);
+            _log->error("LookupMachine3 failed");
+        }
     }
 }
 

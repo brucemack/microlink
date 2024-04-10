@@ -344,8 +344,10 @@ void Conference::processText(IPAddress source,
     // Existing station checks
     if (activeStation) {
         // If the station isn't authorized yet then exit
-         if (!activeStation->authorized)
+         if (!activeStation->authorized) {
+            _log->info("Waiting on authorization for %s", call.c_str());
             return;
+         }
         // If the station is authorized using a different IP?
         if (!(activeStation->id.getAddr() == source)) {
             _log->info("Station %s has moved IPs", call.c_str());

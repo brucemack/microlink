@@ -42,7 +42,7 @@ public:
 
     static int traceLevel;
 
-    LookupMachine3(IPLib* ctx, UserInfo* userInfo, Log* log);
+    LookupMachine3(IPLib* ctx, Log* log);
 
     void setServerName(HostName hn) { _serverHostName = hn; }
     void setServerPort(uint32_t p) { _serverPort = p; }
@@ -78,11 +78,10 @@ private:
         CONNECT_WAIT, 
         DISCONNECT_WAIT, 
         FAILED, 
-        SUCCEEDED 
+        SUCCEEDED,
     };
 
     IPLib* _ctx;
-    UserInfo* _userInfo;
     Log* _log;
     Conference* _conf;
 
@@ -96,6 +95,8 @@ private:
     static const uint32_t _saveAreaSize = 256;
     uint8_t _saveArea[_saveAreaSize];
     uint32_t _saveAreaUsed;
+    // Used for managing retries
+    uint32_t _stateCount = 0;
 };
 
 }

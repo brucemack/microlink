@@ -515,7 +515,7 @@ int main(int, const char**) {
     logonMachine.setLocation(ourLocation);
     logonMachine.setEmailAddr(emailAddr);
 
-    LookupMachine3 lookup(&ctx, &info, &log);
+    LookupMachine3 lookup(&ctx, &log);
     ctx.addEventSink(&lookup);
     lookup.setServerName(ourAddressingServerHost);
     lookup.setServerPort(config->addressingServerPort);
@@ -703,6 +703,9 @@ int main(int, const char**) {
                 else if (tokens[1] == "cosoff") {
                     c.cosDebounceOffMs = atol(tokens[2].c_str());
                 } 
+                else if (tokens[1] == "costhreshold") {
+                    c.rxNoiseThreshold = atol(tokens[2].c_str());
+                } 
                 else if (tokens[1] == "adcoffset") {
                     c.adcRawOffset = atol(tokens[2].c_str());
                     radio0In.setRawOffset(c.adcRawOffset);
@@ -730,8 +733,6 @@ int main(int, const char**) {
             }
             cout << "Max cycle (us) " << longestCycleUs << endl;
             longestCycleUs = 0;
-
-            cout << "RXAnalyzer sanity " << rxAnalyzer.sanityCheck() << endl;
         }
         else {
             cout << "Unreognized command " << cmd << endl;
