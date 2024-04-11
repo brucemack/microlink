@@ -27,9 +27,16 @@ Here's what it sounds like over the air:
 
 [![MicroLink OTA Demo](https://img.youtube.com/vi/BMkJOykSL_8/0.jpg)](https://www.youtube.com/watch?v=BMkJOykSL_8)
 
-Here's the setup at the moment:
+Here's my setup at the moment:
 
-![MicroLink Station Picture](docs/station-1.jpeg)
+![MicroLink Station Picture](docs/v1-station-0.jpeg)
+
+Note that there are no other computers required.  The only
+things not shown in this picture are the +12V power supply,
+the antenna (on the roof), and the WIFI network that the Pico W is connected to.
+
+This station provides EchoLink access to the Wellesley Amateur 
+Radio Society repeater (W1TKZ-L).
 
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
@@ -75,6 +82,14 @@ between the radio and the MicroLink system. This helps to reduce digital noise.
 filter.  The microphone part needs work. The next revision will use a TLV9161 op amp for the 
 microphone pre-amp to reduce noise.
 
+Here's a picture of the the current version of the PCB.  
+
+![MicroLink Board V0](docs/v1-board-0.jpeg)
+
+This is a picture of the cellular module:
+
+![MicroLink Cellular Connection](docs/ml-7600.jpeg)
+
 ## Current Parts List (SW)
 
 * The main station firmware is completely homebrew (C++, see GitHub repo).
@@ -86,18 +101,6 @@ but this was extremely interesting.
 * I'm not using the Arduino development environment for this project. The toolchain is 
 CMake/GCC/GDB using the Pico W 
 SDK. I like this environment a lot. The firmware is flashed via SWD using [openocd](https://openocd.org/).
-
-Here's a picture of the the current version of the prototype.  The Pi Pico W is on the top left.  The two wires on the right go to/from the radio.  The wires on the top left are the flash/debug interfaces which are not part of normal operation.
-
-![MicroLink Station](docs/v0-board-1.jpeg)
-
-This is what the V0 PCB looks like:
-
-![MicroLink Board V0](docs/v0-board-0.jpeg)
-
-This is a picture of the cellular module:
-
-![MicroLink Cellular Connection](docs/ml-7600.jpeg)
 
 MicroLink identifies itself using a version string of **0.02MLZ**.
 
