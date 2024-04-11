@@ -95,7 +95,7 @@ private:
 
     // At the moment we can have at most two bind requests outstanding
     // at a time.    
-    static const uint32_t _bindRespQueueSize = 2;
+    static const uint32_t _bindRespQueueSize = 4;
     Channel _bindRespQueue[_bindRespQueueSize];
     uint32_t _bindRespQueueLen = 0;
 

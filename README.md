@@ -476,7 +476,7 @@ enough.
   - [Light Weight IP - LwIP API Documentation](https://www.nongnu.org/lwip/2_1_x/index.html)
 * ESP-32 
   - [AT Command Reference](https://docs.espressif.com/projects/esp-at/en/latest/esp32/AT_Command_Set/index.html)
-* SIM7600 Cellular
+* SIM7600 Cellular Module
   - SIM7600 module AT Command Reference: https://www.waveshare.net/w/upload/6/68/SIM7500_SIM7600_Series_AT_Command_Manual_V2.00.pdf
   - SIM7600 module application notes: https://www.waveshare.com/w/upload/4/4b/A7600_Series_TCPIP_Applicati0n_Note_V1.00.pdf
   - [SIM7600 Hardware Design Guide](https://edworks.co.kr/wp-content/uploads/2022/04/SIM7600_Series_Hardware_Design_V1.08.pdf)
@@ -485,6 +485,8 @@ enough.
   - http://www.techmind.org/wave/
   - http://midi.teragonaudio.com/tech/lowaud.htm
   - http://soundfile.sapp.org/doc/WaveFormat/
+* SNTP 
+  - [RFC 2030](https://www.rfc-editor.org/rfc/rfc2030.txt#:~:text=SNTP%20uses%20the%20standard%20NTP,or%20high%2Dorder%2C%20position.)
 * Components
   - [Transformer that W2IHY is using](https://www.digikey.com/en/products/detail/triad-magnetics/TY-304P/242649)
   - [MCP4725 DAC](https://ww1.microchip.com/downloads/en/devicedoc/22039d.pdf)

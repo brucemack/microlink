@@ -686,4 +686,16 @@ uint32_t parseCommand(const char* cmd,
     return tokenCount;
 }
 
+bool isValidSNTPResponse(const uint8_t* data, uint32_t dataLen) {
+    // TODO: IMPROVE
+    return (dataLen >= 52 && data[0] == 0x24);
+}
+
+uint32_t getTimeFromSNTPResponse(const uint8_t* data, uint32_t dataLen) {
+    if (!isValidSNTPResponse(data, dataLen))
+        return 0;
+    return data[40] << 24 | data[41] << 16 | data[42] << 8 | data[43];
+}
+
+
 }

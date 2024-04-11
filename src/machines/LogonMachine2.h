@@ -46,7 +46,7 @@ public:
 
     static int traceLevel;
 
-    LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
+    LogonMachine2(IPLib* ctx, Log* log,
         DNSMachine* dm, const FixedString& versionId);
 
     void setServerPort(uint32_t p) { _serverPort = p; }
@@ -88,7 +88,6 @@ private:
     };
 
     IPLib* _ctx = 0;
-    UserInfo* _userInfo = 0;
     Log* _log = 0;
     DNSMachine* _dnsMachine = 0;
     Conference* _conf = 0;

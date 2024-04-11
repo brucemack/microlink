@@ -48,10 +48,9 @@ static const uint32_t DNS_WAIT_MS = 10'000;
 
 int LogonMachine2::traceLevel = 0;
 
-LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
+LogonMachine2::LogonMachine2(IPLib* ctx, Log* log,
     DNSMachine* dm, const FixedString& versionId)
 :   _ctx(ctx),
-    _userInfo(userInfo),
     _log(log),
     _dnsMachine(dm),
     _versionId(versionId) {
@@ -106,10 +105,10 @@ void LogonMachine2::disc(Channel ch) {
         // Parse the response to make sure we got what we expected
         if (_logonRespPtr >= 1 && _logonResp[0] == 'O' && _logonResp[1] == 'K') {
             _lastLogonStamp = time_ms();
-            _userInfo->setStatus("Logon succeeded");
+            _log->info("Logon succeeded");
             _setState(State::SUCCEEDED);
         } else {
-            _userInfo->setStatus("Logon failed");
+            _log->error("Logon failed");
             _setState(State::FAILED);
         }
     }
