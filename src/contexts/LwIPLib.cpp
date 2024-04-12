@@ -96,7 +96,9 @@ void LwIPLib::queryDNS(HostName hostName) {
     if (traceLevel > 0)
         _log->info("DNS request for %s", hostName.c_str());
 
+    // TODO: NEED TO CLEAN UP
     _lastHostNameReq = hostName;
+    _lastAddrResp = IPAddress();
 
     ip_addr_t addr;
     err_t e = dns_gethostbyname(hostName.c_str(), &addr, _dnsCb, this);
@@ -113,8 +115,12 @@ void LwIPLib::queryDNS(HostName hostName) {
     else if (e == ERR_ARG) {
         if (traceLevel > 0)
             _log->error("DNS request failed");
-    } else if (e == ERR_INPROGRESS) {
-    } else {
+    } 
+    else if (e == ERR_INPROGRESS) {
+        // There's no error here, but we should expect a response
+        // asynchronoously.
+    } 
+    else {
         panic_unsupported();
     }
 }

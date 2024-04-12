@@ -74,12 +74,6 @@ void ConferenceBridge::reset() {
 }
 
 void ConferenceBridge::bind(Channel ch) {
-    if (ch == _rtcpChannel) {
-        _log->info("RTCP bind successful");
-    }
-    else if (ch == _rtpChannel) {
-        _log->info("RTP bind successful");
-    }
 }
 
 void ConferenceBridge::recv(Channel ch, const uint8_t* data, uint32_t dataLen, 

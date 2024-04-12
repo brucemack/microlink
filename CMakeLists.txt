@@ -48,6 +48,7 @@ add_executable(link-main-2
   src/LinkUserInfo.cpp
   src/Conference.cpp
   src/ConferenceBridge.cpp
+  src/SNTPClient.cpp
   src/contexts/LwIPLib.cpp
   #src/contexts/SIM7600IPLib.cpp
   #kc1fsz-tools-cpp/src/rp2040/PicoUartChannel.cpp

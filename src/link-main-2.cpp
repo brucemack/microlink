@@ -36,7 +36,6 @@ Build commands:
 Launch command:
     openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main-2.elf verify reset exit"
 */
-
 #include <ios>
 #include <iostream>
 #include <fstream>
@@ -89,6 +88,7 @@ Launch command:
 #include "RXMonitor.h"
 #include "Conference.h"
 #include "ConferenceBridge.h"
+#include "SNTPClient.h"
 // TEMP
 #include "tests/TestUserInfo.h"
 
@@ -106,11 +106,13 @@ Launch command:
 #define DMTF_ACCUMULATOR_TIMEOUT_MS (10 * 1000)
 // 
 #define RIG_COS_DEBOUNCE_INTERVAL_MS (500)
-//
-#define TX_TIMEOUT_MS (90 * 1000)
+// The longest the rig is allowed to stay on continuously
+#define TX_TIMEOUT_MS (120 * 1000)
 // A window of time during which the rig is not allowed to
 // be keyed.
 #define TX_LOCKOUT_MS (30 * 1000)
+// A limit on the TX duty cycle - used to protect transmitter finals
+#define TX_DUTY_CYCLE_LIMIT_PERCENT (50)
 // How long we wait between refreshing the DNS address of the 
 // servers used by the node.  Important to fail-over speed.
 #define DNS_INTERVAL_MS (5 * 60 * 1000)
@@ -507,7 +509,7 @@ int main(int, const char**) {
     FixedString versionId(VERSION_ID);
     FixedString emailAddr;
 
-    LogonMachine2 logonMachine(&ctx, &info, &log, &dnsMachine1, versionId);
+    LogonMachine2 logonMachine(&ctx, &log, &dnsMachine1, versionId);
     ctx.addEventSink(&logonMachine);
     logonMachine.setServerPort(config->addressingServerPort);
     logonMachine.setCallSign(ourCallSign);
@@ -534,6 +536,9 @@ int main(int, const char**) {
     lookup.setConference(&conf);
     rxMonitor.setSink(&confBridge);
     logonMachine.setConference(&conf);
+
+    SNTPClient sntpClient(&log, &ctx);
+    ctx.addEventSink(&sntpClient);
 
     bool rigKeyState = false;
     timestamp lastRigKeyTransitionTime;
@@ -571,7 +576,7 @@ int main(int, const char**) {
 
     // These are all of the tasks that need to be run on every iteration
     // of the main loop.
-    const uint32_t taskCount = 12;
+    const uint32_t taskCount = 13;
     Runnable* loopTasks[taskCount] = {
         &wifiPollTask,
         &ctx,
@@ -589,7 +594,9 @@ int main(int, const char**) {
         // 10
         &rxMonitor,
         // 11
-        &log
+        &log,
+        // 12
+        &sntpClient
     };
 
     // Performance metrics
@@ -741,6 +748,17 @@ int main(int, const char**) {
         log.setStdout(false);
     };
 
+    // ------ Rig Key Duty Cycle Tracking Stuff ------------------------------
+
+    // One slot every 5 seconds for 4 minutes
+    const uint32_t rigKeyHistorySize = 48;
+    bool rigKeyHistory[rigKeyHistorySize];
+    uint32_t rigKeyHistoryPtr = 0;
+    for (uint32_t i = 0; i < rigKeyHistorySize; i++)
+        rigKeyHistory[i] = false;
+    PicoPollTimer rigKeyHistoryTimer;
+    rigKeyHistoryTimer.setIntervalUs(5'000'000);
+
     log.setStdout(true);
 
     // Last thing before going into the event loop
@@ -807,15 +825,15 @@ int main(int, const char**) {
             }
         }
 
-        /*
         // ----- Look for periodic reboot ----------------------------------------
-
-        if (conf.getSecondsSinceLastActivity() > 60 &&
-            ms_since(startTime) > (6 * 60 * 60 * 1000)) {
+        // We restart once every 24 hours, but only if the system has 
+        // been quiet for a few minutes.
+        if (conf.getSecondsSinceLastActivity() > 2 * 60 &&
+            ms_since(startupTime) > (24 * 60 * 60 * 1000)) {
             log.info("Automatic reboot");
+            // The watchdog will take over from here
             while (true);
         } 
-        */  
 
         // ----- Deal with Inbound DTMF Requests ---------------------------------
 
@@ -884,41 +902,83 @@ int main(int, const char**) {
         // Key rig when audio is coming in, but enforce limits to prevent
         // the key from being stuck open for long periods.
 
+        // Calculate the percentage keyed so that we can manage 
+        // overheating
+        uint32_t rigKeyCount = 0;
+        for (uint32_t i = 0; i < rigKeyHistorySize; i++)
+            if (rigKeyHistory[i])
+                rigKeyCount++;
+        const uint32_t rigKeyPercent = (100 * rigKeyCount) / rigKeyHistorySize;
+        // Check duty cycle threshold (50%)
+        const bool rigKeyOverheat = rigKeyPercent > TX_DUTY_CYCLE_LIMIT_PERCENT;
+
         if (!rigKeyState) {
             // This logic will key the rig when (a) we are sending audio
             // to the rig and (b) we are not inside of the "lockout 
             // interval."
             if (radio0Out.getSquelch() && 
-                ms_since(rigKeyLockoutTime) > TX_LOCKOUT_MS) {
+                ms_since(rigKeyLockoutTime) > TX_LOCKOUT_MS &&
+                !rigKeyOverheat) {
                 if (!inContactWithMonitor) {
                     // Not allowed to key
                 }
                 else {
-                    info.setStatus("Keying rig");
+                    log.info("Keying radio (duty cycle %lu%%)", 
+                        rigKeyPercent);
                     rigKeyState = true;
                     lastRigKeyTransitionTime = time_ms();
                 }
             }
         }
         else {
+
             // Check for normal unkey when we've stopped streaming audio to 
             // the rig.
             if (!info.getSquelch()) {
                 rigKeyState = false;
                 lastRigKeyTransitionTime = time_ms();
-                info.setStatus("Unkeying rig");
+                log.info("Unkeying radio (duty cycle %lu%%)", rigKeyPercent);
             }
             // Look for timeout case where the rig has been keyed for too long
             else if (ms_since(lastRigKeyTransitionTime) > TX_TIMEOUT_MS) {
-                info.setStatus("TX lockout triggered");
+                log.info("TX timeout triggered");
                 rigKeyState = false;
                 lastRigKeyTransitionTime = time_ms();
                 rigKeyLockoutTime = time_ms();
                 rigKeyLockoutCount++;
             }
+            // Look for overheating
+            else if (rigKeyOverheat) {
+                log.info("Radio duty cycle exceeded (%lu%%)", 
+                    rigKeyPercent);
+                rigKeyState = false;
+                lastRigKeyTransitionTime = time_ms();
+            }
         }
 
-        gpio_put(RIG_KEY_PIN, rigKeyFailSafe() && rigKeyState ? 1 : 0);
+        // *****************************************************************
+        // *****************************************************************
+        // Here is where we actually control the rig key.
+        bool finalRigKeyState = rigKeyFailSafe() && rigKeyState;
+        gpio_put(RIG_KEY_PIN, finalRigKeyState ? 1 : 0);
+        // *****************************************************************
+        // *****************************************************************
+
+        // Collect rig key state over time so that we can calculate duty
+        // cycle.
+        if (rigKeyHistoryTimer.poll()) {
+            rigKeyHistoryTimer.reset();
+            rigKeyHistory[rigKeyHistoryPtr++] = finalRigKeyState;
+            // Wrap if necessary
+            if (rigKeyHistoryPtr == rigKeyHistorySize) {
+                rigKeyHistoryPtr = 0;
+            }
+            // Display that status if we are overheated
+            if (rigKeyOverheat) {
+                log.info("Limiting duty cycle, current percent %lu%%",
+                    rigKeyPercent);
+            }
+        }
 
         // ----- Rig Carrier Detect Management --------------------------------
         //
@@ -959,9 +1019,9 @@ int main(int, const char**) {
         // Use the debounced cosState to adjust the state of the node
         if (cosState != lastCosState) {
             if (cosState) 
-                info.setStatus("Rig COS on");
+                log.info("Radio COS on");
             else
-                info.setStatus("Rig COS off");
+                log.info("Radio COS off");
             // This is the important part: it turns on the forwarding from 
             // the readio into the Conference.            
             rxMonitor.setForward(cosState);

@@ -48,10 +48,9 @@ static const uint32_t DNS_WAIT_MS = 10'000;
 
 int LogonMachine2::traceLevel = 0;
 
-LogonMachine2::LogonMachine2(IPLib* ctx, UserInfo* userInfo, Log* log,
+LogonMachine2::LogonMachine2(IPLib* ctx, Log* log,
     DNSMachine* dm, const FixedString& versionId)
 :   _ctx(ctx),
-    _userInfo(userInfo),
     _log(log),
     _dnsMachine(dm),
     _versionId(versionId) {
@@ -106,10 +105,11 @@ void LogonMachine2::disc(Channel ch) {
         // Parse the response to make sure we got what we expected
         if (_logonRespPtr >= 1 && _logonResp[0] == 'O' && _logonResp[1] == 'K') {
             _lastLogonStamp = time_ms();
-            _userInfo->setStatus("Logon succeeded");
+            if (traceLevel > 0)
+                _log->info("Logon succeeded");
             _setState(State::SUCCEEDED);
         } else {
-            _userInfo->setStatus("Logon failed");
+            _log->error("Logon failed");
             _setState(State::FAILED);
         }
     }
@@ -137,7 +137,7 @@ void LogonMachine2::_process(int state, bool entry) {
             _setState(State::CONNECT_WAIT, CONNECT_TIMEOUT_MS, State::FAILED);
         }
         else {
-            _log->info("Waiting on server address");
+            _log->info("Waiting on Addressing Server address");
             // We give some time for the link to come up before
             // going back to the idle state
             _setState(State::DNS_WAIT, DNS_WAIT_MS, State::IDLE);

@@ -185,6 +185,10 @@ uint32_t createOnlineMessage(uint8_t* buf, uint32_t bufLen,
 uint32_t parseCommand(const char* cmd, 
     FixedString tokens[], uint32_t tokensSize);
 
+bool isValidSNTPResponse(const uint8_t* data, uint32_t dataLen);
+
+uint32_t getTimeFromSNTPResponse(const uint8_t* data, uint32_t dataLen);
+
 }
 
 
