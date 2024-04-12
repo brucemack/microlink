@@ -105,7 +105,8 @@ void LogonMachine2::disc(Channel ch) {
         // Parse the response to make sure we got what we expected
         if (_logonRespPtr >= 1 && _logonResp[0] == 'O' && _logonResp[1] == 'K') {
             _lastLogonStamp = time_ms();
-            _log->info("Logon succeeded");
+            if (traceLevel > 0)
+                _log->info("Logon succeeded");
             _setState(State::SUCCEEDED);
         } else {
             _log->error("Logon failed");
@@ -136,7 +137,7 @@ void LogonMachine2::_process(int state, bool entry) {
             _setState(State::CONNECT_WAIT, CONNECT_TIMEOUT_MS, State::FAILED);
         }
         else {
-            _log->info("Waiting on server address");
+            _log->info("Waiting on Addressing Server address");
             // We give some time for the link to come up before
             // going back to the idle state
             _setState(State::DNS_WAIT, DNS_WAIT_MS, State::IDLE);

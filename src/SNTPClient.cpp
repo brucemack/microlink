@@ -93,8 +93,11 @@ void SNTPClient::recv(Channel ch, const uint8_t* data, uint32_t dataLen,
         if (isValidSNTPResponse(data, dataLen)) {
             uint32_t now = getTimeFromSNTPResponse(data, dataLen) -
                 2208988800UL;
+            bool neededSync = now - get_epoch_time() > 1000;
             // Set the time
             set_epoch_time(now);
+            if (neededSync)            
+                _log->info("Synchronized time with NTP server");
         }
         _setState(State::SUCCEEDED);
     }

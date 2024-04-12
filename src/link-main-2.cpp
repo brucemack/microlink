@@ -36,7 +36,6 @@ Build commands:
 Launch command:
     openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main-2.elf verify reset exit"
 */
-
 #include <ios>
 #include <iostream>
 #include <fstream>
@@ -760,9 +759,6 @@ int main(int, const char**) {
     PicoPollTimer rigKeyHistoryTimer;
     rigKeyHistoryTimer.setIntervalUs(5'000'000);
 
-    // Fake starting point
-    //set_epoch_time(1712861916);
-
     log.setStdout(true);
 
     // Last thing before going into the event loop
@@ -829,15 +825,15 @@ int main(int, const char**) {
             }
         }
 
-        /*
         // ----- Look for periodic reboot ----------------------------------------
-
-        if (conf.getSecondsSinceLastActivity() > 60 &&
-            ms_since(startTime) > (6 * 60 * 60 * 1000)) {
+        // We restart once every 24 hours, but only if the system has 
+        // been quiet for a few minutes.
+        if (conf.getSecondsSinceLastActivity() > 2 * 60 &&
+            ms_since(startupTime) > (24 * 60 * 60 * 1000)) {
             log.info("Automatic reboot");
+            // The watchdog will take over from here
             while (true);
         } 
-        */  
 
         // ----- Deal with Inbound DTMF Requests ---------------------------------
 
@@ -1023,9 +1019,9 @@ int main(int, const char**) {
         // Use the debounced cosState to adjust the state of the node
         if (cosState != lastCosState) {
             if (cosState) 
-                info.setStatus("Rig COS on");
+                log.info("Radio COS on");
             else
-                info.setStatus("Rig COS off");
+                log.info("Radio COS off");
             // This is the important part: it turns on the forwarding from 
             // the readio into the Conference.            
             rxMonitor.setForward(cosState);
