@@ -69,7 +69,7 @@ The hardware is used in two configurations:
 
 * The main processor is a Pi Pico W (RP2040) development board. This includes WIFI 
 connectivity.  $6.00 on DigiKey. 
-* A 4G cellular data option is available using a SIM7600 module. 
+* A 4G cellular data option is available using a SIM7600 module. *(Not fully working yet.)*
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Isolation transformers and optocouplers are used to eliminate the need for common ground 
 between the radio and the MicroLink system. This helps to reduce digital noise.
@@ -86,7 +86,7 @@ Here's a picture of the the current version of the PCB.
 
 ![MicroLink Board V0](docs/v1-board-0.jpeg)
 
-This is a picture of the cellular module:
+This is a picture of the cellular module.  This has passed some initial tests, but is not ready for production yet.
 
 ![MicroLink Cellular Connection](docs/ml-7600.jpeg)
 
@@ -177,6 +177,26 @@ article I saw, T-Mobile uses QCI 6, 7, 8, and 9 for their normal consumer plans.
 have higher priority.* T-Mobile uses 6 (the best) for their "real" customers (i.e. pre-paid subscribers) and 7 for 
 Mint Mobile.  Interestingly, T-Mobile branded hot-spots run on level 9 (the worst).
 
+## Notes on SNTP
+
+MicroLink will update its internal time using an NTP server.  The main value of this is to 
+ensure that the timestamps on the internal log messages are correct.
+
+The SNTP message protocol is quite simple.  The request is 68 bytes, mostly zeros.  The non-zero
+bytes are as follows:
+
+* Byte 0: (binary) 00 100 011.  This denotes an SNTPv4 client request.
+* Byte 1: zero
+* Byte 2: 6
+* Byte 3: 0xec
+* Bytes 12-15: (ascii) UKNO
+* Bytes 40-43: The client's current time in seconds since the Epoch, big endian format.
+
+The response that comes back has been observed to be around 52 bytes, although this may
+vary in some situations.  The important information in the response is:
+
+* Byte 0: (binary) 00 100 100.  This denotes an SNTPv4 server response.
+* Bytes 40-43: The server's current time in seconds since the Epoch, big endian format.
 
 ## Speeds and Feeds
 
