@@ -20136,7 +20136,7 @@
 		)
 	)
 	(gr_text "J1: Radio connection (DB9)"
-		(at 227.7 37.1 0)
+		(at 223 37.25 0)
 		(layer "Dwgs.User")
 		(uuid "af266688-e5af-46a5-981e-b3d324a0ea83")
 		(effects
@@ -20346,6 +20346,39 @@
 			(units 3)
 			(units_format 1)
 			(precision 1)
+		)
+		(style
+			(thickness 0.15)
+			(arrow_length 1.27)
+			(text_position_mode 0)
+			(extension_height 0.58642)
+			(extension_offset 0.5) keep_text_aligned)
+	)
+	(dimension
+		(type aligned)
+		(layer "Dwgs.User")
+		(uuid "d56bb452-ccb5-45dc-82ea-c566a46999c3")
+		(pts
+			(xy 247.876998 53.834) (xy 253.972998 53.834)
+		)
+		(height -20.334)
+		(gr_text "6.0960 mm"
+			(at 250.924998 32.35 0)
+			(layer "Dwgs.User")
+			(uuid "d56bb452-ccb5-45dc-82ea-c566a46999c3")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(format
+			(prefix "")
+			(suffix "")
+			(units 3)
+			(units_format 1)
+			(precision 4)
 		)
 		(style
 			(thickness 0.15)
