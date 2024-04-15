@@ -545,3 +545,5 @@ enough.
   - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
   - Very interesting audio processing stuff: https://www.repeater-builder.com/tech-info/audio-processing.html
   - [Ceramic vs Tantalum Capacitors in LDOs](https://www.ti.com/lit/an/slva214a/slva214a.pdf)
+  - [DB9 Connector](https://www.digikey.com/en/products/detail/assmann-wsw-components/A-DF-09-A-KG-T2S/1241800)
+  - [5.5mm power Connector](https://www.digikey.com/en/products/detail/cui-devices/PJ-102AH/408448)

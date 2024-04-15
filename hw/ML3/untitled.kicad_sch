@@ -6,8 +6,8 @@
 	(paper "USLetter")
 	(title_block
 		(title "MicroLink - Microcontroller")
-		(date "2024-04-10")
-		(rev "2")
+		(date "2024-04-15")
+		(rev "3")
 		(company "Bruce MacKinnon KC1FSZ")
 		(comment 1 "Copyright (C) 2024 - Not For Commercial Use")
 	)
@@ -975,22 +975,22 @@
 				)
 			)
 		)
-		(symbol "Jumper:Jumper_2_Bridged"
+		(symbol "Jumper:SolderJumper_2_Bridged"
 			(pin_numbers hide)
 			(pin_names
 				(offset 0) hide)
 			(exclude_from_sim yes)
-			(in_bom yes)
+			(in_bom no)
 			(on_board yes)
 			(property "Reference" "JP"
-				(at 0 1.905 0)
+				(at 0 2.032 0)
 				(effects
 					(font
 						(size 1.27 1.27)
 					)
 				)
 			)
-			(property "Value" "Jumper_2_Bridged"
+			(property "Value" "SolderJumper_2_Bridged"
 				(at 0 -2.54 0)
 				(effects
 					(font
@@ -1016,7 +1016,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Jumper, 2-pole, closed/bridged"
+			(property "Description" "Solder Jumper, 2-pole, closed/bridged"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1025,7 +1025,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_keywords" "Jumper SPST"
+			(property "ki_keywords" "solder jumper SPST"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1034,7 +1034,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_fp_filters" "Jumper* TestPoint*2Pads* TestPoint*Bridge*"
+			(property "ki_fp_filters" "SolderJumper*Bridged*"
 				(at 0 0 0)
 				(effects
 					(font
@@ -1043,35 +1043,22 @@
 					(hide yes)
 				)
 			)
-			(symbol "Jumper_2_Bridged_0_0"
-				(circle
-					(center -2.032 0)
-					(radius 0.508)
+			(symbol "SolderJumper_2_Bridged_0_1"
+				(rectangle
+					(start -0.508 0.508)
+					(end 0.508 -0.508)
 					(stroke
 						(width 0)
 						(type default)
 					)
 					(fill
-						(type none)
+						(type outline)
 					)
 				)
-				(circle
-					(center 2.032 0)
-					(radius 0.508)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-			)
-			(symbol "Jumper_2_Bridged_0_1"
 				(arc
-					(start 1.524 0.254)
-					(mid 0 0.762)
-					(end -1.524 0.254)
+					(start -0.254 1.016)
+					(mid -1.2656 0)
+					(end -0.254 -1.016)
 					(stroke
 						(width 0)
 						(type default)
@@ -1080,10 +1067,70 @@
 						(type none)
 					)
 				)
+				(arc
+					(start -0.254 1.016)
+					(mid -1.2656 0)
+					(end -0.254 -1.016)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
+				(polyline
+					(pts
+						(xy -0.254 1.016) (xy -0.254 -1.016)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 0.254 1.016) (xy 0.254 -1.016)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0.254 -1.016)
+					(mid 1.2656 0)
+					(end 0.254 1.016)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0.254 -1.016)
+					(mid 1.2656 0)
+					(end 0.254 1.016)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type outline)
+					)
+				)
 			)
-			(symbol "Jumper_2_Bridged_1_1"
+			(symbol "SolderJumper_2_Bridged_1_1"
 				(pin passive line
-					(at -5.08 0 0)
+					(at -3.81 0 0)
 					(length 2.54)
 					(name "A"
 						(effects
@@ -1101,7 +1148,7 @@
 					)
 				)
 				(pin passive line
-					(at 5.08 0 180)
+					(at 3.81 0 180)
 					(length 2.54)
 					(name "B"
 						(effects
@@ -3296,7 +3343,7 @@
 	)
 	(wire
 		(pts
-			(xy 162.56 64.77) (xy 162.56 68.58)
+			(xy 162.56 62.23) (xy 162.56 68.58)
 		)
 		(stroke
 			(width 0)
@@ -4156,7 +4203,7 @@
 	)
 	(text "Allows the Pico to be \ndisconnected from the \nboard power.\n"
 		(exclude_from_sim no)
-		(at 138.43 58.42 0)
+		(at 173.228 57.912 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -4596,7 +4643,7 @@
 			(uuid "eb5bad89-9da7-4118-b6a9-bbbb72511e0b")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "SW0")
 					(unit 1)
@@ -4778,7 +4825,7 @@
 			(uuid "1ee2a891-e3fe-45c4-bdb9-bc9169cbe157")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "S1")
 					(unit 1)
@@ -4901,7 +4948,7 @@
 			(uuid "af5831c9-a69d-434b-810b-b0815c6a998a")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "J3")
 					(unit 1)
@@ -4967,7 +5014,7 @@
 			(uuid "da950079-4cd2-4b24-8f93-9965f8390cb7")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#PWR043")
 					(unit 1)
@@ -5037,7 +5084,7 @@
 			(uuid "b16aced0-5b79-46ff-a973-6d0cd9ea9109")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "D3")
 					(unit 1)
@@ -5103,7 +5150,7 @@
 			(uuid "55efe647-5f26-4002-95a4-f862f00e7eaf")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#PWR029")
 					(unit 1)
@@ -5169,7 +5216,7 @@
 			(uuid "86d6bc1f-e6d2-4dfb-9cea-be3b44570089")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#FLG03")
 					(unit 1)
@@ -5235,80 +5282,9 @@
 			(uuid "8736c14b-3400-4bf0-96f5-581eb3887f45")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#PWR022")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Jumper:Jumper_2_Bridged")
-		(at 162.56 59.69 90)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "a4ea0380-3bc7-4b8b-8d7a-8769e8784fd4")
-		(property "Reference" "JP2"
-			(at 163.83 59.69 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-			)
-		)
-		(property "Value" "Jumper_2_Bridged"
-			(at 163.83 60.96 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify right)
-				(hide yes)
-			)
-		)
-		(property "Footprint" "Connector_PinHeader_2.54mm:PinHeader_1x02_P2.54mm_Vertical"
-			(at 162.56 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 162.56 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Jumper, 2-pole, closed/bridged"
-			(at 162.56 59.69 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "2"
-			(uuid "e44a3af1-8a8a-49e1-bea1-3a82510675b3")
-		)
-		(pin "1"
-			(uuid "5ee5757d-3cbd-4f7c-b0cd-4c5f77bbe7e9")
-		)
-		(instances
-			(project "ML2"
-				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
-					(reference "JP2")
 					(unit 1)
 				)
 			)
@@ -5462,7 +5438,7 @@
 			(uuid "6961168a-b5af-4fcc-a5ad-010d324e3611")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "Q1")
 					(unit 1)
@@ -5532,7 +5508,7 @@
 			(uuid "527b69d3-41bc-4a82-bb2a-1523088e4b16")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "R20")
 					(unit 1)
@@ -5602,7 +5578,7 @@
 			(uuid "27cbd2c8-3936-4f77-863f-be78cdcdbeaa")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "R17")
 					(unit 1)
@@ -5674,9 +5650,79 @@
 			(uuid "8dfa26ae-873d-4412-b094-7cbfd2a1bac3")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "U7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Jumper:SolderJumper_2_Bridged")
+		(at 162.56 58.42 90)
+		(unit 1)
+		(exclude_from_sim yes)
+		(in_bom no)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "c4d9155f-ab0a-461f-a4a7-e05d5b54f716")
+		(property "Reference" "JP1"
+			(at 165.1 57.1499 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Value" "SolderJumper_2_Bridged"
+			(at 165.1 59.6899 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+			)
+		)
+		(property "Footprint" "Jumper:SolderJumper-2_P1.3mm_Bridged_Pad1.0x1.5mm"
+			(at 162.56 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 162.56 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Solder Jumper, 2-pole, closed/bridged"
+			(at 162.56 58.42 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f9e110ec-54b4-4e10-bc89-a7a7d67682f6")
+		)
+		(pin "2"
+			(uuid "cc4743a9-f10d-4a02-859e-f0858e1c6a2c")
+		)
+		(instances
+			(project "ML3"
+				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
+					(reference "JP1")
 					(unit 1)
 				)
 			)
@@ -5740,7 +5786,7 @@
 			(uuid "46507007-1969-49a5-9ada-71a915351453")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#PWR045")
 					(unit 1)
@@ -5810,7 +5856,7 @@
 			(uuid "1bc887af-25c4-4590-aaea-32536bac7805")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "D4")
 					(unit 1)
@@ -5876,7 +5922,7 @@
 			(uuid "48d46a2c-c59f-4411-92d8-578ed4811850")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#PWR06")
 					(unit 1)
@@ -5942,7 +5988,7 @@
 			(uuid "394c8bf3-aca4-48e4-af09-0cbc35a75045")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#PWR023")
 					(unit 1)
@@ -6008,7 +6054,7 @@
 			(uuid "3e5f9f83-d94d-4e4e-920f-69185a12c9dc")
 		)
 		(instances
-			(project "ML2"
+			(project "ML3"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
 					(reference "#PWR027")
 					(unit 1)

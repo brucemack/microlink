@@ -514,6 +514,8 @@
       "+5VA": "Power",
       "I2C0_SCL": "Fast Signal",
       "I2C0_SDA": "Fast Signal",
+      "Net-(JP1-A)": "Power",
+      "Net-(JP1-B)": "Power",
       "Net-(JP2-A)": "Power",
       "Net-(JP2-B)": "Power"
     },
@@ -540,7 +542,7 @@
       "plot": "./plot",
       "pos_files": "",
       "specctra_dsn": "",
-      "step": "ML3.step",
+      "step": "plot/ML3.step",
       "svg": "",
       "vrml": ""
     },
@@ -724,6 +726,10 @@
     [
       "fa333dda-eb84-4ed5-ba74-283a026e08db",
       "Pi Pico W"
+    ],
+    [
+      "c058822f-762c-444c-afb6-faa81e48d80a",
+      "Connectors"
     ]
   ],
   "text_variables": {}
