@@ -19883,6 +19883,16 @@
 		(uuid "0a3d30c0-6d13-4915-9b5c-fab5f6999d93")
 	)
 	(gr_line
+		(start 218.5 33.25)
+		(end 219.5 43.5)
+		(stroke
+			(width 0.15)
+			(type default)
+		)
+		(layer "Dwgs.User")
+		(uuid "17072dcf-67a0-4453-af39-64b17f062fab")
+	)
+	(gr_line
 		(start 163 74)
 		(end 170 105)
 		(stroke
@@ -19923,8 +19933,8 @@
 		(uuid "f464fb91-90c6-4ff8-b243-058e2ab33a8a")
 	)
 	(gr_line
-		(start 232.45 38.25)
-		(end 243.5 57.25)
+		(start 260 41)
+		(end 250 66.75)
 		(stroke
 			(width 0.3)
 			(type default)
@@ -20136,7 +20146,7 @@
 		)
 	)
 	(gr_text "J1: Radio connection (DB9)"
-		(at 223 37.25 0)
+		(at 257 38.25 0)
 		(layer "Dwgs.User")
 		(uuid "af266688-e5af-46a5-981e-b3d324a0ea83")
 		(effects
@@ -20159,6 +20169,19 @@
 			(justify left bottom)
 		)
 	)
+	(gr_text "NOTE: This break creates electrical \nisolation between the radio and the \nrest of the board."
+		(at 205.5 33 0)
+		(layer "Dwgs.User")
+		(uuid "dda764ea-9332-49a0-b5b1-ce47f123b5bd")
+		(effects
+			(font
+				(size 1.5 1.5)
+				(thickness 0.2)
+				(bold yes)
+			)
+			(justify left bottom)
+		)
+	)
 	(gr_text "Micro USB Connection\n(NOTE: Bonded to Pico Pi daughter\ncard, so elevated from main PCB\nby 1.0mm)"
 		(at 137 37 0)
 		(layer "Dwgs.User")
@@ -20171,9 +20194,9 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text_box "External Connectors:\n1. J1 is a DB9 audio/signal connector connector.\n2. J2 is a 5.5mm DC power connector for +12V.  Center positive.\n3. The micro USB connector on the Pi Pico daughter card must be accessible through case.\n\nIndicator Notes:\n4. There are three SMD LEDs (D1, D3, D4).  External visibilty is required.\n\nThermal Notes:\n5. Air flow in the area of the LDO regulator (U3) is necessary.\n\nOther notes:\n6. Connector J3 is for testing.  Pin header will be populated.\n7. Trim protentiometers RV1, RV2 do not need to be accessible through case.\n8. Switch SW0 is used for programming and does not need to accessible through case.\n9. Connector J4 is an additional power output that is only used for diagnostics - not accessible through case.\n10. There are through-hole components on the PCB that result in leads/solder protroding from the bottom of the PCB. Leave about 5mm of clearance under the board.\n11. User adjustments on the top side of the PCB will be necessary during initial instalation (switches, trim pots).  The top of the case must be fairly easy to remove. "
+	(gr_text_box "External Connectors:\n1. J1 is a DB9 audio/signal connector connector.\n2. J2 is a 5.5mm DC power connector for +12V.  Center positive.\n3. The micro USB connector on the Pi Pico daughter card must be accessible through case.\n\nIndicator Notes:\n4. There are three SMD LEDs (D1, D3, D4).  External visibilty is required.\n\nThermal Notes:\n5. Air flow in the area of the LDO regulator (U3) is necessary.\n\nOther notes:\n6. Connector J3 is for testing.  Pin header will be populated.\n7. Trim protentiometers RV1, RV2 do not need to be accessible through case.\n8. Switch SW0 is used for programming and does not need to accessible through case.\n9. Connector J4 is an additional power output that is only used for diagnostics - not accessible through case.\n10. There are through-hole components on the PCB that result in leads/solder protroding from the bottom of the PCB. Leave about 5mm of clearance under the board.\n11. User adjustments on the top side of the PCB will be necessary during initial instalation (switches, trim pots).  The top of the case must be fairly easy to remove. \n12. The requirement for electrical isolation between the left and right sides of the board means that mounting (at least on the right) must be non-conductive."
 		(start 78 42)
-		(end 112 105)
+		(end 112 113.25)
 		(layer "Dwgs.User")
 		(uuid "92e1b977-796e-4dbf-b203-f2f91d41ec0f")
 		(effects
