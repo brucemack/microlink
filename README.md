@@ -48,6 +48,9 @@ who created the EchoLink system is an outstanding engineer and we should all be 
 appreciative of the work
 that he and the rest of the EchoLink team do on behalf of the amateur radio community.
 
+Huge thanks go to Steve Kondo (K1STK) for providing the mechanical design work
+for this project.
+
 I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions or suggestions.
 
 # Architecture Overview/Parts
