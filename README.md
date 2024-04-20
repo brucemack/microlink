@@ -13,7 +13,7 @@ be interesting to someone who wants to get deep into the nuts-and-bolts of EchoL
 should start to question the sanity of anyone who spends this much time building their own EchoLink station. I am a homebrew enthusiast and I try to avoid off-the-shelf software/components where 
 possible. This has been a huge learning opportunity.
 
-The system currently runs on a Pi Pico W (RP2040) board. I'm pretty sure it 
+The system currently runs on a Pi Pico W (RP204, ARM Cortex M0) board. I'm pretty sure it 
 could also run on an ESP-32, or possibly an Arduino of sufficient caliber. More experimentation
 is needed here.
 
@@ -27,16 +27,14 @@ Here's what it sounds like over the air:
 
 [![MicroLink OTA Demo](https://img.youtube.com/vi/BMkJOykSL_8/0.jpg)](https://www.youtube.com/watch?v=BMkJOykSL_8)
 
-Here's my setup at the moment:
+Here's my production setup at the moment. This station provides EchoLink access to the Wellesley Amateur 
+Radio Society repeater (W1TKZ-L):
 
 ![MicroLink Station Picture](docs/v1-station-0.jpeg)
 
 Note that there are no other computers required.  The only
 things not shown in this picture are the +12V power supply,
-the antenna (on the roof), and the WIFI network that the Pico W is connected to.
-
-This station provides EchoLink access to the Wellesley Amateur 
-Radio Society repeater (W1TKZ-L).
+the antenna (on the roof), and the home WIFI network that the Pico W is connected to.
 
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
