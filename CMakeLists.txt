@@ -94,6 +94,8 @@ target_include_directories(link-main-2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 #
 add_executable(hello-world
   tests/hello-world.cpp
+  tests/dhcpserver.c
+  kc1fsz-tools-cpp/src/Common.cpp
 )
 
 if(DEFINED ENV{PICO_BUILD})
@@ -108,6 +110,7 @@ target_link_libraries(hello-world pico_stdlib hardware_i2c hardware_adc pico_cyw
 endif()
 
 target_include_directories(hello-world PRIVATE src)
+target_include_directories(hello-world PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(hello-world PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 # ------ shell-test ------------------------------------------------------------
