@@ -48,6 +48,9 @@ who created the EchoLink system is an outstanding engineer and we should all be 
 appreciative of the work
 that he and the rest of the EchoLink team do on behalf of the amateur radio community.
 
+Huge thanks go to Steve Kondo (K1STK) for providing the mechanical design work
+for this project.
+
 I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions or suggestions.
 
 # Architecture Overview/Parts
@@ -545,3 +548,5 @@ enough.
   - Audio Transformer: https://electronics.stackexchange.com/questions/648953/what-does-the-impedance-value-of-audio-transformers-specifically-mean-in-terms
   - Very interesting audio processing stuff: https://www.repeater-builder.com/tech-info/audio-processing.html
   - [Ceramic vs Tantalum Capacitors in LDOs](https://www.ti.com/lit/an/slva214a/slva214a.pdf)
+  - [DB9 Connector](https://www.digikey.com/en/products/detail/assmann-wsw-components/A-DF-09-A-KG-T2S/1241800)
+  - [5.5mm power Connector](https://www.digikey.com/en/products/detail/cui-devices/PJ-102AH/408448)
