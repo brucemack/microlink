@@ -18,18 +18,17 @@
  * FOR AMATEUR RADIO USE ONLY.
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
-#ifndef _AtomicInteger_h
-#define _AtomicInteger_h
+#ifndef _VolatileInteger_h
+#define _VolatileInteger_h
 
 #include "hardware/sync.h"
 
 namespace kc1fsz {
 
-// NOT SURE THIS IS RIGHT - STILL RESEARCHING
-class AtomicInteger {
+class VolatileInteger {
 public:
 
-    AtomicInteger() { _value = 0; }
+    VolatileInteger() { _value = 0; }
 
     uint32_t get() const {
         __dsb();
@@ -49,7 +48,7 @@ public:
 
 private:
 
-    uint32_t _value;
+    volatile uint32_t _value;
 };
 
 }

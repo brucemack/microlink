@@ -28,7 +28,7 @@
 #include "kc1fsz-tools/Runnable.h"
 #include "kc1fsz-tools/rp2040/PicoPerfTimer.h"
 
-#include "AtomicInteger.h"
+#include "VolatileInteger.h"
 
 namespace kc1fsz {
 
@@ -100,10 +100,10 @@ private:
     int16_t _audioInBuf[_audioInBufDepth][_audioFrameSize * _audioFrameBlockFactor];
     // Keeps track of how many 4xframes have been written. The ISR
     // is the ONLY WRITER of this value.
-    AtomicInteger _audioInBufWriteCount;
+    VolatileInteger _audioInBufWriteCount;
     // Keeps track of how many 4xframes have been read. The main poll() loop
     // is the ONLY WRITER of this value.
-    AtomicInteger _audioInBufReadCount;
+    VolatileInteger _audioInBufReadCount;
     // Write pointer - ONLY ACCESSED BY ISR!
     uint32_t _audioInBufWritePtr = 0;
     // Keep count of overflows/underflows
