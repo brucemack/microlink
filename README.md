@@ -17,7 +17,7 @@ The system currently runs on a Pi Pico W (RP204, ARM Cortex M0) board. I'm prett
 could also run on an ESP-32, or possibly an Arduino of sufficient caliber. More experimentation
 is needed here.
 
-The software is fully open source. Now that EchoLink is fully "open," others can experiment with this 
+The software is fully open source. Now that EchoLink is "open," others can experiment with this 
 important amateur radio technology. I am currently working on adding support for AllStarLink. More 
 to follow ...
 
