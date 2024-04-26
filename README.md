@@ -49,7 +49,14 @@ that he and the rest of the EchoLink team do on behalf of the amateur radio comm
 Huge thanks go to Steve Kondo (K1STK) for providing the mechanical design work
 for this project.
 
-I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions or suggestions.
+Thanks also to Julius Jones (W2IHY), creator of the world-famous EQPlus and other sophisticated audio gear, for his
+advice on the audio circuit.
+
+I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions or suggestions.  Or e-mail at bruce at mackinnon dot com.
+
+I have a few extra boards which I would be willing to sell
+for a reasonable price if someone wanted to try to build 
+a station of their own.
 
 # Architecture Overview/Parts
 
@@ -85,7 +92,7 @@ microphone pre-amp to reduce noise.
 
 Here's a picture of the the current version of the PCB.  
 
-![MicroLink Board V0](docs/v1-board-0.jpeg)
+![MicroLink Board V0](docs/v3-board-0.jpeg)
 
 This is a picture of the cellular module.  This has passed some initial tests, but is not ready for production yet.
 
