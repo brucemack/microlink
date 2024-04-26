@@ -18,7 +18,7 @@ could also run on an ESP-32, or possibly an Arduino of sufficient caliber. More 
 is needed here.
 
 The software is fully open source. Now that EchoLink is "open," others can experiment with this 
-important amateur radio technology. I am currently working on adding support for AllStarLink. More 
+important amateur radio technology. I am currently working on adding support for [AllStarLink](https://www.allstarlink.org/). More 
 to follow ...
 
 Here's my production setup at the moment. This station provides EchoLink access to the Wellesley Amateur 
