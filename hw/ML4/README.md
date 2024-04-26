@@ -22,7 +22,6 @@ to mechanical detail.
 ## During Build (25-Apr-2024)
 * Changed R5 and R5 to 2.2K
 * Changed R17, R20, R22 to 100 (LED)
-* 
 
 DRC Notes:
 * There are 12 warnings: "Silkscreen clipped by board edge."
