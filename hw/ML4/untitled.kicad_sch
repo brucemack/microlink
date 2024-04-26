@@ -5465,7 +5465,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "220"
+		(property "Value" "100"
 			(at 229.87 111.76 0)
 			(effects
 				(font
@@ -5535,7 +5535,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "220"
+		(property "Value" "100"
 			(at 215.9 111.76 0)
 			(effects
 				(font

@@ -3169,6 +3169,19 @@
 		)
 		(uuid "43ef2461-6f9d-48ca-b658-d6aad6701e8c")
 	)
+	(text "1.44V"
+		(exclude_from_sim no)
+		(at 247.142 56.896 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+				(color 140 18 255 1)
+			)
+		)
+		(uuid "7e61583a-4a22-4c49-9e9d-17bfd6ae8640")
+	)
 	(text "Unit A (Top Left)"
 		(exclude_from_sim no)
 		(at 205.74 91.44 0)
@@ -3190,6 +3203,19 @@
 		)
 		(uuid "950abd41-9c4a-4230-b133-079ff66f8cd8")
 	)
+	(text "1.44V"
+		(exclude_from_sim no)
+		(at 163.068 53.848 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+				(color 140 18 255 1)
+			)
+		)
+		(uuid "9a67fcfe-0c9c-46b8-a3b7-12e555db9a46")
+	)
 	(text "Anti-Aliasing LPF Filter\nfc = 4kHz"
 		(exclude_from_sim no)
 		(at 205.74 86.36 0)
@@ -3200,6 +3226,19 @@
 			(justify left bottom)
 		)
 		(uuid "abc76889-37ed-47e3-82a6-84192dbad0f9")
+	)
+	(text "1.44V"
+		(exclude_from_sim no)
+		(at 105.41 64.262 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+				(thickness 0.254)
+				(bold yes)
+				(color 140 18 255 1)
+			)
+		)
+		(uuid "df5ce6ff-a8fc-4901-a154-42395ca9064a")
 	)
 	(text "Caculate correct ratio\nwhen using 3.0V ADC VREF"
 		(exclude_from_sim no)

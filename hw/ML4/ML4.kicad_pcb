@@ -16584,7 +16584,7 @@
 		(descr "Resistor SMD 0805 (2012 Metric), square (rectangular) end terminal, IPC_7351 nominal with elongated pad for handsoldering. (Body size source: IPC-SM-782 page 72, https://www.pcb-3d.com/wordpress/wp-content/uploads/ipc-sm-782a_amendment_1_and_2.pdf), generated with kicad-footprint-generator")
 		(tags "resistor handsolder")
 		(property "Reference" "R9"
-			(at 2.032 2.794 90)
+			(at -0.112 1.766 90)
 			(layer "F.SilkS")
 			(uuid "a278e732-8a81-4ae6-a1b0-bce592113b01")
 			(effects
@@ -19970,6 +19970,18 @@
 		(layer "Edge.Cuts")
 		(uuid "afca9edf-3e8e-449c-a0f9-19884bcec78c")
 	)
+	(gr_text "+"
+		(at 126.8 78.1 0)
+		(layer "F.SilkS")
+		(uuid "302ca60d-5001-40fb-86e3-de937375c39a")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
 	(gr_text "GND"
 		(at 91.436 52.07 0)
 		(layer "F.SilkS")
@@ -20054,6 +20066,18 @@
 			(justify left bottom)
 		)
 	)
+	(gr_text "+"
+		(at 158.95 46.8 0)
+		(layer "F.SilkS")
+		(uuid "8d7eae8b-1f75-4b84-9d65-be1390f8f9cb")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.15)
+			)
+			(justify left bottom)
+		)
+	)
 	(gr_text "MicroLink V3\n2024-04 KC1FSZ"
 		(at 163.572 97.79 0)
 		(layer "F.SilkS")
@@ -20064,6 +20088,18 @@
 				(thickness 0.2)
 			)
 			(justify bottom)
+		)
+	)
+	(gr_text "+"
+		(at 126.75 72.25 0)
+		(layer "F.SilkS")
+		(uuid "d3afd5a0-2799-4ac7-b125-2d1972c6478e")
+		(effects
+			(font
+				(size 0.8 0.8)
+				(thickness 0.15)
+			)
+			(justify left bottom)
 		)
 	)
 	(gr_text "V33"

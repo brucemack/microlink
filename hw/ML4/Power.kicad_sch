@@ -2800,7 +2800,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "220"
+		(property "Value" "100"
 			(at 205.74 82.55 0)
 			(effects
 				(font
