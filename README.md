@@ -50,7 +50,8 @@ of products.
 I've learned many things about EchoLink during this project. One thing is for sure: Jonathan (K1RFD) 
 who created the EchoLink system is an outstanding engineer and we should all be greatly 
 appreciative of the work
-that he and the rest of the EchoLink team do on behalf of the amateur radio community.
+that he and the rest of the EchoLink team do on behalf of the amateur radio community. Thanks to 
+Jonathan for his suggestions/advice along the way.
 
 Huge thanks go to Steve Kondo (K1STK) for providing the mechanical design work
 for this project.
@@ -75,21 +76,17 @@ of the PCB are in process.
 This project required an in-depth examination of how the EchoLink protocol works. [The notes
 I created during this analysis are located here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
 
-The hardware is used in two configurations:
-* A link station, with integration to a radio to allow remote access.
-* A client, with microphone and speaker for connecting to EchoLink conferences, links, and repeaters.
-
 ## Current Parts List (HW)
 
 * The main processor is a Pi Pico W (RP2040) development board. This includes WIFI 
 connectivity.  $6.00 on DigiKey. 
 * A 4G cellular data option is available using a SIM7600 module. *(Not fully working yet.)*
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
+* Audio input sampling uses the integrated ADC in the RP2040.
 * Isolation transformers and optocouplers are used to eliminate the need for common ground 
 between the radio and the MicroLink system. This helps to reduce digital noise.
 * The radio link is an AZDEN PCS-6000H mobile rig.
 * When not using the radio:
-  - Audio input sampling uses the integrated ADC in the RP2040.
   - Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
   - The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
   - The microphone is an electret condenser with a LVM321 pre-amp and low-pass anti-aliasing 
