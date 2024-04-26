@@ -30,11 +30,14 @@ Here's what it sounds like over the air:
 Here's my production setup at the moment. This station provides EchoLink access to the Wellesley Amateur 
 Radio Society repeater (W1TKZ-L):
 
-![MicroLink Station Picture](docs/v1-station-0.jpeg)
+![MicroLink Station Picture](docs/v3-station-0.jpeg)
 
 Note that there are no other computers required.  The only
-things not shown in this picture are the +12V power supply,
-the antenna (on the roof), and the home WIFI network that the Pico W is connected to.
+things not shown in this picture are the 12V power supply,
+the antenna (on the roof), and the home WIFI network that the Pico W is connected to.  
+
+The red LED is the 12V power indicator and the blue LED is the 
+internet connection status.
 
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
