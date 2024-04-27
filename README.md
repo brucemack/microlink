@@ -225,6 +225,32 @@ flash. The audio is stored in GSM full-rate format for efficiency.
 * The RP2040 communicates with the SIM7600 4G cellular module at 115,200 baud.  This is 
 about 10x the theoretically-required bandwidth to maintain a single channel.
 
+# User Guide
+
+## Serial Command Interface
+
+(More detail to follow)
+
+    reboot
+    status 
+    log
+    tone
+    dropall
+    add [callsign]
+    drop [callsign]
+    set addressingserver [EchoLink addressing server hostname: ex: naeast.echolink.org]
+    set callsign [your call]
+    set password [your password]
+    set fullname "[your full name]"
+    set location "[your location]"
+    set wifissid "[yourssid]"
+    set wifipassword [your password]
+    set hardcos [0 or 1.  Enables or disables hardware carrier detect. Defaults to 0.]
+    set coson [COS debounce ms during off->on transition. Defaults to 10.]
+    set cosoff [COS debounce ms during on->off transition.  Defaults to 400.]
+    set costhreshold [noise power floor used to decide when COS is detected]
+    set adcoffset [value that is added to the raw ADC value.  Used to center the DC bais at 2048.]
+
 # Technical/Development Notes
 
 ## GSM CODEC
@@ -299,8 +325,8 @@ ADC performance is not critical, this pin can be connected to digital ground.
 ## Regarding Transmitter Duty Cycle
 
 When using MicroLink as a bridge to a repeater system via a radio link, be careful about the 
-duty cycle limitations of the radio you are using.  The W1TKZ-L system uses an AZDEN mobile
-rig that wasn't designed for 100% key down.  
+duty cycle limitations of the bridge radio you are using.  The W1TKZ-L system uses an AZDEN mobile
+rig that certainly wasn't designed for 100% key down.  
 
 During "normal" repeater use this isn't a problem because the link radio is only keyed 
 when a remote EchoLink user is speaking - that's no different from using the link
@@ -309,9 +335,11 @@ two repeater systems together, joining a repeater to a conference server, etc.) 
 problematic if the link radio is required to be keyed constantly to transmit the activity 
 happening on the "other" repeater or in the conference.
 
-The MicroLink system supports a configurable duty cycle limit (defaults to 50%).  Once
+If you have a transmitter than can be 
+keyed for long periods of time then this won't be an issue. But if not, the MicroLink system supports a 
+configurable duty cycle limit (defaults to 50%).  Once
 the link radio has been keyed for more than 50% of the time in any 5 minute interval
-the radio is un-keyed and allowed to rest.  
+the radio is un-keyed and allowed to rest. 
 
 ## Building the Link Station
 
