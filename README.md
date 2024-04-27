@@ -238,6 +238,9 @@ about 10x the theoretically-required bandwidth to maintain a single channel.
     dropall
     add [callsign]
     drop [callsign]
+
+Configuration commands - using during initial setup:
+
     set addressingserver [EchoLink addressing server hostname: ex: naeast.echolink.org]
     set callsign [your call]
     set password [your password]
@@ -255,7 +258,7 @@ about 10x the theoretically-required bandwidth to maintain a single channel.
 
 ## GSM CODEC
 
-I implemented my audio compression/decompression CODEC for the GSM 0610 Full Rate 
+I implemented my own fixed-point audio compression/decompression CODEC for the GSM 0610 Full Rate 
 protocol [by following the specification here](https://www.etsi.org/deliver/etsi_en/300900_300999/300961/08.01.01_60/en_300961v080101p.pdf).  The coding scheme is the so-called **Regular Pulse Excitation - Long Term 
 prediction - Linear Predictive Coder**, generally referred to as "RPE-LTP."  This standard was developed
 as part of the modernization of the European mobile phone system in the late 1990s and is a good
@@ -302,6 +305,16 @@ means that the receive path is delayed by around 8 x 80 ms *above and beyond* an
 in the Internet itself. Experimental work is ongoing to make this adaptive
 so that the delay is minimized.  Of course if the buffer empties out (i.e. several
 slow packets in a row), all bets are off.
+3. A MicroLink node can have up to four "remote" (i.e. internet based) stations
+connected at the same time. This of this as a mini-conference. In the extreme 
+case (four users connected), the 
+inbound audio packets from the station who is speaking need to be routed 
+back out to the other three listening stations AND be sent to the CODEC/DAC for 
+local radio transmission. Since the CODEC is relatively time-consuming, it is 
+important to *reflect the audio packets back out onto the internet to the 
+listening stations before dealing with the GSM decode needed for the local radio
+link.* This will ensure maximum parallelism and smooth audio for all 
+stations involved.
 
 ## Regarding the Pi Pico ADC
 
