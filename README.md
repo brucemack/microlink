@@ -296,6 +296,23 @@ Per Pico datasheet:
 running under these signals and terminating at this pin. If the ADC is not used or 
 ADC performance is not critical, this pin can be connected to digital ground.
 
+## Regarding Transmitter Duty Cycle
+
+When using MicroLink as a bridge to a repeater system via a radio link, be careful about the 
+duty cycle limitations of the radio you are using.  The W1TKZ-L system uses an AZDEN mobile
+rig that wasn't designed for 100% key down.  
+
+During "normal" repeater use this isn't a problem because the link radio is only keyed 
+when a remote EchoLink user is speaking - that's no different from using the link
+radio directly.  However, if more a complicated configuration is used (examples: linking 
+two repeater systems together, joining a repeater to a conference server, etc.) things can become
+problematic if the link radio is required to be keyed constantly to transmit the activity 
+happening on the "other" repeater or in the conference.
+
+The MicroLink system supports a configurable duty cycle limit (defaults to 50%).  Once
+the link radio has been keyed for more than 50% of the time in any 5 minute interval
+the radio is un-keyed and allowed to rest.  
+
 ## Building the Link Station
 
 This is the official binary that runs in production.
