@@ -209,6 +209,13 @@ vary in some situations.  The important information in the response is:
 * Byte 0: (binary) 00 100 100.  This denotes an SNTPv4 server response.
 * Bytes 40-43: The server's current time in seconds since the Epoch, big endian format.
 
+## Enclosure
+
+Steve K1STK designed and fabricated a great enclosure on his 3D printer.  Here's what the PCB
+looks like with the case:
+
+![Enclosure](docs/IMG_0879.jpeg)
+
 ## Speeds and Feeds
 
 * The standard audio sample rate for GSM-FR/EchoLink is 8 kHz at 12-bits of resolution.
