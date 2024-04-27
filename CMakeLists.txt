@@ -94,7 +94,6 @@ target_include_directories(link-main-2 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 #
 add_executable(hello-world
   tests/hello-world.cpp
-  tests/dhcpserver.c
   kc1fsz-tools-cpp/src/Common.cpp
 )
 

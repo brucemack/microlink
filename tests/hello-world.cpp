@@ -12,10 +12,6 @@
 
 #include "kc1fsz-tools/Common.h"
 
-extern "C" {
-#include "tests/dhcpserver.h"
-}
-
 // Blue
 #define LED0_PIN (21)
 // Green
@@ -112,7 +108,7 @@ int main() {
     uint8_t adcChannel = 0;
     adc_select_input(adcChannel);    
 
-    sleep_ms(1000);
+    sleep_ms(2000);
     cout << "MicroLink Hello World" << endl;
 
     // One-time initialization of the I2C channel
@@ -135,33 +131,24 @@ int main() {
              CYW43_AUTH_WPA2_AES_PSK);
     }
 
-    ip4_addr_t gw;
-    ip4_addr_t mask;
-    IP4_ADDR(ip_2_ip4(&gw), 192, 168, 8, 1);
-    IP4_ADDR(ip_2_ip4(&mask), 255, 255, 255, 0);
-
-    // Start the dhcp server
-    dhcp_server_t dhcp_server;
-    dhcp_server_init(&dhcp_server, &gw, &mask);
-
     while (true) {
 
-        if (ms_since(lastSwitch) > 500) {
+        if (ms_since(lastSwitch) > 2000) {
             lastSwitch = time_ms();
             if (state == 0) {
                 gpio_put(LED0_PIN, 1);
                 gpio_put(LED1_PIN, 0);
-                //play((uint16_t)maxAdc);
+                play((uint16_t)maxAdc);
                 state = 1;
             } 
             else if (state == 1) {
                 gpio_put(LED0_PIN, 0);
                 gpio_put(LED1_PIN, 1);
-                //play((uint16_t)minAdc);
+                play((uint16_t)minAdc);
                 state = 0;
             }
             int st = cyw43_wifi_link_status(&cyw43_state, CYW43_ITF_AP);
-            cout << st << endl;
+            //cout << "WIFI: " << st << endl;
         }
 
         // If you are using pico_cyw43_arch_poll, then you must poll periodically 

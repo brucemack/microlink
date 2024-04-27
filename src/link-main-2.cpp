@@ -641,7 +641,7 @@ int main(int, const char**) {
             while (true);
         } 
         else if (streq(cmd, "tone")) {
-            radio0Out.tone(800, 1000);
+            radio0Out.tone(800, 5000);
         }
         else if (streq(cmd, "dropall")) {
             conf.dropAll();
