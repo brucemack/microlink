@@ -1,4 +1,5 @@
 *.lck
-ML3-backups/
+*-backups/
 fp-info-cache
+plot/
 

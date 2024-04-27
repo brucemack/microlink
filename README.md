@@ -17,6 +17,21 @@ The system currently runs on a Pi Pico W (RP204, ARM Cortex M0) board. I'm prett
 could also run on an ESP-32, or possibly an Arduino of sufficient caliber. More experimentation
 is needed here.
 
+The software is fully open source. Now that EchoLink is fully "open," others can experiment with this 
+important amateur radio technology. I am currently working on adding support for AllStarLink. More 
+to follow ...
+
+Here's my production setup at the moment. This station provides EchoLink access to the Wellesley Amateur 
+Radio Society repeater (W1TKZ-L):
+
+![MicroLink Station Picture](docs/v3-station-0.jpeg)
+
+Note that there are no other computers required.  The only
+things not shown in this picture are the 12V power supply,
+the antenna (on the roof), and the home WIFI network that the Pico W is connected to.  The red LED is the 12V 
+power indicator and the blue LED is the 
+internet connection status.
+
 Here's the current demo video:
 
 [![MicroLink Transmit and Receive Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
@@ -26,15 +41,6 @@ The microphone/analog section still needs some work.
 Here's what it sounds like over the air:
 
 [![MicroLink OTA Demo](https://img.youtube.com/vi/BMkJOykSL_8/0.jpg)](https://www.youtube.com/watch?v=BMkJOykSL_8)
-
-Here's my production setup at the moment. This station provides EchoLink access to the Wellesley Amateur 
-Radio Society repeater (W1TKZ-L):
-
-![MicroLink Station Picture](docs/v1-station-0.jpeg)
-
-Note that there are no other computers required.  The only
-things not shown in this picture are the +12V power supply,
-the antenna (on the roof), and the home WIFI network that the Pico W is connected to.
 
 The official 
 PC-based EchoLink client written by Jonathan Taylor (K1RFD) is excellent and is the quickest/easiest way to get on 
@@ -49,7 +55,14 @@ that he and the rest of the EchoLink team do on behalf of the amateur radio comm
 Huge thanks go to Steve Kondo (K1STK) for providing the mechanical design work
 for this project.
 
-I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions or suggestions.
+Thanks also to Julius Jones (W2IHY), creator of the world-famous EQPlus and other sophisticated audio gear, for his
+advice on the audio circuit.
+
+I have a few extra boards which I would be willing to sell
+for a reasonable price if someone wanted to try to build 
+a station of their own.
+
+I am [good in QRZ at KC1FSZ](https://www.qrz.com/db/kc1fsz) if you have any questions or suggestions.  Or e-mail at bruce at mackinnon dot com.
 
 # Architecture Overview/Parts
 
@@ -85,7 +98,7 @@ microphone pre-amp to reduce noise.
 
 Here's a picture of the the current version of the PCB.  
 
-![MicroLink Board V0](docs/v1-board-0.jpeg)
+![MicroLink Board V0](docs/v3-board-0.jpeg)
 
 This is a picture of the cellular module.  This has passed some initial tests, but is not ready for production yet.
 
@@ -230,13 +243,13 @@ Institute (ETSI) publishes a comprehensive set of test vectors containing known 
 corresponding GSM encoding. I have used that test data to validate that my CODEC is 100% complaint.
 
 The smallest/cheapest microcontrollers lack hardware support for floating-point, so I built my CODEC using
-fixed point (Q15) math.  This was my first major foray into fixed-point DSP.
+fixed point (Q15) math. 
 
 ## Regarding Audio Smoothness
 
 One of the most difficult challenges I had with this project was getting audio
 that was "smooth" in both directions. This stuff is probably obvious to people
-who are well versed in the state-of-the-art of VoIP, but it's all new to me.  Here
+who are well versed in the state-of-the-art of VoIP.  Here
 are a few points that will help anyone getting into this.
 
 1. Accurate/consistent clocking of the audio chain is essential.  GSM uses
