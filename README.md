@@ -32,7 +32,7 @@ the antenna (on the roof), and the home WIFI network that the Pico W is connecte
 power indicator and the blue LED is the 
 internet connection status.
 
-Here's the current demo video:
+Here's a demo video I made of the first bench test:
 
 [![MicroLink Transmit and Receive Demo](https://img.youtube.com/vi/wqWCYG_9o4k/0.jpg)](https://www.youtube.com/watch?v=wqWCYG_9o4k)
 
