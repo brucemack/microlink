@@ -267,7 +267,7 @@ The MicroLink device provides a DB9 (female) connector with the following pinout
 
 * Pin 1: Audio out (rig microphone in)
 * Pin 2: PTT out (rig PTT in).  This pin will be pulled to rig ground to key the rig.
-* Pin 3: COS in (rig COS out). Pull to rig ground to indicate RX carrier.
+* Pin 3: COS in (rig COS out). Pull to rig ground to indicate RX carrier. This is an optional connection and is only used when hardware carrier detect is available.
 * Pin 4: NC
 * Pin 5: Audio in (+) (rig speaker out)
 * Pin 6: Rig Ground
