@@ -85,7 +85,7 @@ connectivity.  $6.00 on DigiKey.
 * Audio input sampling uses the integrated ADC in the RP2040.
 * Isolation transformers and optocouplers are used to eliminate the need for common ground 
 between the radio and the MicroLink system. This helps to reduce digital noise.
-* The radio link is an AZDEN PCS-6000H mobile rig.
+* The radio link is an ~~AZDEN PCS-6000H~~ Yaesu FT-1900 mobile rig.
 * When not using the radio:
   - Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
   - The local T/R key is from Federal Telephone and Telegraph Company (Buffalo, NY), made in 1920.  Priceless.
@@ -408,8 +408,32 @@ This is the official binary that runs in production.
     # SIM7600 open TCP socket in transparent mode:
     ATE0;+CIPMODE=1;+NETOPEN;+CIPOPEN=0,"TCP","54.89.121.215",8100
 
-
 # Rig Integration Notes
+
+## Yaesu FT-1900
+
+This rig was installed in October of 2024 to address an ongoing problem with occasional local QRN. The RF squelch on the original (AZDEN) rig was opening sporadically, particularly during the evening hours. The advantage of the more modern Yaesu rig is that it supports CTCSS tone squelch.
+
+### Connectors
+
+The rig has a normal 3.5mm audio output jack on the back. This is used to drive the audio input on the MicroLink box.
+
+The FT-1900 ships with a Yaesu MH-48 microphone.  The rig as a 6-pin RJ12 modular microphone connector on the front. **NOTE:** Although this looks similar to the RJ45 connector used on many (ICOM) rigs, it is actually the smaller connector size commonly used for telephones.  Unlike the telephone RJ11 connector that uses 4 pins, the RJ12 connector uses 6 pins.
+
+The pinout is as follows, looking into the front of the rig and counting from left to right:
+
+* Pin 6 - PTT
+* Pin 5 - Microphone Input
+* Pin 4 - Ground for microphone and PTT
+* Pin 3 - +8V
+* Pin 2 - Mic SW1
+* Pin 1 - Mic SW2
+
+Pins 6, 5, and 4 are used for the MicroLink interface.  Pins 3, 2, and 1 are not used.
+
+### Carrier Detect
+
+There is no carrier detect output on the rig.  MicroLink is run in soft-COS mode with this radio and we've not had any propblems.
 
 ## Baofeng BF-F8HP HT
 
