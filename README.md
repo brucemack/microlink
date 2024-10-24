@@ -261,6 +261,23 @@ Configuration commands - using during initial setup:
     set costhreshold [noise power floor used to decide when COS is detected]
     set adcoffset [value that is added to the raw ADC value.  Used to center the DC bais at 2048.]
 
+## DB9 Connector Pinout
+
+The MicroLink device provides a DB9 connector with the following pinout:
+
+* Pin 1: Audio out (rig microphone in)
+* Pin 2: PTT out (rig PTT in).  This pin will be pulled to rig ground to key the rig.
+* Pin 3: COS in (rig COS out). Pull to rig ground to indicate RX carrier.
+* Pin 4: NC
+* Pin 5: Audio in (+) (rig speaker out)
+* Pin 6: Rig Ground
+* Pin 7: Rig Ground
+* Pin 8: Rig Ground
+* Pin 9: Audio in (-) (rig speaker out)
+
+NOTES:
+* Audio in (+) and audio in (-) are connected to the primary side of an audio isolation transformer.
+
 # Technical/Development Notes
 
 ## GSM CODEC
@@ -414,6 +431,8 @@ This is the official binary that runs in production.
 
 This rig was installed in October of 2024 to address an ongoing problem with occasional local QRN. The RF squelch on the original (AZDEN) rig was opening sporadically, particularly during the evening hours. The advantage of the more modern Yaesu rig is that it supports CTCSS tone squelch.
 
+[Here is the manual for the rig](https://www.yaesu.com/downloadFile.cfm?FileID=7879&FileCatID=150&FileName=FT%2D1900R%5FOM%5FEH023N111.pdf&FileContentType=application%2Fpdf).
+
 ### Connectors
 
 The rig has a normal 3.5mm audio output jack on the back. This is used to drive the audio input on the MicroLink box.
@@ -434,6 +453,10 @@ Pins 6, 5, and 4 are used for the MicroLink interface.  Pins 3, 2, and 1 are not
 ### Carrier Detect
 
 There is no carrier detect output on the rig.  MicroLink is run in soft-COS mode with this radio and we've not had any propblems.
+
+### Other Configuration
+
+We have saved the repeater frequency/split/tone/power level in one of the rig's memory slots so that the correct configuration is used automatically following a power cycle. It appears that the rig remembers the last memory slot that was selected after power off/on.
 
 ## Baofeng BF-F8HP HT
 
