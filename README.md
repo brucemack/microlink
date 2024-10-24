@@ -263,7 +263,7 @@ Configuration commands - using during initial setup:
 
 ## DB9 Connector Pinout
 
-The MicroLink device provides a DB9 connector with the following pinout:
+The MicroLink device provides a DB9 (female) connector with the following pinout:
 
 * Pin 1: Audio out (rig microphone in)
 * Pin 2: PTT out (rig PTT in).  This pin will be pulled to rig ground to key the rig.
