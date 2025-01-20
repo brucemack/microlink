@@ -83,8 +83,9 @@ connectivity.  $6.00 on DigiKey.
 * A 4G cellular data option is available using a SIM7600 module. *(Not fully working yet.)*
 * Audio output generation uses the MicroChip MCP4725 I2C digital-to-analog converter.  $1.27 on DigiKey.
 * Audio input sampling uses the integrated ADC in the RP2040.
-* Isolation transformers and optocouplers are used to eliminate the need for common ground 
-between the radio and the MicroLink system. This helps to reduce digital noise.
+* Isolation transformers and optocouplers are used to eliminate the need for a common ground 
+between the radio and the MicroLink system. The 
+radio and the MicroLink circuitry are completely isolated from each other. This helps to reduce digital noise. 
 * The radio link is an ~~AZDEN PCS-6000H~~ Yaesu FT-1900 mobile rig.
 * When not using the radio:
   - Audio amplification uses the LM4862M 825mW amplifier.  $2.23 on DigiKey.
@@ -333,7 +334,7 @@ in the Internet itself. Experimental work is ongoing to make this adaptive
 so that the delay is minimized.  Of course if the buffer empties out (i.e. several
 slow packets in a row), all bets are off.
 3. A MicroLink node can have up to four "remote" (i.e. internet based) stations
-connected at the same time. This of this as a mini-conference. In the extreme 
+connected at the same time. Think of this as a mini-conference. In the extreme 
 case (four users connected), the 
 inbound audio packets from the station who is speaking need to be routed 
 back out to the other three listening stations AND be sent to the CODEC/DAC for 
