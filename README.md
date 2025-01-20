@@ -22,13 +22,14 @@ important amateur radio technology. I am currently working on adding support for
 to follow ...
 
 Here's my production setup at the moment. This station provides EchoLink access to the Wellesley Amateur 
-Radio Society repeater (W1TKZ-L):
+Radio Society repeater (W1TKZ-L) using a Yaesu FT-1900:
 
-![MicroLink Station Picture](docs/v3-station-0.jpeg)
+![MicroLink Station Picture](docs/IMG_1727.jpg)
 
+The green case contains the MicroLink system. The DB9 connector on the side of the 
+case connects to microphone and audio plugs on the FT-1900. A 12V supply powers the radio and the MicroLink interface.
 Note that there are no other computers required.  The only
-things not shown in this picture are the 12V power supply,
-the antenna (on the roof), and the home WIFI network that the Pico W is connected to.  The red LED is the 12V 
+things not shown in this picture are the antenna (on the roof), and the home WIFI network that the Pico W is connected to.  The red LED is the 12V 
 power indicator and the blue LED is the 
 internet connection status.
 
