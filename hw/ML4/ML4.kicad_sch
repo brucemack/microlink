@@ -1,7 +1,7 @@
 (kicad_sch
-	(version 20231120)
+	(version 20250114)
 	(generator "eeschema")
-	(generator_version "8.0")
+	(generator_version "9.0")
 	(uuid "5f8f636b-fd0e-498e-8696-0a023acb4c09")
 	(paper "USLetter")
 	(title_block
@@ -93,6 +93,7 @@
 					)
 				)
 			)
+			(embedded_fonts no)
 		)
 	)
 	(symbol
@@ -148,6 +149,14 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "LCSC" ""
+			(at 176.53 120.65 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(instances
@@ -214,6 +223,14 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" ""
+			(at 176.53 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(instances
 			(project "ML4"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09"
@@ -276,6 +293,14 @@
 					(size 1.27 1.27)
 				)
 				(hide yes)
+			)
+		)
+		(property "LCSC" ""
+			(at 176.53 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
 			)
 		)
 		(instances
@@ -342,6 +367,14 @@
 				(hide yes)
 			)
 		)
+		(property "LCSC" ""
+			(at 176.53 143.51 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
 		(instances
 			(project "ML4"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09"
@@ -354,6 +387,10 @@
 	(sheet
 		(at 93.98 29.21)
 		(size 45.72 35.56)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -392,6 +429,10 @@
 	(sheet
 		(at 29.21 29.21)
 		(size 48.26 35.56)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -430,6 +471,10 @@
 	(sheet
 		(at 29.21 78.74)
 		(size 48.26 35.56)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -468,6 +513,10 @@
 	(sheet
 		(at 93.98 78.74)
 		(size 44.45 34.29)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -506,6 +555,10 @@
 	(sheet
 		(at 30.48 129.54)
 		(size 48.26 44.45)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(stroke
 			(width 0.1524)
@@ -546,4 +599,5 @@
 			(page "1")
 		)
 	)
+	(embedded_fonts no)
 )
