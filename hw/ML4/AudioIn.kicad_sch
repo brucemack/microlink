@@ -6,7 +6,7 @@
 	(paper "USLetter")
 	(title_block
 		(title "MicroLink - Audio Input")
-		(date "2024-04-24")
+		(date "2025-09-30")
 		(rev "4")
 		(company "Bruce MacKinnon KC1FSZ")
 		(comment 1 "Copyright (C) 2024 - Not For Commercial Use")
@@ -648,7 +648,7 @@
 			)
 			(embedded_fonts no)
 		)
-		(symbol "Device:C_Polarized_Small_US"
+		(symbol "Device:C_Small"
 			(pin_numbers
 				(hide yes)
 			)
@@ -668,7 +668,7 @@
 					(justify left)
 				)
 			)
-			(property "Value" "C_Polarized_Small_US"
+			(property "Value" "C_Small"
 				(at 0.254 -2.032 0)
 				(effects
 					(font
@@ -695,7 +695,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Polarized capacitor, small US symbol"
+			(property "Description" "Unpolarized capacitor, small symbol"
 				(at 0 0 0)
 				(effects
 					(font
@@ -704,7 +704,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_keywords" "cap capacitor"
+			(property "ki_keywords" "capacitor cap"
 				(at 0 0 0)
 				(effects
 					(font
@@ -713,7 +713,7 @@
 					(hide yes)
 				)
 			)
-			(property "ki_fp_filters" "CP_*"
+			(property "ki_fp_filters" "C_*"
 				(at 0 0 0)
 				(effects
 					(font
@@ -722,7 +722,7 @@
 					(hide yes)
 				)
 			)
-			(symbol "C_Polarized_Small_US_0_1"
+			(symbol "C_Small_0_1"
 				(polyline
 					(pts
 						(xy -1.524 0.508) (xy 1.524 0.508)
@@ -737,34 +737,10 @@
 				)
 				(polyline
 					(pts
-						(xy -1.27 1.524) (xy -0.762 1.524)
+						(xy -1.524 -0.508) (xy 1.524 -0.508)
 					)
 					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(polyline
-					(pts
-						(xy -1.016 1.27) (xy -1.016 1.778)
-					)
-					(stroke
-						(width 0)
-						(type default)
-					)
-					(fill
-						(type none)
-					)
-				)
-				(arc
-					(start -1.524 -0.762)
-					(mid 0 -0.3734)
-					(end 1.524 -0.762)
-					(stroke
-						(width 0.3048)
+						(width 0.3302)
 						(type default)
 					)
 					(fill
@@ -772,7 +748,7 @@
 					)
 				)
 			)
-			(symbol "C_Polarized_Small_US_1_1"
+			(symbol "C_Small_1_1"
 				(pin passive line
 					(at 0 2.54 270)
 					(length 2.032)
@@ -3563,7 +3539,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C1729"
 			(at 173.99 72.39 0)
 			(effects
 				(font
@@ -4041,7 +4017,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "LMV324 (Actually LTV9161)"
+		(property "Value" "TLV9164PWR"
 			(at 196.85 25.908 0)
 			(effects
 				(font
@@ -4077,7 +4053,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C4368361"
 			(at 212.09 35.56 0)
 			(effects
 				(font
@@ -4132,84 +4108,6 @@
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/605cddf5-737f-47be-b5fd-7ed3decef4e0"
 					(reference "U1")
 					(unit 5)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Polarized_Small_US")
-		(at 110.49 87.63 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "4f7f69af-f1db-4819-b34d-9ea109ee21aa")
-		(property "Reference" "C19"
-			(at 113.03 85.9281 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "47u"
-			(at 113.03 88.4681 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "bruce-footprints:CPOL_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
-			(at 110.49 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 110.49 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Polarized capacitor, small US symbol"
-			(at 110.49 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
-			(at 110.49 87.63 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "de29ffe5-de3d-4397-9eef-a891669c94fc")
-		)
-		(pin "2"
-			(uuid "8eaa3163-ca78-44f0-9138-63af365d3d8d")
-		)
-		(instances
-			(project "ML4"
-				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/605cddf5-737f-47be-b5fd-7ed3decef4e0"
-					(reference "C19")
-					(unit 1)
 				)
 			)
 		)
@@ -4423,6 +4321,85 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Small")
+		(at 227.33 33.02 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "61407260-7962-40aa-b787-a85a1c47ae22")
+		(property "Reference" "C20"
+			(at 229.87 31.7562 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "47u"
+			(at 229.87 34.2962 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 227.33 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 227.33 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor, small symbol"
+			(at 227.33 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C16780 "
+			(at 227.33 33.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "9680d28d-48cd-4720-8896-d1a17f5fc4a5")
+		)
+		(pin "2"
+			(uuid "8b31e027-a596-4bad-b4b3-600967c3982a")
+		)
+		(instances
+			(project ""
+				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/605cddf5-737f-47be-b5fd-7ed3decef4e0"
+					(reference "C20")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R_US")
 		(at 44.45 107.95 90)
 		(unit 1)
@@ -4619,7 +4596,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C17520"
 			(at 110.49 77.47 0)
 			(effects
 				(font
@@ -4698,7 +4675,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C125117 "
 			(at 58.42 110.49 0)
 			(effects
 				(font
@@ -4780,7 +4757,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C28323 "
 			(at 87.63 62.23 0)
 			(effects
 				(font
@@ -4821,7 +4798,7 @@
 				)
 			)
 		)
-		(property "Value" "0R"
+		(property "Value" "0R 1206"
 			(at 152.4 60.96 90)
 			(effects
 				(font
@@ -4856,7 +4833,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" "C17477"
+		(property "LCSC" "C17888"
 			(at 152.4 64.77 0)
 			(effects
 				(font
@@ -4874,6 +4851,85 @@
 			(project "ML4"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/605cddf5-737f-47be-b5fd-7ed3decef4e0"
 					(reference "R26")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small")
+		(at 110.49 87.63 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "7df2c75c-2865-4ff7-b8f2-cc823e838aa0")
+		(property "Reference" "C19"
+			(at 113.03 86.3662 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "47u"
+			(at 113.03 88.9062 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 110.49 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 110.49 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Unpolarized capacitor, small symbol"
+			(at 110.49 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "LCSC" "C16780 "
+			(at 110.49 87.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "2"
+			(uuid "986cceb6-8ba5-45c9-b789-1bd2e400ab33")
+		)
+		(pin "1"
+			(uuid "dbede9d5-e84b-4b33-9e69-716f68c8e3ff")
+		)
+		(instances
+			(project ""
+				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/605cddf5-737f-47be-b5fd-7ed3decef4e0"
+					(reference "C19")
 					(unit 1)
 				)
 			)
@@ -5422,7 +5478,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C28233 "
 			(at 240.03 34.29 0)
 			(effects
 				(font
@@ -5576,7 +5632,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C12765"
 			(at 60.96 43.18 0)
 			(effects
 				(font
@@ -5620,7 +5676,7 @@
 				)
 			)
 		)
-		(property "Value" "LMV324 (Actually LTV9161)"
+		(property "Value" "TLV9164PWR"
 			(at 205.74 59.69 0)
 			(effects
 				(font
@@ -5655,7 +5711,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C4368361"
 			(at 205.74 67.31 0)
 			(effects
 				(font
@@ -5799,7 +5855,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "50k"
 			(at 72.39 60.96 0)
 			(effects
 				(font
@@ -5835,7 +5891,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C81264"
 			(at 74.93 62.23 0)
 			(effects
 				(font
@@ -5916,7 +5972,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C1710 "
 			(at 191.77 83.82 0)
 			(effects
 				(font
@@ -5992,7 +6048,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C17520"
 			(at 127 48.26 0)
 			(effects
 				(font
@@ -6010,84 +6066,6 @@
 			(project "ML4"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/605cddf5-737f-47be-b5fd-7ed3decef4e0"
 					(reference "R13")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:C_Polarized_Small_US")
-		(at 227.33 33.02 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "e4e68fbe-14fb-43c2-9801-238c197f8976")
-		(property "Reference" "C20"
-			(at 229.87 31.3181 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Value" "47u"
-			(at 229.87 33.8581 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(justify left)
-			)
-		)
-		(property "Footprint" "bruce-footprints:CPOL_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
-			(at 227.33 33.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 227.33 33.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Polarized capacitor, small US symbol"
-			(at 227.33 33.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "LCSC" ""
-			(at 227.33 33.02 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(pin "1"
-			(uuid "2588bd12-dc9d-47cd-98c6-573d4e496dae")
-		)
-		(pin "2"
-			(uuid "a870c013-aaa2-445f-a9f5-a318df4d8ab3")
-		)
-		(instances
-			(project "ML4"
-				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/605cddf5-737f-47be-b5fd-7ed3decef4e0"
-					(reference "C20")
 					(unit 1)
 				)
 			)
@@ -6214,7 +6192,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C28233 "
 			(at 100.33 76.2 0)
 			(effects
 				(font
@@ -6453,7 +6431,7 @@
 				)
 			)
 		)
-		(property "Value" "LMV324 (Actually LTV9161)"
+		(property "Value" "TLV9164PWR"
 			(at 120.65 57.15 0)
 			(effects
 				(font
@@ -6488,7 +6466,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C4368361"
 			(at 120.65 64.77 0)
 			(effects
 				(font

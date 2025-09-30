@@ -6,7 +6,7 @@
 	(paper "USLetter")
 	(title_block
 		(title "MicroLink - Microcontroller")
-		(date "2024-04-24")
+		(date "2025-09-30")
 		(rev "4")
 		(company "Bruce MacKinnon KC1FSZ")
 		(comment 1 "Copyright (C) 2024 - Not For Commercial Use")
@@ -3122,7 +3122,7 @@
 			(embedded_fonts no)
 		)
 	)
-	(text "This is a voltage reference for the ADC"
+	(text "This is a 3VDC voltage reference for the ADC"
 		(exclude_from_sim no)
 		(at 177.546 72.136 0)
 		(effects
@@ -4669,7 +4669,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C4364775"
 			(at 184.15 140.97 0)
 			(effects
 				(font
@@ -4751,7 +4751,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C7203003"
 			(at 115.57 100.33 0)
 			(effects
 				(font
@@ -5140,12 +5140,13 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C2293"
 			(at 213.36 116.84 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "2"
@@ -5499,12 +5500,13 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C144153"
 			(at 162.56 45.72 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "3"
@@ -5586,6 +5588,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "1"
@@ -5664,6 +5667,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "1"
@@ -5700,7 +5704,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LM4040DBZ-3"
+		(property "Value" "LM4040D30IDBZR"
 			(at 173.99 78.74 90)
 			(effects
 				(font
@@ -5738,12 +5742,13 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C2157213"
 			(at 171.45 77.47 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "1"
@@ -5960,12 +5965,13 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C2297"
 			(at 227.33 116.84 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "2"

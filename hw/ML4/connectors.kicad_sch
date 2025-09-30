@@ -5,11 +5,13 @@
 	(uuid "085a9e30-113c-4e92-ab75-9855ed0c25bf")
 	(paper "USLetter")
 	(title_block
-		(date "2024-04-24")
+		(date "2025-09-30")
 		(rev "4")
+		(company "Bruce MacKinnon KC1FSZ")
+		(comment 1 "Copyright (C) 2024 - Not For Commercial Use")
 	)
 	(lib_symbols
-		(symbol "power:+5VA"
+		(symbol "power:+12VA"
 			(power)
 			(pin_numbers
 				(hide yes)
@@ -30,7 +32,7 @@
 					(hide yes)
 				)
 			)
-			(property "Value" "+5VA"
+			(property "Value" "+12VA"
 				(at 0 3.556 0)
 				(effects
 					(font
@@ -56,7 +58,7 @@
 					(hide yes)
 				)
 			)
-			(property "Description" "Power symbol creates a global label with name \"+5VA\""
+			(property "Description" "Power symbol creates a global label with name \"+12VA\""
 				(at 0 0 0)
 				(effects
 					(font
@@ -74,7 +76,7 @@
 					(hide yes)
 				)
 			)
-			(symbol "+5VA_0_1"
+			(symbol "+12VA_0_1"
 				(polyline
 					(pts
 						(xy -0.762 1.27) (xy 0 2.54)
@@ -112,7 +114,7 @@
 					)
 				)
 			)
-			(symbol "+5VA_1_1"
+			(symbol "+12VA_1_1"
 				(pin power_in line
 					(at 0 0 90)
 					(length 0)
@@ -1433,6 +1435,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+12VA")
+		(at 119.38 128.27 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "2b6fc517-98aa-444b-a800-3e313e53bd5d")
+		(property "Reference" "#PWR02"
+			(at 119.38 132.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+12VA"
+			(at 119.38 123.19 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 119.38 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 119.38 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"+12VA\""
+			(at 119.38 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "e0cb943f-b126-405f-9c16-f93bc1eabf02")
+		)
+		(instances
+			(project ""
+				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/c058822f-762c-444c-afb6-faa81e48d80a"
+					(reference "#PWR02")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "symbol-library-1:Power_5.5mm_PJ-102AH")
 		(at 109.22 135.89 0)
 		(unit 1)
@@ -1566,7 +1634,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C3096093"
 			(at 109.22 135.89 0)
 			(effects
 				(font
@@ -1587,72 +1655,6 @@
 			(project "ML4"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/c058822f-762c-444c-afb6-faa81e48d80a"
 					(reference "J2")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "power:+5VA")
-		(at 119.38 128.27 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(fields_autoplaced yes)
-		(uuid "3f04d30c-def4-42d2-9d9f-e19576f64cfb")
-		(property "Reference" "#PWR047"
-			(at 119.38 132.08 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+5VA"
-			(at 119.38 123.19 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 119.38 128.27 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 119.38 128.27 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" "Power symbol creates a global label with name \"+5VA\""
-			(at 119.38 128.27 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "9c77bdca-06d8-4817-b1f5-13ec8e8b2fdf")
-		)
-		(instances
-			(project "ML4"
-				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/c058822f-762c-444c-afb6-faa81e48d80a"
-					(reference "#PWR047")
 					(unit 1)
 				)
 			)

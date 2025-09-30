@@ -432,6 +432,14 @@ This is the official binary that runs in production.
 
 # Rig Integration Notes
 
+## SA818 Module Integration
+
+(Work in process)
+
+Module datasheet: https://d3s5r33r268y59.cloudfront.net/datasheets/2570/2014-06-03-08-38-29/SA818%20Datasheet.pdf
+Module programming: https://www.qsl.net/ta2ei/devreler/sa818/SA818%20programming%20manual.pdf
+A good reference: https://hamvoip.org/hamradio/818_transceiver_module/
+
 ## Yaesu FT-1900
 
 This rig was installed in October of 2024 to address an ongoing problem with occasional local QRN. The RF squelch on the original (AZDEN) rig was opening sporadically, particularly during the evening hours. The advantage of the more modern Yaesu rig is that it supports CTCSS tone squelch.
