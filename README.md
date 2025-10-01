@@ -72,7 +72,8 @@ My goal was to build a complete station from scratch, with no strings attached t
 
 I have made a PCB for 
 ease of use with radios (link mode) and/or direct integration with repeaters. Further refinements
-of the PCB are in process.
+of the PCB are in process. The [latest Gerbers are here](hw/ML4/plot/ML4.zip) and 
+the [latest BOM is here](hw/ML4/ML4-bom.csv).
 
 This project required an in-depth examination of how the EchoLink protocol works. [The notes
 I created during this analysis are located here](https://github.com/brucemack/microlink/blob/main/docs/el_supplement.md).
