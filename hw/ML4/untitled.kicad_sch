@@ -4649,7 +4649,7 @@
 				)
 			)
 		)
-		(property "Footprint" "TS04-66-55-BK-160-SMT:SW_TS04-66-55-BK-160-SMT"
+		(property "Footprint" "bruce-footprints:SW_TS04-66-55-BK-160-SMT"
 			(at 184.15 140.97 0)
 			(effects
 				(font
@@ -4708,6 +4708,24 @@
 			)
 		)
 		(property "LCSC" "C4364775"
+			(at 184.15 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DK" ""
+			(at 184.15 140.97 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "BOM Comments" ""
 			(at 184.15 140.97 0)
 			(effects
 				(font
@@ -4800,6 +4818,15 @@
 			)
 		)
 		(property "DK" ""
+			(at 115.57 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "BOM Comments" ""
 			(at 115.57 100.33 0)
 			(effects
 				(font
@@ -5198,7 +5225,7 @@
 				(hide yes)
 			)
 		)
-		(property "LCSC" "C2293"
+		(property "LCSC" "C84259 "
 			(at 213.36 116.84 0)
 			(effects
 				(font
@@ -5457,7 +5484,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "digikey-footprints:SOT-23-3"
+		(property "Footprint" "Package_TO_SOT_SMD:SOT-23_Handsoldering"
 			(at 167.64 50.8 0)
 			(effects
 				(font

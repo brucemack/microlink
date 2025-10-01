@@ -782,7 +782,7 @@
           "group_by": false,
           "label": "DK",
           "name": "DK",
-          "show": false
+          "show": true
         },
         {
           "group_by": false,
