@@ -620,9 +620,16 @@ details.
 
 # Manufacturing/Assembly 
 
-There is a BOM that includes LCSC part numbers. [See the CSV file here](hw/ML4/ML4-bom.csv).
-Most of the parts are listed and available on LCSC. Here are some notes on some 
-parts that didn't appear on LCSC:
+At the request of Abdullah S21AF I've updated the design files a bit to make 
+assembly using parts from [LCSC Electronics](https://www.lcsc.com/). This involved
+a few tweaks to the PCB to allow the use of more available parts. I've also updated
+the schematics to include the LCSC part numbers. Please 
+see the ML4 version of the hardware design files.
+
+There is also an official BOM file that includes LCSC part 
+numbers. [See the CSV file here](hw/ML4/ML4-bom.csv).
+Most of the parts listed in the BOM are available on LCSC. Here are some notes on some 
+parts that didn't appear on LCSC when I checked:
 
 * J1, the DB9 radio connector. This is an important part since there are mechanical
 and enclosure dependencies. The official design uses a **A-DF 09 A/KG-T2S** from Assmann
