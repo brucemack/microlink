@@ -640,7 +640,7 @@ for configuration or diagnostics.  The official design uses a **TS04-66-55-BK-16
 from Same Sky. These are in stock at DigiKey using part number 2223-TS04-66-55-BK-160-SMT-ND
 .
 * U7, the voltage reference. This is used to improve the performance of the ADC inside
-of the Pico.  According to the [Pico Datasheet](https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf): "... for much improved ADC performance, an external 3.0V shunt reference, such as LM4040, can be connected from the
+of the Pico.  According to the [Pico Datasheet](https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf) in section 4.3: "... for much improved ADC performance, an external 3.0V shunt reference, such as LM4040, can be connected from the
 ADC_VREF pin to ground." So this influences audio quality, but I've not measured it
 so I don't know if it's significant.
 
