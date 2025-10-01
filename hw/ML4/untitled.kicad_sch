@@ -730,6 +730,15 @@
 					(hide yes)
 				)
 			)
+			(property "Sim.Pins" "1=K 2=A"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
 			(property "ki_keywords" "LED diode"
 				(at 0 0 0)
 				(effects
@@ -996,7 +1005,7 @@
 				(offset 0)
 				(hide yes)
 			)
-			(exclude_from_sim yes)
+			(exclude_from_sim no)
 			(in_bom no)
 			(on_board yes)
 			(property "Reference" "JP"
@@ -1306,6 +1315,25 @@
 						)
 					)
 					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin no_connect line
+					(at -1.27 0 0)
+					(length 2.54)
+					(hide yes)
+					(name "NC"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "3"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -3143,6 +3171,16 @@
 		)
 		(uuid "7971efc8-0a6c-4dbe-b872-b48987b4e493")
 	)
+	(text "Pico Pi W Module"
+		(exclude_from_sim no)
+		(at 116.078 49.784 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "cacb05d0-23f3-44b2-9c4f-8b19df69b859")
+	)
 	(junction
 		(at 63.5 104.14)
 		(diameter 0)
@@ -4611,7 +4649,7 @@
 				)
 			)
 		)
-		(property "Footprint" "bruce-footprints:SW_TS04-66-55-BK-160-SMT"
+		(property "Footprint" "TS04-66-55-BK-160-SMT:SW_TS04-66-55-BK-160-SMT"
 			(at 184.15 140.97 0)
 			(effects
 				(font
@@ -4675,6 +4713,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "3"
@@ -4757,6 +4796,16 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
+			)
+		)
+		(property "DK" ""
+			(at 115.57 100.33 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
 			)
 		)
 		(pin "18"
@@ -5149,6 +5198,15 @@
 				(hide yes)
 			)
 		)
+		(property "Sim.Pins" "1=K 2=A"
+			(at 213.36 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "e8ef2609-85ca-4501-a565-800924632929")
 		)
@@ -5390,7 +5448,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "Package_TO_SOT_SMD:SOT-23-3"
+		(property "Footprint" "digikey-footprints:SOT-23-3"
 			(at 167.64 50.8 0)
 			(effects
 				(font
@@ -5757,6 +5815,9 @@
 		(pin "2"
 			(uuid "8dfa26ae-873d-4412-b094-7cbfd2a1bac3")
 		)
+		(pin "3"
+			(uuid "74ded36b-021f-4379-918c-4903ac7b8d4f")
+		)
 		(instances
 			(project "ML4"
 				(path "/5f8f636b-fd0e-498e-8696-0a023acb4c09/fa333dda-eb84-4ed5-ba74-283a026e08db"
@@ -5966,6 +6027,15 @@
 			)
 		)
 		(property "LCSC" "C2297"
+			(at 227.33 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Sim.Pins" "1=K 2=A"
 			(at 227.33 116.84 0)
 			(effects
 				(font

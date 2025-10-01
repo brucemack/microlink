@@ -2303,7 +2303,7 @@
 				)
 				(polyline
 					(pts
-						(xy 2.54 1.905) (xy 2.54 -1.905) (xy 2.54 -1.905)
+						(xy 2.54 1.905) (xy 2.54 -1.905)
 					)
 					(stroke
 						(width 0.508)
@@ -2327,7 +2327,7 @@
 				)
 				(polyline
 					(pts
-						(xy 3.048 -1.651) (xy 3.556 -1.143) (xy 4.064 -2.159) (xy 3.048 -1.651) (xy 3.048 -1.651)
+						(xy 3.048 -1.651) (xy 3.556 -1.143) (xy 4.064 -2.159) (xy 3.048 -1.651)
 					)
 					(stroke
 						(width 0)
@@ -2678,6 +2678,19 @@
 		)
 	)
 	(rectangle
+		(start 210.82 78.74)
+		(end 236.22 104.14)
+		(stroke
+			(width 0)
+			(type dot)
+			(color 10 17 255 1)
+		)
+		(fill
+			(type none)
+		)
+		(uuid 1f1fc027-4191-476e-9505-5726049cee7d)
+	)
+	(rectangle
 		(start 102.87 69.85)
 		(end 171.45 115.57)
 		(stroke
@@ -2703,7 +2716,7 @@
 	)
 	(text "CW to increase gain"
 		(exclude_from_sim no)
-		(at 241.554 85.852 0)
+		(at 242.824 86.868 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2736,7 +2749,7 @@
 		)
 		(uuid "84c8b950-8dfd-490e-b6da-8641e35898e6")
 	)
-	(text "-10dB pad to attenuate line output\nto something close to microphone level."
+	(text "-10dB pad to attenuate line output\nto something close to microphone level.\nThese three resistors are through-hole\nto make it easier to change them as needed\nto adjust gain."
 		(exclude_from_sim no)
 		(at 212.09 78.232 0)
 		(effects
@@ -4380,6 +4393,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "3"
@@ -4570,6 +4584,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "1"
@@ -5965,6 +5980,7 @@
 				(font
 					(size 1.27 1.27)
 				)
+				(hide yes)
 			)
 		)
 		(pin "6"
@@ -6012,7 +6028,7 @@
 				)
 			)
 		)
-		(property "Value" "Transformer_1P_1S"
+		(property "Value" "Transformer_1P_1S 600 Ohm"
 			(at 201.9427 83.82 0)
 			(effects
 				(font
