@@ -618,16 +618,36 @@ integration with this rig just listens for noise on the audio output line
 and triggers accordingly.  That seems to work just fine.  See the schematic for 
 details.
 
+# KiCad Project Notes
+
+The latest (ML4) design was created using KiCad 9.
+
+There are a few symbols/footprints in the hardware design that are not 
+included in the standard KiCad libraries. These parts are included 
+in my own library located in GitHib. Please clone my [GitHub project called kicad-library](https://github.com/brucemack/kicad-library) to get access to these 
+additional parts.
+
+There are a few steps that need to be taken to allow KiCad to find the
+custom parts:
+
+* From the schematic editor, use Preferences ... Manage Symbol Libraries. Add the 
+location of the symbol-library-1 from the kicad-library repo.
+* From the schematic editor, use Preferences ... Configure Paths. Add a new
+name "USER_3DMODEL_DIR" and set the path to the location of the 3d directory 
+from the kicad-library repo.
+* From the PCB editor, use Preferences ... Manage Footprint Libraries. Add the 
+location of the bruce-footprints from the kicad-library repo.
+
 # Manufacturing/Assembly 
 
 At the request of Abdullah S21AF I've updated the design files to make 
-assembly using parts from [LCSC Electronics](https://www.lcsc.com/). This involved
-a few tweaks to the PCB to allow the use of more available parts. I've also updated
+assembly using parts from [LCSC Electronics](https://www.lcsc.com/) easier. This involved
+a few tweaks to the PCB to allow the use of more available parts. I've updated
 the schematics to include the LCSC part numbers. Please 
 see the ML4 version of the hardware design files.
 
-There is also an official BOM file that includes LCSC part 
-numbers. [See the CSV file here](hw/ML4/ML4-bom.csv).
+There is now an official BOM file that includes LCSC part 
+numbers: [see the CSV file here](hw/ML4/ML4-bom.csv).
 Most of the parts listed in the BOM are available on LCSC. Here are some notes on some 
 parts that didn't appear on LCSC when I checked:
 
@@ -667,7 +687,7 @@ for a microphone level and the pot can be used to dial in the proper level.
 
 The optional DC blocking capacitor (C10) can be installed if your radio provides
 a DC bias voltage
-on the microphone cable as is often the case when powering an electet/condenser
+on the microphone cable as is often the case when powering an electret/condenser
 microphone. If you don't use the DC block then a short should be installed instead.
 
 # References

@@ -6247,7 +6247,7 @@
 			)
 		)
 		(property "Value" "47u (Optional DC Block)"
-			(at 256.54 91.44 90)
+			(at 253.238 91.44 90)
 			(effects
 				(font
 					(size 1.27 1.27)
