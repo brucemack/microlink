@@ -645,6 +645,8 @@ ADC_VREF pin to ground." So this influences audio quality, but I've not measured
 so I don't know if it's significant.
 
 The Gerber files for the ML4 version of the PCB are [located here](hw/ML4/plot/ML4.zip).
+**NOTE:** As of September 2025 I have not yet manufactured/tested this version
+of the PCB. 
 
 ## Microphone Interface in ML4
 
