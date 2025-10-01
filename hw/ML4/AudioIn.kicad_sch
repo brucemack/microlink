@@ -6,10 +6,10 @@
 	(paper "USLetter")
 	(title_block
 		(title "MicroLink - Audio Input")
-		(date "2025-09-30")
+		(date "2025-10-01")
 		(rev "4")
 		(company "Bruce MacKinnon KC1FSZ")
-		(comment 1 "Copyright (C) 2024 - Not For Commercial Use")
+		(comment 1 "Copyright (C) 2025 - Not For Commercial Use")
 	)
 	(lib_symbols
 		(symbol "Amplifier_Operational:LMV324"
@@ -2579,6 +2579,16 @@
 			)
 		)
 		(uuid "950abd41-9c4a-4230-b133-079ff66f8cd8")
+	)
+	(text "Needed for cross-over \nin layout"
+		(exclude_from_sim no)
+		(at 152.654 69.342 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "951efe25-4298-4c96-932a-240f749eb419")
 	)
 	(text "1.44V"
 		(exclude_from_sim no)

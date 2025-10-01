@@ -6,10 +6,10 @@
 	(paper "USLetter")
 	(title_block
 		(title "MicroLink - Top Level")
-		(date "2025-09-30")
+		(date "2025-10-01")
 		(rev "4")
 		(company "Bruce MacKinnon KC1FSZ")
-		(comment 1 "Copyright (C) 2024 - Not For Commercial Use")
+		(comment 1 "Copyright (C) 2025 - Not For Commercial Use")
 	)
 	(lib_symbols
 		(symbol "Mechanical:MountingHole"
