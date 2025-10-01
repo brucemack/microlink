@@ -383,116 +383,6 @@ configurable duty cycle limit (defaults to 50%).  Once
 the link radio has been keyed for more than 50% of the time in any 5 minute interval
 the radio is un-keyed and allowed to rest. 
 
-## Building the Link Station
-
-This is the official binary that runs in production.
-
-(These notes are not comprehensive yet.)
-
-    git clone https://github.com/brucemack/microlink.git
-    cd microlink
-    git submodule update --remote
-    mkdir build
-    cd build
-    export PICO_BUILD=1
-    cmake -DPICO_BOARD=pico_w ..
-    make link-main-2
-    openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main-2.elf verify reset exit"
-   
-## Building Tests on Windows (CYGWIN)
-
-(These notes are not comprehensive yet.)
-
-    git clone https://github.com/brucemack/microlink.git
-    cd microlink
-    git submodule update --remote
-    mkdir build
-    cd build
-    cmake ..
-    make <target>
-
-## ESP32 AT Firmware Notes
-
-(No longer used)
-
-    esptool.py --chip auto --port /dev/ttyUSB0 --baud 115200 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB 0x0 /home/bruce/Downloads/ESP32-WROOM-32-V3.2.0.0/factory/factory_WROOM-32.bin
-
-## Test Commands
-
-    # Used to receive UDP packets
-    netcat -u -l 5198
-    # Used to send UDP packets.  The printf command supports non-printable.
-    printf 'Hello\rWorld' | nc -u -w1 192.168.8.210 5198
-
-    # Login test
-    printf "lKC1FSZ\254\254xxx\rONLINE0.02MLZ(08:11)\rWellesley, MA USA\r" | nc -w 10 naeast.echolink.org 5200
-
-    # SIM7600 open TCP socket in transparent mode:
-    ATE0;+CIPMODE=1;+NETOPEN;+CIPOPEN=0,"TCP","54.89.121.215",8100
-
-# Rig Integration Notes
-
-## SA818 Module Integration
-
-(Work in process)
-
-Module datasheet: https://d3s5r33r268y59.cloudfront.net/datasheets/2570/2014-06-03-08-38-29/SA818%20Datasheet.pdf
-Module programming: https://www.qsl.net/ta2ei/devreler/sa818/SA818%20programming%20manual.pdf
-A good reference: https://hamvoip.org/hamradio/818_transceiver_module/
-
-## Yaesu FT-1900
-
-This rig was installed in October of 2024 to address an ongoing problem with occasional local QRN. The RF squelch on the original (AZDEN) rig was opening sporadically, particularly during the evening hours. The advantage of the more modern Yaesu rig is that it supports CTCSS tone squelch.
-
-[Here is the manual for the rig](https://www.yaesu.com/downloadFile.cfm?FileID=7879&FileCatID=150&FileName=FT%2D1900R%5FOM%5FEH023N111.pdf&FileContentType=application%2Fpdf).
-
-### Connectors
-
-The rig has a normal 3.5mm audio output jack on the back. This is used to drive the audio input on the MicroLink box.
-
-The FT-1900 ships with a Yaesu MH-48 microphone.  The rig as a 6-pin RJ12 modular microphone connector on the front. **NOTE:** Although this looks similar to the RJ45 connector used on many (ICOM) rigs, it is actually the smaller connector size commonly used for telephones.  Unlike the telephone RJ11 connector that uses 4 pins, the RJ12 connector uses 6 pins.
-
-The pinout is as follows, looking into the front of the rig and counting from left to right:
-
-* Pin 6 - PTT
-* Pin 5 - Microphone Input
-* Pin 4 - Ground for microphone and PTT
-* Pin 3 - +8V
-* Pin 2 - Mic SW1
-* Pin 1 - Mic SW2
-
-Pins 6, 5, and 4 are used for the MicroLink interface.  Pins 3, 2, and 1 are not used.
-
-### Carrier Detect
-
-There is no carrier detect output on the rig.  MicroLink is run in soft-COS mode with this radio and we've not had any propblems.
-
-### Other Configuration
-
-We have saved the repeater frequency/split/tone/power level in one of the rig's memory slots so that the correct configuration is used automatically following a power cycle. It appears that the rig remembers the last memory slot that was selected after power off/on.
-
-## Baofeng BF-F8HP HT
-
-### Connectors
-
-* 3.5mm Jack
-  - Tip - NC
-  - Ring - Rig mic in, MicroLink audio out
-  - Sleeve - PTT when pulled to ground
-* 2.5mm Jack
-  - Tip - Rig speaker+ out, MicroLink audio in
-  - Ring - Rig ground
-  - Sleeve - Rig ground
-
-### Carrier Detect
-
-This has been discussed at length in other venues.  The method of detecting the 
-receive carrier depends on the radio you are using.  Unless you are willing 
-to crack it open, there is no explicit carrier detect "signal" on the Baofeng HT.  My 
-integration with this rig just listens for noise on the audio output line
-and triggers accordingly.  That seems to work just fine.  See the schematic for 
-details.
-
 ## Notes Regarding Interface with MCP4725
 
 The RP2040 has no DAC and the MCP4725 is cheap and plentiful. This could certainly be 
@@ -617,6 +507,135 @@ enough.
   - If all tests pass, then do the 40ms duration checks.
 * The +4dB level is equivalent to x ~1.58 linear.  Testing a/b > ~1.58 is the same as testing 4a/b > ~6.
 * The +8dB level is equivalent to x ~2.5 linear.  Testing a/b > ~2.5 is the same as testing 4a/b > ~10.
+
+## Building the Link Station
+
+This is the official binary that runs in production.
+
+(These notes are not comprehensive yet.)
+
+    git clone https://github.com/brucemack/microlink.git
+    cd microlink
+    git submodule update --remote
+    mkdir build
+    cd build
+    export PICO_BUILD=1
+    cmake -DPICO_BOARD=pico_w ..
+    make link-main-2
+    openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main-2.elf verify reset exit"
+   
+## Building Tests on Windows (CYGWIN)
+
+(These notes are not comprehensive yet.)
+
+    git clone https://github.com/brucemack/microlink.git
+    cd microlink
+    git submodule update --remote
+    mkdir build
+    cd build
+    cmake ..
+    make <target>
+
+## ESP32 AT Firmware Notes
+
+(No longer used)
+
+    esptool.py --chip auto --port /dev/ttyUSB0 --baud 115200 --before default_reset --after hard_reset write_flash -z --flash_mode dio --flash_freq 40m --flash_size 4MB 0x0 /home/bruce/Downloads/ESP32-WROOM-32-V3.2.0.0/factory/factory_WROOM-32.bin
+
+## Test Commands
+
+    # Used to receive UDP packets
+    netcat -u -l 5198
+    # Used to send UDP packets.  The printf command supports non-printable.
+    printf 'Hello\rWorld' | nc -u -w1 192.168.8.210 5198
+
+    # Login test
+    printf "lKC1FSZ\254\254xxx\rONLINE0.02MLZ(08:11)\rWellesley, MA USA\r" | nc -w 10 naeast.echolink.org 5200
+
+    # SIM7600 open TCP socket in transparent mode:
+    ATE0;+CIPMODE=1;+NETOPEN;+CIPOPEN=0,"TCP","54.89.121.215",8100
+
+# Rig Integration Notes
+
+## SA818 Module Integration
+
+(Work in process)
+
+Module datasheet: https://d3s5r33r268y59.cloudfront.net/datasheets/2570/2014-06-03-08-38-29/SA818%20Datasheet.pdf
+Module programming: https://www.qsl.net/ta2ei/devreler/sa818/SA818%20programming%20manual.pdf
+A good reference: https://hamvoip.org/hamradio/818_transceiver_module/
+
+## Yaesu FT-1900
+
+This rig was installed in October of 2024 to address an ongoing problem with occasional local QRN. The RF squelch on the original (AZDEN) rig was opening sporadically, particularly during the evening hours. The advantage of the more modern Yaesu rig is that it supports CTCSS tone squelch.
+
+[Here is the manual for the rig](https://www.yaesu.com/downloadFile.cfm?FileID=7879&FileCatID=150&FileName=FT%2D1900R%5FOM%5FEH023N111.pdf&FileContentType=application%2Fpdf).
+
+### Connectors
+
+The rig has a normal 3.5mm audio output jack on the back. This is used to drive the audio input on the MicroLink box.
+
+The FT-1900 ships with a Yaesu MH-48 microphone.  The rig as a 6-pin RJ12 modular microphone connector on the front. **NOTE:** Although this looks similar to the RJ45 connector used on many (ICOM) rigs, it is actually the smaller connector size commonly used for telephones.  Unlike the telephone RJ11 connector that uses 4 pins, the RJ12 connector uses 6 pins.
+
+The pinout is as follows, looking into the front of the rig and counting from left to right:
+
+* Pin 6 - PTT
+* Pin 5 - Microphone Input
+* Pin 4 - Ground for microphone and PTT
+* Pin 3 - +8V
+* Pin 2 - Mic SW1
+* Pin 1 - Mic SW2
+
+Pins 6, 5, and 4 are used for the MicroLink interface.  Pins 3, 2, and 1 are not used.
+
+### Carrier Detect
+
+There is no carrier detect output on the rig.  MicroLink is run in soft-COS mode with this radio and we've not had any propblems.
+
+### Other Configuration
+
+We have saved the repeater frequency/split/tone/power level in one of the rig's memory slots so that the correct configuration is used automatically following a power cycle. It appears that the rig remembers the last memory slot that was selected after power off/on.
+
+## Baofeng BF-F8HP HT
+
+### Connectors
+
+* 3.5mm Jack
+  - Tip - NC
+  - Ring - Rig mic in, MicroLink audio out
+  - Sleeve - PTT when pulled to ground
+* 2.5mm Jack
+  - Tip - Rig speaker+ out, MicroLink audio in
+  - Ring - Rig ground
+  - Sleeve - Rig ground
+
+### Carrier Detect
+
+This has been discussed at length in other venues.  The method of detecting the 
+receive carrier depends on the radio you are using.  Unless you are willing 
+to crack it open, there is no explicit carrier detect "signal" on the Baofeng HT.  My 
+integration with this rig just listens for noise on the audio output line
+and triggers accordingly.  That seems to work just fine.  See the schematic for 
+details.
+
+# Manufacturing/Assembly 
+
+There is a BOM that includes LCSC part numbers. [See the CSV file here](hw/ML4/ML4-bom.csv).
+Most of the parts are listed and available on LCSC. Here are some notes on some 
+parts that didn't appear on LCSC:
+
+* J1, the DB9 radio connector. This is an important part since there are mechanical
+and enclosure dependencies. The official design uses a **A-DF 09 A/KG-T2S** from Assmann
+Components. These are in stock at DigiKey using part number AE10921-ND.
+* SW0, the SMT push-button switch. This part is less important since the firmware
+doesn't make use of it at the moment. At some point in the future it may be used
+for configuration or diagnostics.  The official design uses a **TS04-66-55-BK-160-SMT**
+from Same Sky. These are in stock at DigiKey using part number 2223-TS04-66-55-BK-160-SMT-ND
+.
+* U7, the voltage reference. This is used to improve the performance of the ADC inside
+of the Pico.  According to the [Pico Datasheet](https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf): "... for much improved ADC performance, an external 3.0V shunt reference, such as LM4040, can be connected from the
+ADC_VREF pin to ground." So this influences audio quality, but I've not measured it
+so I don't know if it's significant.
 
 # References
 

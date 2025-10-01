@@ -5676,7 +5676,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "2,.2k"
+		(property "Value" "2.2k"
 			(at 227.076 94.996 0)
 			(effects
 				(font
@@ -5713,6 +5713,24 @@
 			)
 		)
 		(property "LCSC" "C58595 "
+			(at 232.41 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "DK" ""
+			(at 232.41 90.17 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "BOM Comments" ""
 			(at 232.41 90.17 0)
 			(effects
 				(font
