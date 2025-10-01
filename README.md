@@ -646,6 +646,28 @@ so I don't know if it's significant.
 
 The Gerber files for the ML4 version of the PCB are [located here](hw/ML4/plot/ML4.zip).
 
+## Microphone Interface in ML4
+
+It's been tricky to interface to the audio input of some radios. Sometimes this 
+needs to be "line level," but most of the time the audio is being fed into 
+the microphone input. Different radios expect very different audio levels,
+but microphone levels are very small compared to what is coming out of 
+the MicroLink circuit.
+
+To improve flexibility, a resistive pi-attenuator is provided **using through-hole
+resistors**. THT parts make it easier to adjust the attenuation in the field.
+There is also a pot that can be used for fine adjustment. Here's the schematic:
+
+![Output Pad](docs/output-pad.jpg)
+
+From my experience a -10dB pad gets the audio level into the right range 
+for a microphone level and the pot can be used to dial in the proper level.
+
+The optional DC blocking capacitor (C10) can be installed if your radio provides
+a DC bias voltage
+on the microphone cable as is often the case when powering an electet/condenser
+microphone. If you don't use the DC block then a short should be installed instead.
+
 # References
 
 * Official EchoLink Site: https://www.echolink.org/
