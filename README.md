@@ -620,7 +620,7 @@ details.
 
 # Manufacturing/Assembly 
 
-At the request of Abdullah S21AF I've updated the design files a bit to make 
+At the request of Abdullah S21AF I've updated the design files to make 
 assembly using parts from [LCSC Electronics](https://www.lcsc.com/). This involved
 a few tweaks to the PCB to allow the use of more available parts. I've also updated
 the schematics to include the LCSC part numbers. Please 
@@ -643,6 +643,8 @@ from Same Sky. These are in stock at DigiKey using part number 2223-TS04-66-55-B
 of the Pico.  According to the [Pico Datasheet](https://datasheets.raspberrypi.com/pico/pico-datasheet.pdf): "... for much improved ADC performance, an external 3.0V shunt reference, such as LM4040, can be connected from the
 ADC_VREF pin to ground." So this influences audio quality, but I've not measured it
 so I don't know if it's significant.
+
+The Gerber files for the ML4 version of the PCB are [located here](hw/ML4/plot/ML4.zip).
 
 # References
 
