@@ -512,7 +512,7 @@ enough.
 
 ## Building the Link Station
 
-This is the official binary that runs in production.
+This is the official binary that runs in production. 
 
 (These notes are not comprehensive yet.)
 
@@ -524,7 +524,19 @@ This is the official binary that runs in production.
     export PICO_BUILD=1
     cmake -DPICO_BOARD=pico_w ..
     make link-main-2
+    # At this point you'll have a link-main-2.uf2 that can 
+    # be dragged onto a Pico W module. This is done by 
+    # holding down the BOOTSEL button while powering on 
+    # and then dragging/dropping the UF2 file onto the mass
+    # storage device.
+    #
+    # Or the link-main-2.elf can be flashed onto the board
+    # via the SWD port using a Raspberry Pi programming feature:
     openocd -f interface/raspberrypi-swd.cfg -f target/rp2040.cfg -c "program link-main-2.elf verify reset exit"
+    #
+    # Or, more directly, using the RPi Debug/Programming Probe:
+    ~/git/openocd/src/openocd -s ~/git/openocd/tcl -f interface/cmsis-dap.cfg -f target/rp2040.cfg -c "adapter speed 5000" -c "rp2040.dap.core1 cortex_m reset_config sysresetreq" -c "program link-main-2.elf verify reset exit"
+
    
 ## Building Tests on Windows (CYGWIN)
 
