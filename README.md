@@ -518,7 +518,7 @@ This is the official binary that runs in production.
 
     git clone https://github.com/brucemack/microlink.git
     cd microlink
-    git submodule update --remote
+    git submodule update --init 
     mkdir build
     cd build
     export PICO_BUILD=1

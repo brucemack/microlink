@@ -480,8 +480,9 @@ int main(int, const char**) {
     radio0In.setAnalyzer(&rxAnalyzer);
     rxAnalyzer.setEnabled(true);
 
-    int16_t dtmfDetectorHistory[400];
-    DTMFDetector dtmfDetector(dtmfDetectorHistory, 400, sampleRate);
+    //int16_t dtmfDetectorHistory[400];
+    //DTMFDetector dtmfDetector(dtmfDetectorHistory, 400, sampleRate);
+    DTMFDetector dtmfDetector(sampleRate);
 
     // The RXMonitor is basically a gate between the rig's receiver
     // and the Conference.  
@@ -843,8 +844,8 @@ int main(int, const char**) {
             log.info("Discarding DTMF activity");
         }
 
-        while (dtmfDetector.resultAvailable()) {
-            char c = dtmfDetector.getResult();
+        while (dtmfDetector.isAvailable()) {
+            char c = dtmfDetector.pullResult();
             log.info("DTMF: %c", c);
             if (dtmfAccumulatorLen < dtmfAccumulatorSize)
                 dtmfAccumulator[dtmfAccumulatorLen++] = c;

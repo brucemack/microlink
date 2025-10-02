@@ -19,7 +19,7 @@
  * NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
  */
 #include <iostream>
-#include "pico/platform.h"
+//#include "pico/platform.h"
 
 #include "kc1fsz-tools/Common.h"
 #include "kc1fsz-tools/CallSign.h"
