@@ -375,7 +375,7 @@ int main(int, const char**) {
     log.setStdout(true);
 
     log.info("===== MicroLink Link Station ============");
-    log.info("Copyright (c) 2024 Bruce MacKinnon KC1FSZ");
+    log.info("Copyright (c) 2025 Bruce MacKinnon KC1FSZ");
 
     if (watchdog_caused_reboot()) {
         log.info("WATCHDOG REBOOT");
@@ -641,6 +641,12 @@ int main(int, const char**) {
             // Hang the watchdog
             while (true);
         } 
+        else if (streq(cmd, "factoryreset")) {
+            cout << endl << "Factory reset ..." << endl;
+            setDefaultConfig();
+            // Hang the watchdog
+            while (true);
+        } 
         else if (streq(cmd, "tone")) {
             radio0Out.tone(800, 1000);
         }
@@ -719,7 +725,7 @@ int main(int, const char**) {
                     radio0In.setRawOffset(c.adcRawOffset);
                 } 
                 else {
-                    cout << "Unrecognized configuration paramter" << endl;
+                    cout << "Unrecognized configuration parameter" << endl;
                 }
                 saveConfig(&c);
             }
@@ -728,6 +734,7 @@ int main(int, const char**) {
 
             cout << "Configuration:" << endl;
             config->dump(cout);
+            cout << endl;
             cout << "Diagnostics:" << endl;
             cout << "Station count " << conf.getActiveStationCount() << endl;
             cout << "RX ADC value " << radio0In.getLastRawSample() << endl;
@@ -743,7 +750,7 @@ int main(int, const char**) {
             longestCycleUs = 0;
         }
         else {
-            cout << "Unreognized command " << cmd << endl;
+            cout << "Unrecognized command " << cmd << endl;
         }
 
         log.setStdout(false);
