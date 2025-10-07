@@ -571,7 +571,7 @@ This is the official binary that runs in production.
 
 # Rig Integration Notes
 
-## SA818 Module Integration
+## SA818 Transceiver Module
 
 The SA818 is an inexpensive 1W transceiver module that is available for about
 $10 USD. There are VHF and UHF versions. I have tested 
