@@ -574,16 +574,17 @@ This is the official binary that runs in production.
 ## SA818 Module Integration
 
 The SA818 is an inexpensive 1W transceiver module that is available for about
-$10 USD. There are VHF and UHF versions of this radio. I have tested 
-the MicroLink system using this module and it works fine.
+$10 USD. There are VHF and UHF versions. I have tested 
+the MicroLink system using this module and it works fine. [Here is a short demo video](https://www.youtube.com/watch?v=QV-Jfr8qjco&feature=youtu.be).
+
+I've created [notes for this module on my blog](https://mackinnon.info/2025/10/07/sa818-module.html).
 
 * [SA818 Module Datasheet](https://d3s5r33r268y59.cloudfront.net/datasheets/2570/2014-06-03-08-38-29/SA818%20Datasheet.pdf)
 * [SA8181 Module Programming Guide](https://www.qsl.net/ta2ei/devreler/sa818/SA818%20programming%20manual.pdf)
 * [A good reference to another project](https://hamvoip.org/hamradio/818_transceiver_module/)
 
-I've created some [more documentation for this module on my blog](https://mackinnon.info/2025/10/07/sa818-module.html).
-
-The connection is straight-forward. Here's a picture of the module:
+The connection is straight-forward. Here's a picture of the module with interface
+wires attached:
 
 ![SA818](docs/sa818.jpg)
 
