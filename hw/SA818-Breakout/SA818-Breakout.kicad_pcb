@@ -1170,7 +1170,7 @@
 		(descr "Inductor, Axial series, Axial, Horizontal, pin pitch=10.16mm, length*diameter=6.6*2.7mm^2, Vishay, IM-2, http://www.vishay.com/docs/34030/im.pdf")
 		(tags "Inductor Axial series Axial Horizontal pin pitch 10.16mm  length 6.6mm diameter 2.7mm Vishay IM-2")
 		(property "Reference" "L2"
-			(at 5.08 -2.47 90)
+			(at 5.08 0 90)
 			(layer "F.SilkS")
 			(uuid "5afa36e4-1141-4718-8c43-7c9541e9c783")
 			(effects
@@ -1346,7 +1346,7 @@
 		(descr "Inductor, Axial series, Axial, Horizontal, pin pitch=10.16mm, length*diameter=6.6*2.7mm^2, Vishay, IM-2, http://www.vishay.com/docs/34030/im.pdf")
 		(tags "Inductor Axial series Axial Horizontal pin pitch 10.16mm  length 6.6mm diameter 2.7mm Vishay IM-2")
 		(property "Reference" "L1"
-			(at 5.08 -2.47 90)
+			(at 5.08 0 90)
 			(layer "F.SilkS")
 			(uuid "3ac886a3-3488-4864-98cd-4bef185538a8")
 			(effects
@@ -4636,16 +4636,6 @@
 			)
 		)
 	)
-	(gr_line
-		(start 70 80)
-		(end 70 101)
-		(stroke
-			(width 0.1)
-			(type default)
-		)
-		(layer "F.SilkS")
-		(uuid "c26a3d7e-8895-45f9-8c8b-ff8d13a1365e")
-	)
 	(gr_rect
 		(start 103 86)
 		(end 159 135)
@@ -4658,7 +4648,7 @@
 		(uuid "a1735185-7223-49e4-86dc-12f14f79257a")
 	)
 	(gr_text "KC1FSZ bruce@mackinnon.com"
-		(at 68.5 80 270)
+		(at 115 99.5 270)
 		(layer "F.SilkS")
 		(uuid "0e0594c0-cd2e-4381-a17c-3ac3467f6af9")
 		(effects
@@ -4670,7 +4660,7 @@
 		)
 	)
 	(gr_text "SA818 Breakout 25-10"
-		(at 70.5 80 270)
+		(at 104.5 102 270)
 		(layer "F.SilkS")
 		(uuid "541da740-8f28-47f7-a461-a1254ef3da76")
 		(effects
