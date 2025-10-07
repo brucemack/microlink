@@ -6,7 +6,7 @@
 	(paper "USLetter")
 	(title_block
 		(title "SA818 Breakout")
-		(date "2025-10-06")
+		(date "2025-10-07")
 		(rev "1")
 		(company "Bruce MacKinnon KC1FSZ")
 		(comment 1 "Copyright (C) 2025 - NOT FOR COMMERCIAL USE")
@@ -1068,6 +1068,192 @@
 					(at 0 -2.54 90)
 					(length 2.032)
 					(name "~"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "2"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+			)
+			(embedded_fonts no)
+		)
+		(symbol "Device:L_Iron"
+			(pin_numbers
+				(hide yes)
+			)
+			(pin_names
+				(offset 1.016)
+				(hide yes)
+			)
+			(exclude_from_sim no)
+			(in_bom yes)
+			(on_board yes)
+			(property "Reference" "L"
+				(at -1.27 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Value" "L_Iron"
+				(at 2.794 0 90)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+				)
+			)
+			(property "Footprint" ""
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Datasheet" "~"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "Description" "Inductor with iron core"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_keywords" "inductor choke coil reactor magnetic"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(property "ki_fp_filters" "Choke_* *Coil* Inductor_* L_*"
+				(at 0 0 0)
+				(effects
+					(font
+						(size 1.27 1.27)
+					)
+					(hide yes)
+				)
+			)
+			(symbol "L_Iron_0_1"
+				(arc
+					(start 0 2.54)
+					(mid 0.6323 1.905)
+					(end 0 1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 1.27)
+					(mid 0.6323 0.635)
+					(end 0 0)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 0)
+					(mid 0.6323 -0.635)
+					(end 0 -1.27)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(arc
+					(start 0 -1.27)
+					(mid 0.6323 -1.905)
+					(end 0 -2.54)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.016 2.54) (xy 1.016 -2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+				(polyline
+					(pts
+						(xy 1.524 -2.54) (xy 1.524 2.54)
+					)
+					(stroke
+						(width 0)
+						(type default)
+					)
+					(fill
+						(type none)
+					)
+				)
+			)
+			(symbol "L_Iron_1_1"
+				(pin passive line
+					(at 0 3.81 270)
+					(length 1.27)
+					(name "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+					(number "1"
+						(effects
+							(font
+								(size 1.27 1.27)
+							)
+						)
+					)
+				)
+				(pin passive line
+					(at 0 -3.81 90)
+					(length 1.27)
+					(name "2"
 						(effects
 							(font
 								(size 1.27 1.27)
@@ -2305,6 +2491,16 @@
 		)
 		(uuid "8aaef188-837a-4d61-95a0-3dc6b30ecccb")
 	)
+	(text "Harmonic LPF"
+		(exclude_from_sim no)
+		(at 79.248 125.73 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+		)
+		(uuid "97a41a77-dcad-452b-9e34-e1f190383b6d")
+	)
 	(text "Per datasheet: \"output capacitor minimum of \n4.7uF with ESR in range of 33mO to 2.2O\"\n\nUsing series resistor."
 		(exclude_from_sim no)
 		(at 142.748 23.876 0)
@@ -2332,6 +2528,12 @@
 		(uuid "234252a3-b2ba-4ef5-b6d6-25f3ace65487")
 	)
 	(junction
+		(at 60.96 135.89)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "2c0f83e7-25d2-49c9-9304-d3ed42e325fb")
+	)
+	(junction
 		(at 222.25 64.77)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2356,6 +2558,12 @@
 		(uuid "867f3888-ec4b-4aca-85ee-04bf348e3aa6")
 	)
 	(junction
+		(at 77.47 135.89)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "8960671d-0c22-46ff-b832-411313fdb410")
+	)
+	(junction
 		(at 219.71 72.39)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -2378,6 +2586,12 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "c5d508aa-6552-4410-ba5f-0ca83aa3d49b")
+	)
+	(junction
+		(at 93.98 135.89)
+		(diameter 0)
+		(color 0 0 0 0)
+		(uuid "d9d73145-b6c5-4a4d-832b-1ba5a9e3e076")
 	)
 	(no_connect
 		(at 104.14 91.44)
@@ -2445,6 +2659,16 @@
 	)
 	(wire
 		(pts
+			(xy 93.98 135.89) (xy 109.22 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "25346c86-3104-4d0c-a55f-04c979fefca0")
+	)
+	(wire
+		(pts
 			(xy 201.93 80.01) (xy 227.33 80.01)
 		)
 		(stroke
@@ -2505,6 +2729,16 @@
 	)
 	(wire
 		(pts
+			(xy 45.72 135.89) (xy 60.96 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "31c93629-8b9f-4de5-a0f5-1b79e40cd6c2")
+	)
+	(wire
+		(pts
 			(xy 80.01 90.17) (xy 71.12 90.17)
 		)
 		(stroke
@@ -2532,6 +2766,16 @@
 			(type default)
 		)
 		(uuid "3c224123-cb2d-4924-8ee3-61db4313d4aa")
+	)
+	(wire
+		(pts
+			(xy 77.47 135.89) (xy 82.55 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "424980a1-976f-4bff-91b1-a894db06d18a")
 	)
 	(wire
 		(pts
@@ -2585,6 +2829,26 @@
 	)
 	(wire
 		(pts
+			(xy 60.96 139.7) (xy 60.96 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "701c7326-99d3-4a40-9f41-af9e3aa32dfd")
+	)
+	(wire
+		(pts
+			(xy 72.39 135.89) (xy 77.47 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "716cbc35-d5a9-407e-bdee-6726fe31d20d")
+	)
+	(wire
+		(pts
 			(xy 71.12 92.71) (xy 71.12 102.87)
 		)
 		(stroke
@@ -2605,6 +2869,16 @@
 	)
 	(wire
 		(pts
+			(xy 93.98 135.89) (xy 93.98 139.7)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8844021b-9d2a-403a-8c06-bd7382c7ef50")
+	)
+	(wire
+		(pts
 			(xy 64.77 74.93) (xy 80.01 74.93)
 		)
 		(stroke
@@ -2612,6 +2886,16 @@
 			(type default)
 		)
 		(uuid "88443c34-ce45-4f9c-8122-2033d6b7817d")
+	)
+	(wire
+		(pts
+			(xy 60.96 135.89) (xy 64.77 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8849a77c-1e43-475d-941c-13fa281c8d57")
 	)
 	(wire
 		(pts
@@ -2632,6 +2916,16 @@
 			(type default)
 		)
 		(uuid "929c7efb-65c9-44cf-b9f9-0efb3dde0a4a")
+	)
+	(wire
+		(pts
+			(xy 90.17 135.89) (xy 93.98 135.89)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "988d197f-fa9c-4cd6-9015-72088cb056ce")
 	)
 	(wire
 		(pts
@@ -2712,6 +3006,16 @@
 			(type default)
 		)
 		(uuid "c21ff79d-6ea8-4358-9aab-0e75beb70721")
+	)
+	(wire
+		(pts
+			(xy 77.47 135.89) (xy 77.47 139.7)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "c6bfe990-26d0-4784-b0f3-a65cda65ec26")
 	)
 	(wire
 		(pts
@@ -3029,6 +3333,28 @@
 			)
 		)
 	)
+	(global_label "ANT"
+		(shape input)
+		(at 138.43 66.04 0)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left)
+		)
+		(uuid "a9324860-cbfc-47b8-9cf1-ac3dc5fa6d12")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 144.8019 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+				(hide yes)
+			)
+		)
+	)
 	(global_label "AF_OUT"
 		(shape input)
 		(at 193.04 74.93 180)
@@ -3042,6 +3368,28 @@
 		(uuid "b0e3dca4-b427-4ced-8385-2dee8ad6995c")
 		(property "Intersheetrefs" "${INTERSHEET_REFS}"
 			(at 183.2814 74.93 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify right)
+				(hide yes)
+			)
+		)
+	)
+	(global_label "ANT"
+		(shape input)
+		(at 45.72 135.89 180)
+		(fields_autoplaced yes)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify right)
+		)
+		(uuid "de1b2b4d-d6d1-4bf5-91cc-c38ef8ffbd4d")
+		(property "Intersheetrefs" "${INTERSHEET_REFS}"
+			(at 39.3481 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -3638,6 +3986,212 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:C_Small_US")
+		(at 60.96 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "258eb2e8-86e6-4bad-85e7-e6177da6f805")
+		(property "Reference" "C3"
+			(at 63.5 141.0969 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "C_Small_US"
+			(at 63.5 143.6369 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 60.96 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 60.96 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "capacitor, small US symbol"
+			(at 60.96 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "46aefb1b-3102-482d-ad49-14559e4f71bf")
+		)
+		(pin "2"
+			(uuid "12b72284-aaa3-4b50-a8ea-7fcd2f37da74")
+		)
+		(instances
+			(project ""
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "C3")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 77.47 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "25f13250-4d6b-4b8d-b749-7231451879c0")
+		(property "Reference" "#PWR03"
+			(at 77.47 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 77.47 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 77.47 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 77.47 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 77.47 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "3b9fc3d6-4afd-439b-94ac-db7ac2ee30aa")
+		)
+		(instances
+			(project ""
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "#PWR03")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small_US")
+		(at 93.98 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "29408d27-d23e-4902-89cb-1f93697ab5ed")
+		(property "Reference" "C7"
+			(at 96.52 141.0969 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "C_Small_US"
+			(at 96.52 143.6369 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 93.98 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 93.98 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "capacitor, small US symbol"
+			(at 93.98 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "06ca40e2-312c-4c39-882f-117a387056ee")
+		)
+		(pin "2"
+			(uuid "78b4c02e-6865-4895-b159-c606545300d8")
+		)
+		(instances
+			(project "SA818-Breakout"
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "C7")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:C_Small")
 		(at 133.35 38.1 0)
 		(unit 1)
@@ -4155,8 +4709,76 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:L_Iron")
+		(at 86.36 135.89 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "4dac1642-4d8a-48a5-a6c6-366a9ac9efe1")
+		(property "Reference" "L2"
+			(at 86.36 129.54 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "L_Iron"
+			(at 86.36 132.08 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Inductor_THT:L_Axial_L6.6mm_D2.7mm_P10.16mm_Horizontal_Vishay_IM-2"
+			(at 86.36 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 86.36 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Inductor with iron core"
+			(at 86.36 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "81a8bb7f-e0de-4568-8dbb-7f569cfbcf05")
+		)
+		(pin "2"
+			(uuid "e354b3b6-ea49-41fc-8054-e6e72ce4edb8")
+		)
+		(instances
+			(project "SA818-Breakout"
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "L2")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector:Conn_Coaxial")
-		(at 143.51 66.04 0)
+		(at 114.3 135.89 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4165,7 +4787,7 @@
 		(fields_autoplaced yes)
 		(uuid "535da6b3-a575-4e40-be6e-9e300fb864a9")
 		(property "Reference" "J1"
-			(at 147.32 66.3331 0)
+			(at 118.11 136.1831 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4174,7 +4796,7 @@
 			)
 		)
 		(property "Value" "Conn_Coaxial"
-			(at 147.32 67.6031 0)
+			(at 118.11 137.4531 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4184,7 +4806,7 @@
 			)
 		)
 		(property "Footprint" "bruce-footprints:SMA_Amphenol_901-144_Vertical"
-			(at 143.51 66.04 0)
+			(at 114.3 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4193,7 +4815,7 @@
 			)
 		)
 		(property "Datasheet" "~"
-			(at 143.51 66.04 0)
+			(at 114.3 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4202,7 +4824,7 @@
 			)
 		)
 		(property "Description" "coaxial connector (BNC, SMA, SMB, SMC, Cinch/RCA, LEMO, ...)"
-			(at 143.51 66.04 0)
+			(at 114.3 135.89 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4491,7 +5113,7 @@
 	)
 	(symbol
 		(lib_id "power:GND")
-		(at 143.51 71.12 0)
+		(at 114.3 140.97 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -4500,7 +5122,7 @@
 		(fields_autoplaced yes)
 		(uuid "97e23308-ef5c-4e2c-af59-79b5eec15314")
 		(property "Reference" "#PWR011"
-			(at 143.51 77.47 0)
+			(at 114.3 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4509,7 +5131,7 @@
 			)
 		)
 		(property "Value" "GND"
-			(at 143.51 76.2 0)
+			(at 114.3 146.05 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4517,7 +5139,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 143.51 71.12 0)
+			(at 114.3 140.97 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4526,7 +5148,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 143.51 71.12 0)
+			(at 114.3 140.97 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -4535,7 +5157,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
-			(at 143.51 71.12 0)
+			(at 114.3 140.97 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -5006,6 +5628,72 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 60.96 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "ca06ae09-e54c-485f-9356-acf91f1f9067")
+		(property "Reference" "#PWR02"
+			(at 60.96 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 60.96 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 60.96 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 60.96 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 60.96 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "1199fa07-6977-4073-86d4-754fe7ef641f")
+		)
+		(instances
+			(project ""
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "#PWR02")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Connector_Generic:Conn_01x02")
 		(at 129.54 72.39 0)
 		(unit 1)
@@ -5205,6 +5893,74 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:L_Iron")
+		(at 68.58 135.89 90)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "da4909bd-3b89-4143-b407-f3bf0bcd34df")
+		(property "Reference" "L1"
+			(at 68.58 129.54 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "L_Iron"
+			(at 68.58 132.08 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Inductor_THT:L_Axial_L6.6mm_D2.7mm_P10.16mm_Horizontal_Vishay_IM-2"
+			(at 68.58 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 68.58 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Inductor with iron core"
+			(at 68.58 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "66694b20-5c81-45fa-91f9-126a609aa889")
+		)
+		(pin "2"
+			(uuid "af57e512-fb1a-4ccf-a5e6-572edc61eeb5")
+		)
+		(instances
+			(project ""
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "L1")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+5V")
 		(at 179.07 33.02 0)
 		(unit 1)
@@ -5265,6 +6021,72 @@
 			(project "SA818-Breakout"
 				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
 					(reference "#PWR0100")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "power:GND")
+		(at 93.98 144.78 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "e2d45ea8-a72d-4c82-9782-ea6a7d3d57a6")
+		(property "Reference" "#PWR04"
+			(at 93.98 151.13 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 93.98 149.86 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 93.98 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 93.98 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Power symbol creates a global label with name \"GND\" , ground"
+			(at 93.98 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "db547c83-400d-4b48-bdb1-7ff3e810dfc1")
+		)
+		(instances
+			(project ""
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "#PWR04")
 					(unit 1)
 				)
 			)
@@ -5463,6 +6285,76 @@
 			(project ""
 				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
 					(reference "#FLG02")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:C_Small_US")
+		(at 77.47 142.24 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(fields_autoplaced yes)
+		(uuid "f6717d12-334a-4187-aaba-14b7c0007c47")
+		(property "Reference" "C4"
+			(at 80.01 141.0969 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Value" "C_Small_US"
+			(at 80.01 143.6369 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(justify left)
+			)
+		)
+		(property "Footprint" "Capacitor_SMD:C_0805_2012Metric_Pad1.18x1.45mm_HandSolder"
+			(at 77.47 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 77.47 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "capacitor, small US symbol"
+			(at 77.47 142.24 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "49029014-e1f9-413b-afa0-2cad86344ed9")
+		)
+		(pin "2"
+			(uuid "6ecc2260-2cf1-438d-ad37-04a62178897f")
+		)
+		(instances
+			(project "SA818-Breakout"
+				(path "/b1f2da3d-be80-4199-8e2a-257ef6e8ac82"
+					(reference "C4")
 					(unit 1)
 				)
 			)
