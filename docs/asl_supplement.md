@@ -27,6 +27,12 @@
 
 ## Message Format/Semantics
 
+# Voice Packet (Full)
+
+G.711 μ-law payload contains the actual 8-bit μ-law encoded audio samples. The size of 
+this payload depends on the packetization interval.  20ms of audio at 8kHz a sampling
+rate is 160 bytes.
+
 # AUTHREQ
 
 Sent from the server to the client to request authentication. Contains a 9-digit challenge,
