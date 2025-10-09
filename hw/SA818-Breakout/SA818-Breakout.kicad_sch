@@ -6,7 +6,7 @@
 	(paper "USLetter")
 	(title_block
 		(title "SA818 Breakout")
-		(date "2025-10-07")
+		(date "2025-10-09")
 		(rev "1")
 		(company "Bruce MacKinnon KC1FSZ")
 		(comment 1 "Copyright (C) 2025 - NOT FOR COMMERCIAL USE")
@@ -2472,7 +2472,7 @@
 	)
 	(text "+5V Source"
 		(exclude_from_sim no)
-		(at 155.448 52.832 0)
+		(at 154.178 22.606 0)
 		(effects
 			(font
 				(size 2.54 2.54)
@@ -2480,9 +2480,9 @@
 		)
 		(uuid "81e6bca6-e3d1-4ecf-947a-36720930beee")
 	)
-	(text "MAKE SURE THIS \nIS A +12V CAP!"
+	(text "MAKE SURE THIS \nIS A >+12V COMPLIANT CAP!"
 		(exclude_from_sim no)
-		(at 133.858 30.226 0)
+		(at 117.602 39.878 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -2503,7 +2503,7 @@
 	)
 	(text "Per datasheet: \"output capacitor minimum of \n4.7uF with ESR in range of 33mO to 2.2O\"\n\nUsing series resistor."
 		(exclude_from_sim no)
-		(at 142.748 23.876 0)
+		(at 177.292 43.942 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -3156,6 +3156,26 @@
 			(type default)
 		)
 		(uuid "fa9b162e-f1c3-4de4-9688-53948b2baf57")
+	)
+	(label "ANT_OUT"
+		(at 99.06 135.89 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "702d71b5-ede2-4a21-b86f-e8d2fcf4e424")
+	)
+	(label "LPF1"
+		(at 73.66 135.89 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "97fd4e0d-0e7b-4626-866c-9853ba6338b3")
 	)
 	(global_label "AF_OUT"
 		(shape input)
