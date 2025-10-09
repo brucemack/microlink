@@ -39,10 +39,10 @@ hUaYIFwQxTB3v1h+1QIDAQAB\n\
 -----END PUBLIC KEY-----\n"
 public_key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
 
+print("Public key modulus (n)", public_key.public_numbers().n)
+print("Public key exponent (e)", public_key.public_numbers().e)
 print("Public key size (bit length of the modulus)", public_key.key_size)
 print("Public key size (k)", int(public_key.key_size / 8))
-print("Public key n", public_key.public_numbers().n)
-print("Public key e", public_key.public_numbers().e)
 
 # The RSA challenge string is a 9-digit number created randomly by 
 # the server creating the AUTHREQ message. Here is an example that 
@@ -98,6 +98,9 @@ assert len(EM) == k - 1
 # Get the message representation
 # m = OS2IP (EM)
 # https://datatracker.ietf.org/doc/html/rfc2437#section-4.2
+#
+# The resulting number has the same number of bits as the original 
+# EM message.
 m = 0
 place_value = 1 << (8 * (len(EM) - 1))
 for i in range(0, len(EM)):
@@ -112,7 +115,10 @@ for i in range(0, len(S)):
     s += (place_value * int(S[i]))
     place_value = place_value >> 8
 
-# Get the message representation from the signature
+# Get the message representation from the signature. This is equivalent
+# to decryption. 
+#
+# Note that the result is constrained to be an integer from 0 to n-1.
 n = public_key.public_numbers().n
 e = public_key.public_numbers().e
 print("Slow math ...")
@@ -147,7 +153,8 @@ m_prime = (s ** e) % n
 # standard optimization for modular exponentiation. 
 #
 # https://gmplib.org/
-
+# Or more specifically:
+# https://gmplib.org/manual/Integer-Exponentiation
 
 # Convert back to string 
 # EM = I2OSP (m)
