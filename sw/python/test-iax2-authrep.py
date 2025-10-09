@@ -55,8 +55,12 @@ rsa_challenge = "570639908"
 # was captured from the network during an actual connection:
 rsa_challenge_result_base64 = "ZanWw1+Wx5TWWX6g4890bmnflMgk8ZyyRdjINenNmzq3eYWfPMpcfMFIrHfX0gxOzGeNflcbOqr1m6GMnCoE92h+fMlIEZceUuCZXh+GZ4ywiy3RJluvE/Cj/vkh5Af38jb5PjT2dJB/HMZ8mSZ7qDQgcjjotNRmWVGhAMte9Nc="
 
+# -----------------------------------------------------------------------------
+# FIRST VERSION:
+# Do signature validation the Python way. 
+
 # The signature in the AUTHREP message is actually a base-64 encoding 
-# of the signature:
+# of the signature. So this needs to be undone first.
 rsa_challenge_result = base64.b64decode(rsa_challenge_result_base64.encode("utf-8"))
 
 # Here is where the actual validation happens:
@@ -69,9 +73,11 @@ public_key.verify(rsa_challenge_result,
 print("[1] AUTHREP signature validated, all good!")
 
 # -----------------------------------------------------------------------------
-# Doing the signature verification manually. 
+# SECOND VERSION:
+# Do the signature verification manually, but still taking advantage of 
+# Python's infinite precision integer capability.
 
-k = 128
+k = int(public_key.key_size / 8)
 # We start off with the SHA1 hash of the original message:
 M = hashlib.sha1(rsa_challenge.encode("utf-8")).digest()
 
@@ -95,16 +101,16 @@ assert len(EM) == k - 1
 m = 0
 place_value = 1 << (8 * (len(EM) - 1))
 for i in range(0, len(EM)):
-    m = m + (place_value * int(EM[i]))
+    m += (place_value * int(EM[i]))
     place_value = place_value >> 8
 
-# Get the signature integer representation 
-S = rsa_challenge_result
+# Get the signature's integer representation 
+S = base64.b64decode(rsa_challenge_result_base64.encode("utf-8"))
 s = 0
+place_value = 1 << (8 * (len(S) - 1))
 for i in range(0, len(S)):
-    # Valid of digit in base-256 numbering
-    place_value = 256 ** (len(S) - i - 1)
     s += (place_value * int(S[i]))
+    place_value = place_value >> 8
 
 # Get the message representation from the signature
 n = public_key.public_numbers().n
@@ -112,17 +118,48 @@ e = public_key.public_numbers().e
 print("Slow math ...")
 m_prime = (s ** e) % n
 
+# NOTES FOR EMBEDDED IMPLEMENTATION
+# =================================
+#
+# Need to be able to multiply and take the modulo for very large numbers.
+#
+# The MModular Exponentiation Algorithm
+# -------------------------------------
+#
+# The most common approach is the right-to-left binary method, also known as 
+# the "square-and-multiply" algorithm. This method computes 
+#   \(c=m^{e}\quad (\bmod n)\) 
+# by iterating through the bits of the exponent, performing a modular 
+# squaring and, if the bit is 1, a modular multiplication. This reduces the 
+# number of multiplications from a linear relationship with the exponent's 
+# value to a logarithmic one. 
+#
+# A more advanced version is the sliding window algorithm, which processes 
+# multiple bits of the exponent at once. This reduces the number of 
+# multiplications at the cost of a larger lookup table, offering a significant 
+# speed-up, especially for longer exponents. 
+#
+# Montgomery Reduction
+# --------------------
+# Instead of performing a full division for every modular reduction, the 
+# Montgomery reduction algorithm is a more efficient method. It replaces the 
+# expensive division with a sequence of shifts and additions, making it a 
+# standard optimization for modular exponentiation. 
+#
+# https://gmplib.org/
+
+
 # Convert back to string 
+# EM = I2OSP (m)
+# https://datatracker.ietf.org/doc/html/rfc2437#section-4.1
 work_m_prime = int(m_prime) 
 M_prime = bytearray()
 # Here we are working from LSB to MSB. 
-for i in range(0, k - 1):
-    digit = int(work_m_prime % 256)
-    if i < len(M):
-        # Pull off the right most byte (LSB)
-        M_prime.append(digit)
-    else:
-        break
+# We only care about the bytes that correspond to the
+# message we are validating. Everything else is just padding.
+for i in range(0, len(M)):
+    # Pull off the least significant byte
+    M_prime.append(int(work_m_prime % 256))
     # Shift right
     work_m_prime = work_m_prime >> 8
 M_prime.reverse()
