@@ -123,12 +123,18 @@ public:
         }
     }
 
+    void add(const mpx_u& b) {
+        for (unsigned i = 0; i < b._maxDigits; i++)
+            addToDigit(i, b.getDigit(i));
+    }
+
     /**
-     *
+     * Subtracts and borrows if necessary.
      */
     void subtractFromDigit(unsigned place, uint32_t b) {
         if (b != 0) {
             if (place < _maxDigits) {
+                // Do we have enough to subtract?
                 if (_digits[place] >= b)
                     _digits[place] -= b;
                 // Not enough in this position? Here is where we need to borrow 
@@ -146,11 +152,7 @@ public:
         }
     }
 
-
-    void add(const mpx_u& b) {
-        for (unsigned i = 0; i < b._maxDigits; i++)
-            addToDigit(i, b.getDigit(i));
-    }
+    void subtract()
 
     void dumpHex(ostream& str) const {
         bool first = true;
