@@ -44,26 +44,23 @@ public:
 
     bool gt(const mpx_u& b) const {
         // Overflow makes comparison invalid
-        if (_overflow || b._overflow)
+        if (_overflow || b._overflow) {
             return false;
+        }
         unsigned k = max(_maxDigits, b._maxDigits);
         // Start with the MSD and move backwards.
         for (unsigned i = 0; i < k; i++) {
             unsigned digit = k - i - 1;
-            if (digit >= _maxDigits) {
-                if (b._digits[i] > 0) {
-                    return true;
-                }
-            } else if (digit >= b._maxDigits) {
-                if (_digits[i] > 0)
-                    return false;
-            }
-            else {
-                if (b._digits[i] > _digits[i])
-                    return true;
-                else if (b._digits[i] < _digits[i])
-                    return false;
-            }
+            uint32_t ad = 0;
+            if (digit < _maxDigits)
+                ad = _digits[digit];
+            uint32_t bd = 0;
+            if (digit < b._maxDigits)
+                bd = b._digits[digit];
+            if (ad > bd)
+                return true;
+            else if (ad < bd)
+                return false;
         }
         return false;
     }
@@ -75,7 +72,6 @@ public:
     }
 
     void set(uint32_t a) {
-        cout << "max " << _maxDigits << endl;
         _overflow = false;
         memset(_digits, 0, _maxDigits * sizeof(uint32_t));
         setDigit(0, a);
@@ -90,8 +86,8 @@ public:
     }
 
     void setDigit(unsigned place, uint32_t v) {
-        if ()
-        cout << "sD " << place << " " << _maxDigits << endl;
+        if (place >= _maxDigits && v == 0)
+            return;
         assert(place < _maxDigits);
         _digits[place] = v;
     }
@@ -206,17 +202,12 @@ public:
         q.set(0);
         uint32_t tempW[32];
         mpx_u temp(tempW, 32);
-        cout << "n=";
-        n.dumpHex(cout);
-        cout << endl;
         temp.set(n);
-        /*
         // Initially: a very naive implementation
-        while (temp.gt(n) || temp.eq(n)) {
+        while (temp.gt(d)) {
             q.inc();
             temp.sub(d);
         }
-        */
         r.set(temp);
     }
 
@@ -293,9 +284,6 @@ int main(int,const char**) {
     a.set(0xffffffff);
     b.set(0xffffffff);
     mpx_u::mult(a, b, r);
-    cout << "0xffffffff x 0xffffffff=";
-    r.dumpHex(cout);
-    cout << endl;
 
     // Carry test during multiplication
     b.set(0, 0xffffffff);
@@ -315,12 +303,11 @@ int main(int,const char**) {
     b.add(a);
     assert(b.getDigit(0) == 0 && b.getDigit(1) == 1 && !b.isOf());
 
-    a.set(2);
-    b.set(1);
+    a.set(7);
+    b.set(2);
     mpx_u::div(a, b, q, r);
-    q.dumpHex(cout);
-    cout << endl;
-    r.dumpHex(cout);
-    cout << endl;
-
+    a.set(3);
+    assert(a.eq(q));
+    a.set(1);
+    assert(a.eq(r));
 }
