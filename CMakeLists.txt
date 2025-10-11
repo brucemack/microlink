@@ -262,3 +262,11 @@ add_executable(dtmf-test-1
 target_include_directories(dtmf-test-1 PRIVATE src)
 target_include_directories(dtmf-test-1 PRIVATE kc1fsz-tools-cpp/include)
 target_include_directories(dtmf-test-1 PRIVATE gsm-0610-codec/include)
+
+# ----- test1 -----
+add_executable(multiprec-test-1
+  tests/multiprec-test-1.cpp
+)
+
+target_include_directories(multiprec-test-1 PRIVATE kc1fsz-tools-cpp/include)
+target_include_directories(multiprec-test-1 PRIVATE ${CMAKE_CURRENT_LIST_DIR})
