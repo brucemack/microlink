@@ -68,7 +68,6 @@ public:
         return false;
     }
 
-
     void set(const mpx_u& other) {
         set(0);
         for (unsigned i = 0; i < other._maxDigits; i++)
@@ -76,11 +75,13 @@ public:
     }
 
     void set(uint32_t a) {
+        cout << "max " << _maxDigits << endl;
         _overflow = false;
         memset(_digits, 0, _maxDigits * sizeof(uint32_t));
         setDigit(0, a);
     }
 
+    // Convenience
     void set(uint32_t a1, uint32_t a0) {
         _overflow = false;
         memset(_digits, 0, _maxDigits * sizeof(uint32_t));
@@ -89,6 +90,8 @@ public:
     }
 
     void setDigit(unsigned place, uint32_t v) {
+        if ()
+        cout << "sD " << place << " " << _maxDigits << endl;
         assert(place < _maxDigits);
         _digits[place] = v;
     }
@@ -124,14 +127,20 @@ public:
     }
 
     void add(const mpx_u& b) {
+        // Start from the least significant digit.
+        // addToDigit() has carry built in.
         for (unsigned i = 0; i < b._maxDigits; i++)
             addToDigit(i, b.getDigit(i));
+    }
+
+    void inc() {
+        addToDigit(0, 1);
     }
 
     /**
      * Subtracts and borrows if necessary.
      */
-    void subtractFromDigit(unsigned place, uint32_t b) {
+    void subFromDigit(unsigned place, uint32_t b) {
         if (b != 0) {
             if (place < _maxDigits) {
                 // Do we have enough to subtract?
@@ -140,7 +149,7 @@ public:
                 // Not enough in this position? Here is where we need to borrow 
                 // from more significant digits.
                 else {
-                    subtractFromDigit(place + 1, 1);
+                    subFromDigit(place + 1, 1);
                     // We actually get one more than this.
                     uint32_t v = 0xffffffff;
                     // Tweak
@@ -152,20 +161,25 @@ public:
         }
     }
 
-    void subtract()
+    void sub(const mpx_u& b) {  
+        // Starting from the least significant digit.
+        // subtractFromDigit() has borrow built in.
+        for (unsigned i = 0; i < b._maxDigits; i++)
+            subFromDigit(i, b.getDigit(i));
+    }
 
     void dumpHex(ostream& str) const {
         bool first = true;
+        bool hideLeading = true;
         if (_overflow)
             cout << "(OF) ";
-        bool leading = true;
         for (unsigned int d = 0; d < _maxDigits; d++) {
             unsigned int digit = _maxDigits - d - 1;
-            if (digit > 0 && leading) 
-                if (_digits[digit] == 0) 
-                    continue;
+            if (_digits[digit] == 0 && hideLeading)
+                continue;
+            hideLeading = false;
             char temp[32];
-            sprintf(temp,"%08X", _digits[digit]);
+            snprintf(temp, sizeof(temp), "%08X", _digits[digit]);
             if (!first)
                 str << ",";
             str << temp;
@@ -187,6 +201,25 @@ public:
         }
     }
 
+    static void div(const mpx_u& n, const mpx_u& d, 
+        mpx_u& q, mpx_u& r) {
+        q.set(0);
+        uint32_t tempW[32];
+        mpx_u temp(tempW, 32);
+        cout << "n=";
+        n.dumpHex(cout);
+        cout << endl;
+        temp.set(n);
+        /*
+        // Initially: a very naive implementation
+        while (temp.gt(n) || temp.eq(n)) {
+            q.inc();
+            temp.sub(d);
+        }
+        */
+        r.set(temp);
+    }
+
  private:
 
     bool _overflow = false;
@@ -199,11 +232,37 @@ int main(int,const char**) {
     uint32_t aw[2], bw[2], rw[2], cw[2], qw[4];
     mpx_u a(aw, 2), b(bw, 2), r(rw, 2), c(cw, 2), q(qw, 4);
 
+    // Subtraction
+    a.set(1);
+    b.set(1);
+    a.sub(b);
+    r.set(0);
+    assert(a.eq(r));
+    
+    // Subtraction with a borrow
+    a.set(1,0);
+    b.set(1);
+    a.sub(b);
+    b.set(0xffffffff);
+    a.sub(b);
+    r.set(0);
+    assert(a.eq(r));
+
+    // More extreme borrow
+    q.set(0);
+    q.setDigit(2, 1);
+    b.set(0);
+    b.setDigit(0, 1);
+    b.setDigit(1, 1);
+    q.sub(b);
+    r.set(0xfffffffe, 0xffffffff);
+    assert(q.eq(r));
+    assert(r.eq(q));
+
     // Equality
     a.set(1);
     b.set(1);
     assert(a.eq(b));
-
     q.set(1);
     assert(a.eq(q));
 
@@ -256,6 +315,12 @@ int main(int,const char**) {
     b.add(a);
     assert(b.getDigit(0) == 0 && b.getDigit(1) == 1 && !b.isOf());
 
-    // Test of subtraction, showing borrow
+    a.set(2);
+    b.set(1);
+    mpx_u::div(a, b, q, r);
+    q.dumpHex(cout);
+    cout << endl;
+    r.dumpHex(cout);
+    cout << endl;
 
 }

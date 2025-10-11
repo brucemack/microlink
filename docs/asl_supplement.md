@@ -112,4 +112,3 @@ public_key.verify(rsa_challenge_result,
 # If we get here the validation is good, otherwise an exception is raised
 print("AUTHREP signature validated, all good!")
 ```
-
