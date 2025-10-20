@@ -2,6 +2,54 @@
 
 [By Bruce MacKinnon, KC1FSZ](https://www.qrz.com/db/kc1fsz)
 
+## Node Registration
+
+A JSON message is sent to the AllStarLink registry
+when a node starts up to allow the 
+network to know the IP address that the node is running
+on. It's likely that this message is sent out on a 
+periodic basis to keep the registration active.
+
+The format of this JSON message doesn't appear to be directly
+documented, but it can be determined from looking at the 
+source code.
+
+Here's an example of a command that will send the 
+properly formatted message:
+```
+curl -X POST "register.allstarlink.org" \
+     -H "Content-Type: application/json" \
+     -d '{ 
+    "port": 7777,
+    "data": { 
+        "nodes": { 
+            "61057": { 
+                "node": "61057", 
+                "passwd": "xxxxxx", 
+                "remote": 0 
+            } 
+        } 
+    } 
+} 
+' \
+     --trace allstarlink.log
+```
+Here's the JSON message (the important part):
+```json
+{
+    "port": 7777,
+    "data": {
+        "nodes": {
+            "61057": {
+                "node": "61057",
+                "passwd": "xxxxxx",
+                "remote": 0
+            }
+        }
+    }
+}
+```
+
 ## Message Flows
 
 ### New Call from AllStarLink Phone Portal
