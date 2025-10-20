@@ -56,7 +56,7 @@ public:
         uint32_t ssrc2,
         uint8_t* packet, uint32_t packetSize);      
 
-    ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log, AudioOutputContext* radio0);
+    ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log, AudioProcessor* radio0);
 
     void setConference(Conference* conf) { _conf = conf; }
 
@@ -106,7 +106,7 @@ private:
     Channel _rtpChannel;
     Channel _rtcpChannel;
 
-    AudioOutputContext* _radio0;
+    AudioProcessor* _radio0;
     // Hard-coded address for the radio
     IPAddress _radio0Addr;
     Decoder _gsmDecoder0;

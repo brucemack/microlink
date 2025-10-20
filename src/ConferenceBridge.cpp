@@ -44,7 +44,7 @@ static const uint32_t SEND_TIMEOUT_MS = 1000;
 int ConferenceBridge::traceLevel = 0;
 
 ConferenceBridge::ConferenceBridge(IPLib* ctx, UserInfo* userInfo, Log* log, 
-    AudioOutputContext* radio0)
+    AudioProcessor* radio0)
 :   _ctx(ctx),
     _userInfo(userInfo),
     _conf(0),
