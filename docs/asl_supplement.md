@@ -80,18 +80,28 @@ Here's the JSON message (the important part):
 
 ## Message Format/Semantics
 
-# Voice Packet (Full)
+### NEW
+
+Used to initiate a call. This actually comes in twice, once at the very 
+beginning and once after a CALLTOKEN challenge is issued.
+
+### CALLTOKEN 
+
+Used to respond to an initial NEW request. Tells the the originator that
+a call token will be required in the NEW retry.
+
+### Voice Packet (Full)
 
 G.711 μ-law payload contains the actual 8-bit μ-law encoded audio samples. The size of 
 this payload depends on the packetization interval.  20ms of audio at 8kHz a sampling
 rate is 160 bytes.
 
-# AUTHREQ
+### AUTHREQ
 
 Sent from the server to the client to request authentication. Contains a 9-digit challenge,
 which is a random number.
 
-# AUTHREP
+### AUTHREP
 
 Send from the client to the server in response to an AUTHREQ.
 
