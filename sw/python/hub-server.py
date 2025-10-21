@@ -109,8 +109,8 @@ def is_ACK_frame(frame):
         get_full_subclass_c_bit(frame) == False and \
         get_full_subclass(frame) == 4
 
-def make_CALLTOKEN_frame(source_call: int, dest_call: int, timestamp: int, 
-    out_seq: int, in_seq: int, token):
+def make_frame_header(source_call: int, dest_call: int, timestamp: int, 
+    out_seq: int, in_seq: int, frame_type: int, frame_subclass: int):
     result = bytearray()
     result += source_call.to_bytes(2, byteorder='big')
     result[0] = result[0] | 0b10000000
@@ -119,41 +119,29 @@ def make_CALLTOKEN_frame(source_call: int, dest_call: int, timestamp: int,
     result += timestamp.to_bytes(4, byteorder='big')
     result += out_seq.to_bytes(1, byteorder='big')
     result += in_seq.to_bytes(1, byteorder='big')
-    result += int(6).to_bytes(1, byteorder='big')
+    # Type
+    result += int(frame_type).to_bytes(1, byteorder='big')
     # Subclass
-    result += int(40).to_bytes(1, byteorder='big')
-    # Information elements
+    result += int(frame_subclass).to_bytes(1, byteorder='big')
+    return result
+
+def make_CALLTOKEN_frame(source_call: int, dest_call: int, timestamp: int, 
+    out_seq: int, in_seq: int, token):
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        6, 40)
     result += encode_information_elements({ 54: token })
     return result
 
 def make_ACK_frame(source_call: int, dest_call: int, timestamp: int,
     out_seq: int, in_seq: int):
-    result = bytearray()
-    result += source_call.to_bytes(2, byteorder='big')
-    result[0] = result[0] | 0b10000000
-    result += dest_call.to_bytes(2, byteorder='big')
-    result[2] = result[2] & 0b01111111
-    result += timestamp.to_bytes(4, byteorder='big')
-    result += out_seq.to_bytes(1, byteorder='big')
-    result += in_seq.to_bytes(1, byteorder='big')
-    result += int(6).to_bytes(1, byteorder='big')
-    # Subclass
-    result += int(4).to_bytes(1, byteorder='big')
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        6, 4)
     return result
 
 def make_AUTHREQ_frame(source_call: int, dest_call: int, timestamp: int,
     out_seq: int, in_seq: int, challenge: str):
-    result = bytearray()
-    result += source_call.to_bytes(2, byteorder='big')
-    result[0] = result[0] | 0b10000000
-    result += dest_call.to_bytes(2, byteorder='big')
-    result[2] = result[2] & 0b01111111
-    result += timestamp.to_bytes(4, byteorder='big')
-    result += out_seq.to_bytes(1, byteorder='big')
-    result += in_seq.to_bytes(1, byteorder='big')
-    result += int(6).to_bytes(1, byteorder='big')
-    # Subclass
-    result += int(8).to_bytes(1, byteorder='big')
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        6, 8)
     # Information elements
     result += encode_information_elements({ 
         14: int(4).to_bytes(2, byteorder='big'),
@@ -164,17 +152,8 @@ def make_AUTHREQ_frame(source_call: int, dest_call: int, timestamp: int,
 
 def make_ACCEPT_frame(source_call: int, dest_call: int, timestamp: int,
     out_seq: int, in_seq: int):
-    result = bytearray()
-    result += source_call.to_bytes(2, byteorder='big')
-    result[0] = result[0] | 0b10000000
-    result += dest_call.to_bytes(2, byteorder='big')
-    result[2] = result[2] & 0b01111111
-    result += timestamp.to_bytes(4, byteorder='big')
-    result += out_seq.to_bytes(1, byteorder='big')
-    result += in_seq.to_bytes(1, byteorder='big')
-    result += int(6).to_bytes(1, byteorder='big')
-    # Subclass
-    result += int(7).to_bytes(1, byteorder='big')
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        6, 7)
     # Information elements
     result += encode_information_elements({ 
         9: int(4).to_bytes(4, byteorder='big'),
@@ -184,50 +163,20 @@ def make_ACCEPT_frame(source_call: int, dest_call: int, timestamp: int,
 
 def make_RINGING_frame(source_call: int, dest_call: int, timestamp: int,
     out_seq: int, in_seq: int):
-    result = bytearray()
-    result += source_call.to_bytes(2, byteorder='big')
-    result[0] = result[0] | 0b10000000
-    result += dest_call.to_bytes(2, byteorder='big')
-    result[2] = result[2] & 0b01111111
-    result += timestamp.to_bytes(4, byteorder='big')
-    result += out_seq.to_bytes(1, byteorder='big')
-    result += in_seq.to_bytes(1, byteorder='big')
-    # Type is control
-    result += int(4).to_bytes(1, byteorder='big')
-    # Subclass
-    result += int(3).to_bytes(1, byteorder='big')
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        4, 3)
     return result
 
 def make_ANSWER_frame(source_call: int, dest_call: int, timestamp: int,
     out_seq: int, in_seq: int):
-    result = bytearray()
-    result += source_call.to_bytes(2, byteorder='big')
-    result[0] = result[0] | 0b10000000
-    result += dest_call.to_bytes(2, byteorder='big')
-    result[2] = result[2] & 0b01111111
-    result += timestamp.to_bytes(4, byteorder='big')
-    result += out_seq.to_bytes(1, byteorder='big')
-    result += in_seq.to_bytes(1, byteorder='big')
-    # Type is control
-    result += int(4).to_bytes(1, byteorder='big')
-    # Subclass
-    result += int(4).to_bytes(1, byteorder='big')
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        4, 4)
     return result
 
 def make_STOP_SOUNDS_frame(source_call: int, dest_call: int, timestamp: int,
     out_seq: int, in_seq: int):
-    result = bytearray()
-    result += source_call.to_bytes(2, byteorder='big')
-    result[0] = result[0] | 0b10000000
-    result += dest_call.to_bytes(2, byteorder='big')
-    result[2] = result[2] & 0b01111111
-    result += timestamp.to_bytes(4, byteorder='big')
-    result += out_seq.to_bytes(1, byteorder='big')
-    result += in_seq.to_bytes(1, byteorder='big')
-    # Type is control
-    result += int(4).to_bytes(1, byteorder='big')
-    # Subclass
-    result += int(255).to_bytes(1, byteorder='big')
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        4, 255)
     return result
 
 def current_ms():
@@ -351,7 +300,8 @@ while True:
                 # Pay attention to wrap
                 state_expected_inseq = (get_full_outseq(frame) + 1) % 256
     else:
-        print("Mini frame")
+        #print("Mini frame")
+        pass
 
     if state == State.IDLE:
         if is_NEW_frame(frame):
@@ -508,3 +458,24 @@ while True:
             state_outseq += 1
 
             state = State.IN_CALL
+
+    # In this state we are in an active call
+    elif state == State.IN_CALL:
+        if is_full_frame(frame) and \
+            get_full_type(frame) == 6 and \
+            get_full_subclass_c_bit(frame) == False and \
+            get_full_subclass(frame) == 5:
+        
+            print("Hangup")
+
+            # Send ACK
+            resp = make_ACK_frame(state_call_id, 
+                state_source_call_id,
+                state_call_start_ms + (current_ms() - state_call_start_stamp),
+                state_outseq, 
+                state_expected_inseq)
+            print("Sending ACK", resp, state_outseq, state_expected_inseq)
+            sock.sendto(resp, addr)
+            # IMPORTANT: We don't move the outseq forward!
+
+            state = State.IDLE
