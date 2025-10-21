@@ -2,6 +2,11 @@
 
 [By Bruce MacKinnon, KC1FSZ](https://www.qrz.com/db/kc1fsz)
 
+## Network Information
+
+IAX2 runs on UDP port 4569. It appears that this is the only 
+port that needs to be open from the outside.
+
 ## Node Registration
 
 A JSON message is sent to the AllStarLink registry
