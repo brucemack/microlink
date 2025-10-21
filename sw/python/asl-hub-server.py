@@ -1,19 +1,72 @@
+# AllStartLink Hub Demonstration Program
+# Copyright (C) 2025, Bruce MacKinnon KC1FSZ
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+#
+# FOR AMATEUR RADIO USE ONLY.
+# NOT FOR COMMERCIAL USE WITHOUT PERMISSION.
+#
+# Overview
+# --------
+# This program provides a simple implementation of an AllStarLink 
+# hub. The goal is to demonstrate AllStarLink functionaltion without
+# dependency on the Asterisk infrastructure.
+#
 import time
 import requests
 import socket
 import random
 from enum import Enum
 import base64
-import hashlib
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
-from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
-from cryptography.exceptions import InvalidSignature
 import scipy.io.wavfile as wavfile
 import numpy as np
-# TODO: THIS IS DEPRECATED!
+# TODO: THIS IS DEPRECATED AS OF PYTHON 3.13, NEED TO REPLACE
 import audioop
+
+# ===========================================================================
+# USER CONFIGURATION AREA
+#
+# Put in your AllStarLink node ID here:
+node_id = "nnnnnn"
+# Put in your node password here:
+node_password = "xxxxxxx"
+# Put in the name of the audio .wav file (8kHz, 16-bit PCM) that will be used
+# as the announcement file on connection.
+audio_fn = "./W1TKZ-ID.wav"
+# ===========================================================================
+
+# System configurations that normally shouldn't need to change:
+#
+# The UDP port that the server listens on for IAX2 traffic
+iax2_port = 4569
+# The AllStarLink registration server
+reg_url = "https://register.allstarlink.org"
+# The RSA public key is provided in the ASL3 installation. On the Pi
+# appliance distribution it is located at:
+#   /usr/share/asterisk/keys/allstar.pub
+# The public key is in PEM format:
+public_key_pem = "-----BEGIN PUBLIC KEY-----\n\
+MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCu3h0BZQQ+s5kNM64gKxZ5PCpQ\n\
+9BVzhl+PWVYXbEtozlJVVs1BHpw90GsgScRoHh4E76JuDYjEdCTuAwg1YkHdrPfm\n\
+BUjdw8Vh6wPFmf3ozR6iDFcps4/+RkCUb+uc9v0BqZIzyIdpFC6dZnJuG5Prp7gJ\n\
+hUaYIFwQxTB3v1h+1QIDAQAB\n\
+-----END PUBLIC KEY-----\n"
+# Interval between registrations (in milliseconds)
+reg_interval_ms = 5 * 60 * 1000
 
 def is_full_frame(frame):
     return frame[0] & 0b10000000 == 0b10000000
@@ -218,60 +271,13 @@ def current_ms():
 def current_ms_frac():
     return time.time() * 1000
 
-"""
-# Unit test
-a = make_CALLTOKEN_frame(1, 8125, 19, 0, 1, make_call_token())
-print(len(a), a)
-
-# Unit test - round-trip on information element encoding
-d = dict()
-d[1] = "111".encode("utf-8")
-d[2] = "222".encode("utf-8")
-d[3] = "".encode("utf-8")
-enc_d = encode_information_elements(d)
-d_prime = decode_information_elements(enc_d)
-assert(d == d_prime)
-quit()
-"""
-node_id = "61057"
-node_password = "xxxxxx"
-
-iax2_port = 4569
-reg_url = "https://register.allstarlink.org"
-# The RSA public key is provided in the ASL3 installation. On the Pi
-# appliance distribution it is located at:
-#   /usr/share/asterisk/keys/allstar.pub
-# The public key is in PEM format:
-public_key_pem = "-----BEGIN PUBLIC KEY-----\n\
-MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCu3h0BZQQ+s5kNM64gKxZ5PCpQ\n\
-9BVzhl+PWVYXbEtozlJVVs1BHpw90GsgScRoHh4E76JuDYjEdCTuAwg1YkHdrPfm\n\
-BUjdw8Vh6wPFmf3ozR6iDFcps4/+RkCUb+uc9v0BqZIzyIdpFC6dZnJuG5Prp7gJ\n\
-hUaYIFwQxTB3v1h+1QIDAQAB\n\
------END PUBLIC KEY-----\n"
 public_key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
 
-# Load up audio message
-audio_fn = "./W1TKZ-ID.wav"
 audio_samplerate, audio_data = wavfile.read(audio_fn)
+if audio_samplerate != 8000:
+    raise Exception("Audio format error")
 
-print("Audio Sample Rate (Hz)   ", audio_samplerate)
-print("Audio Sample Count       ", audio_data.size)
-print("Audio Duration (Seconds) ", audio_data.size / audio_samplerate)
-print("Audio Min                ", audio_data.min())
-print("Audio Max                ", audio_data.max())
-print("Audio Mean               ", audio_data.mean())
-
-"""
-# Playing audio
- for x in np.nditer(data):
-        txt_file.write(str(x) + ",\n")
-        count = count + 1
-"""
-"""
-audio_block_ulaw = encode_ulaw(audio_data[160:160+160])
-print(audio_block_ulaw)
-quit()
-"""
+call_id_counter = 1
 
 class State(Enum):
     IDLE = 1
@@ -280,7 +286,6 @@ class State(Enum):
     RINGING = 4
     IN_CALL = 5
 
-call_id_counter = 1
 state = State.IDLE
 state_source_call_id = 0
 state_call_id = 0
@@ -308,30 +313,30 @@ reg_msg = {
 }
 
 reg_msg["data"]["nodes"][node_id] = reg_node_msg
-print(reg_msg)
-
-response = requests.post(reg_url, json=reg_msg)
-print(response.text)
 
 UDP_IP = "0.0.0.0" 
 # Create a UDP socket and bind 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, iax2_port))
-# This prevents the recvfrom() call below from blocking forever. We
-# use a short timeout to allow smooth progress on audio streams.
-sock.settimeout(0.001)
+# This prevents the recvfrom() call below from blocking forever. 
 sock.setblocking(False)
 
 print(f"Listening on IAX2 port {UDP_IP}:{iax2_port}")
 
-# ---- Main processing loop --------------------------------------------------
+last_reg_ms = 0
 
-last_gap = 0
+# ---- Main processing loop --------------------------------------------------
 
 while True:
 
     # Process any background activity
-    
+
+    # Periodically register the node so that other peers known where to find us
+    if (current_ms() - last_reg_ms) > reg_interval_ms:
+        reg_response = requests.post(reg_url, json=reg_msg)
+        print("Registration response:", reg_response.text)
+        last_reg_ms = current_ms()
+
     if state == State.RINGING:
 
         # Look for timeout
