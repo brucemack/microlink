@@ -38,7 +38,7 @@ import numpy as np
 import audioop
 
 # ===========================================================================
-# USER CONFIGURATION AREA
+# USER CONFIGURATION AREA - PLESE CUSTOMIZE HERE
 #
 # Put in your AllStarLink node ID here:
 node_id = "nnnnnn"
@@ -49,10 +49,13 @@ node_password = "xxxxxxx"
 audio_fn = "./W1TKZ-ID.wav"
 # ===========================================================================
 
+# ===========================================================================
 # System configurations that normally shouldn't need to change:
 #
-# The UDP port that the server listens on for IAX2 traffic
+# The UDP port that the server listens on for IAX2 traffic.
 iax2_port = 4569
+# The interface that the server binds on. 0.0.0.0 means all interfaces.
+UDP_IP = "0.0.0.0" 
 # The AllStarLink registration server
 reg_url = "https://register.allstarlink.org"
 # The RSA public key is provided in the ASL3 installation. On the Pi
@@ -67,6 +70,7 @@ hUaYIFwQxTB3v1h+1QIDAQAB\n\
 -----END PUBLIC KEY-----\n"
 # Interval between registrations (in milliseconds)
 reg_interval_ms = 5 * 60 * 1000
+# ===========================================================================
 
 def is_full_frame(frame):
     return frame[0] & 0b10000000 == 0b10000000
@@ -263,6 +267,7 @@ def make_VOICE_miniframe(source_call: int, timestamp: int, audio_data: bytes):
     return result
 
 def encode_ulaw(pcm_data: bytes):
+    # TODO: REMOVE DEPENDENCY ON THIS DEPRECATED LIBRARY
     return audioop.lin2ulaw(pcm_data, 2)
 
 def current_ms():
@@ -297,6 +302,7 @@ state_outseq = 0
 state_audio_frame = 0
 state_audio_ptr = 0
 state_audio_start_stamp = 0
+last_reg_ms = 0
 
 reg_node_msg = {
     "node": node_id,
@@ -305,6 +311,7 @@ reg_node_msg = {
 }
 
 reg_msg = {
+    # TODO: Understand this port
     "port": 7777,
     "data": {
         "nodes": {
@@ -314,7 +321,6 @@ reg_msg = {
 
 reg_msg["data"]["nodes"][node_id] = reg_node_msg
 
-UDP_IP = "0.0.0.0" 
 # Create a UDP socket and bind 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, iax2_port))
@@ -322,8 +328,6 @@ sock.bind((UDP_IP, iax2_port))
 sock.setblocking(False)
 
 print(f"Listening on IAX2 port {UDP_IP}:{iax2_port}")
-
-last_reg_ms = 0
 
 # ---- Main processing loop --------------------------------------------------
 
@@ -339,7 +343,7 @@ while True:
 
     if state == State.RINGING:
 
-        # Look for timeout
+        # Look for timeout on the ringer
         if current_ms() > state_timeout:
 
             resp = make_ANSWER_frame(state_call_id, 
@@ -364,7 +368,7 @@ while True:
             state_audio_ptr = 0
             state_audio_frame = 0
             # Set the start time forward a bit
-            state_audio_start_stamp = current_ms_frac() + 100
+            state_audio_start_stamp = current_ms_frac() + 250
 
     # In this state we are in an active call
     elif state == State.IN_CALL:
@@ -394,7 +398,9 @@ while True:
                         audio_block_ulaw)
                     sock.sendto(resp, addr)
                     state_outseq += 1
-                # After the first we can use mini-frames
+                # After the first we can use mini-frames.
+                # TODO: There is some special handling that should be followed
+                # when the 16-bit timestamp wraps around zero.
                 else:
                     resp = make_VOICE_miniframe(state_call_id, 
                         state_call_start_ms + (current_ms() - state_call_start_stamp),
@@ -411,6 +417,7 @@ while True:
     except BlockingIOError:
         continue
 
+    # Process the full frames
     if is_full_frame(frame):
 
         print("---------", f"Received message from {addr}")        
@@ -440,10 +447,6 @@ while True:
                     print("WARNING: Inbound sequence error")
                 # Pay attention to wrap
                 state_expected_inseq = (get_full_outseq(frame) + 1) % 256
-
-    else:
-        #print("Mini frame")
-        pass
 
     if state == State.IDLE:
         if is_NEW_frame(frame):
@@ -532,10 +535,15 @@ while True:
                 rsa_challenge_result = base64.b64decode(ies[17])
 
                 # Here is where the actual validation happens:
-                public_key.verify(rsa_challenge_result,
-                    state_challenge.encode("utf-8"), 
-                    padding.PKCS1v15(), 
-                    hashes.SHA1())
+                try:
+                    public_key.verify(rsa_challenge_result,
+                        state_challenge.encode("utf-8"), 
+                        padding.PKCS1v15(), 
+                        hashes.SHA1())
+                except:
+                    print("Authentication failed")
+                    state = State.IDLE
+                    continue
 
                 print("Authenticated!")
 
