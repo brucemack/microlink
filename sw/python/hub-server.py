@@ -10,6 +10,10 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from cryptography.exceptions import InvalidSignature
+import scipy.io.wavfile as wavfile
+import numpy as np
+# TODO: THIS IS DEPRECATED!
+import audioop
 
 def is_full_frame(frame):
     return frame[0] & 0b10000000 == 0b10000000
@@ -109,6 +113,12 @@ def is_ACK_frame(frame):
         get_full_subclass_c_bit(frame) == False and \
         get_full_subclass(frame) == 4
 
+def is_HANGUP_frame(frame):
+    return is_full_frame(frame) and \
+        get_full_type(frame) == 6 and \
+        get_full_subclass_c_bit(frame) == False and \
+        get_full_subclass(frame) == 5
+
 def make_frame_header(source_call: int, dest_call: int, timestamp: int, 
     out_seq: int, in_seq: int, frame_type: int, frame_subclass: int):
     result = bytearray()
@@ -179,6 +189,29 @@ def make_STOP_SOUNDS_frame(source_call: int, dest_call: int, timestamp: int,
         4, 255)
     return result
 
+def make_VOICE_frame(source_call: int, dest_call: int, timestamp: int,
+    out_seq: int, in_seq: int, audio_block: bytes):
+    result = make_frame_header(source_call, dest_call, timestamp, out_seq, in_seq,
+        2, 4)
+    result += audio_block
+    return result
+
+def make_VOICE_miniframe(source_call: int, timestamp: int, audio_data: bytes):
+    result = bytearray()
+    result += source_call.to_bytes(2, byteorder='big')
+    # Make sure the top bit is zero (indicates mini-frame)
+    result[0] = result[0] & 0b01111111
+    # Per RFC 5456 section 8.1.2: the timestamp on a mini-frame is 
+    # just the lower 16 bits
+    full_32bit_stamp = timestamp.to_bytes(4, byteorder='big')
+    result.append(full_32bit_stamp[2])
+    result.append(full_32bit_stamp[3])
+    result += audio_data
+    return result
+
+def encode_ulaw(pcm_data: bytes):
+    return audioop.lin2ulaw(pcm_data, 2)
+
 def current_ms():
     return int(time.time() * 1000)
 
@@ -197,9 +230,8 @@ d_prime = decode_information_elements(enc_d)
 assert(d == d_prime)
 quit()
 """
-
 node_id = "61057"
-node_password = "microlink"
+node_password = "xxxx"
 
 iax2_port = 4569
 reg_url = "https://register.allstarlink.org"
@@ -214,6 +246,29 @@ BUjdw8Vh6wPFmf3ozR6iDFcps4/+RkCUb+uc9v0BqZIzyIdpFC6dZnJuG5Prp7gJ\n\
 hUaYIFwQxTB3v1h+1QIDAQAB\n\
 -----END PUBLIC KEY-----\n"
 public_key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
+
+# Load up audio message
+audio_fn = "./W1TKZ-ID.wav"
+audio_samplerate, audio_data = wavfile.read(audio_fn)
+
+print("Audio Sample Rate (Hz)   ", audio_samplerate)
+print("Audio Sample Count       ", audio_data.size)
+print("Audio Duration (Seconds) ", audio_data.size / audio_samplerate)
+print("Audio Min                ", audio_data.min())
+print("Audio Max                ", audio_data.max())
+print("Audio Mean               ", audio_data.mean())
+
+"""
+# Playing audio
+ for x in np.nditer(data):
+        txt_file.write(str(x) + ",\n")
+        count = count + 1
+"""
+"""
+audio_block_ulaw = encode_ulaw(audio_data[160:160+160])
+print(audio_block_ulaw)
+quit()
+"""
 
 class State(Enum):
     IDLE = 1
@@ -231,6 +286,8 @@ state_call_start_stamp = 0
 state_challenge = ""
 state_expected_inseq = 0
 state_outseq = 0
+state_audio_ptr = 0
+state_last_audio_stamp = 0
 
 reg_node_msg = {
     "node": node_id,
@@ -256,8 +313,9 @@ UDP_IP = "0.0.0.0"
 # Create a UDP socket and bind 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind((UDP_IP, iax2_port))
-# This prevents the recvfrom() call below from blocking forever
-sock.settimeout(0.25)
+# This prevents the recvfrom() call below from blocking forever. We
+# use a short timeout to allow smooth progress on audio streams.
+sock.settimeout(0.001)
 
 print(f"Listening on IAX2 port {UDP_IP}:{iax2_port}")
 
@@ -299,6 +357,7 @@ while True:
                     print("WARNING: Inbound sequence error")
                 # Pay attention to wrap
                 state_expected_inseq = (get_full_outseq(frame) + 1) % 256
+
     else:
         #print("Mini frame")
         pass
@@ -309,6 +368,7 @@ while True:
             state_source_call_id = get_full_source_call(frame)
             state_call_start_stamp = current_ms()
             state_call_start_ms = get_full_timestamp(frame)
+            state_audio_ptr = 0
             # Send a CALLTOKEN challenge
             state_token = make_call_token()
             # NOTE: For now the call ID is set to 1
@@ -428,16 +488,18 @@ while True:
                 state_outseq += 1
 
                 state = State.RINGING
-                state_timeout = current_ms() + 1000
+                state_timeout = current_ms() + 2000
 
             else:
                 print("AUTHREP error")
 
-    # In this state we are waiting for some time to pass
+    # In this state we are generating ringing for some period
+    # of time.
     elif state == State.RINGING:
+
+        # Look for timeout
         if current_ms() > state_timeout:
 
-            # Send the ANSWER
             resp = make_ANSWER_frame(state_call_id, 
                 state_source_call_id,
                 state_call_start_ms + (current_ms() - state_call_start_stamp),
@@ -447,7 +509,6 @@ while True:
             sock.sendto(resp, addr)
             state_outseq += 1
 
-            # Send the STOP_SOUNDS
             resp = make_STOP_SOUNDS_frame(state_call_id, 
                 state_source_call_id,
                 state_call_start_ms + (current_ms() - state_call_start_stamp),
@@ -461,21 +522,48 @@ while True:
 
     # In this state we are in an active call
     elif state == State.IN_CALL:
-        if is_full_frame(frame) and \
-            get_full_type(frame) == 6 and \
-            get_full_subclass_c_bit(frame) == False and \
-            get_full_subclass(frame) == 5:
-        
-            print("Hangup")
 
-            # Send ACK
+        if is_HANGUP_frame(frame):
             resp = make_ACK_frame(state_call_id, 
                 state_source_call_id,
                 state_call_start_ms + (current_ms() - state_call_start_stamp),
                 state_outseq, 
                 state_expected_inseq)
-            print("Sending ACK", resp, state_outseq, state_expected_inseq)
             sock.sendto(resp, addr)
             # IMPORTANT: We don't move the outseq forward!
 
             state = State.IDLE
+
+        # Make progress on streaming out audio
+        audio_block_size = 160
+        now_ms = current_ms()
+        if state_audio_ptr < audio_data.size:
+            # Only do this every 20ms
+            if now_ms - state_last_audio_stamp >= 20:
+                state_last_audio_stamp = now_ms
+                # Shorten the last block if necessary
+                audio_left = audio_data.size - state_audio_ptr
+                if audio_left < audio_block_size:
+                    audio_block_size = audio_left
+                audio_block = audio_data[state_audio_ptr:state_audio_ptr + audio_block_size]
+                audio_block_ulaw = encode_ulaw(audio_block)
+
+                # For the first audio frame, make a full voice frame. 
+                if state_audio_ptr == 0:
+                    resp = make_VOICE_frame(state_call_id, 
+                        state_source_call_id,
+                        state_call_start_ms + (current_ms() - state_call_start_stamp),
+                        state_outseq, 
+                        state_expected_inseq,
+                        audio_block_ulaw)
+                    sock.sendto(resp, addr)
+                    state_outseq += 1
+                # After the first we can use mini-frames
+                else:
+                    resp = make_VOICE_miniframe(state_call_id, 
+                        state_call_start_ms + (current_ms() - state_call_start_stamp),
+                        audio_block_ulaw)
+                    sock.sendto(resp, addr)
+
+                state_audio_ptr += audio_block_size
+

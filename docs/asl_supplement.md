@@ -55,6 +55,13 @@ Here's the JSON message (the important part):
 }
 ```
 
+## Audio Notes
+
+The audio sample rate is 8kHz. Block size is 160. So each block represents 20ms
+of audio.
+
+G.711 mu-law audio data 
+
 ## Message Flows
 
 ### New Call from AllStarLink Phone Portal
