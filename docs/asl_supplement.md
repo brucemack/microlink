@@ -4,13 +4,12 @@
 
 ## Network Information
 
-IAX2 runs on UDP port 4569. It appears that this is the only 
-port that needs to be open from the outside.
+IAX2 runs on UDP port 4569. This is the only port that needs to be open from the outside.
 
 ## Node Registration
 
 A JSON message is sent to the AllStarLink registry
-when a node starts up to allow the 
+when a node starts up.  This registration allows the 
 network to know the IP address that the node is running
 on. It's likely that this message is sent out on a 
 periodic basis to keep the registration active.
@@ -64,26 +63,31 @@ G.711 mu-law audio data
 
 ## Message Flows
 
-### New Call from AllStarLink Phone Portal
+A network capture was made of a node receiving a call from the AllStarLink
+Telephone Portal. In WireShark it looks like this:
 
-* (From Caller) Full Packet, Type=Control(4), Subclass=NEW(1)
-* (To Caller)  Full Packet, Type=Control(4), Subclass=CALLTOKEN(40)
-* (From Caller) Full Packet, Type=Control(4), Subclass=NEW(1)
+![ASL Capture 1](asl-capture-1.jpg)
+
+### New Call from AllStarLink Telephone Portal
+
+* (From Caller) Full Packet, Type=Control(4), Subclass=NEW
+* (To Caller)  Full Packet, Type=Control(4), Subclass=CALLTOKEN
+* (From Caller) Full Packet, Type=Control(4), Subclass=NEW
 * (To Caller) ACK
 * (To Caller) AUTHREQ
 * (From Caller) AUTHREP
 * (To Caller) ACK
 * (To Caller) ACCEPT
-* (To Caller) Full Packet, Type=Control(4), Subclass=RINGING(3)
-* (From Caller) Full Packet, Type=IAX(6), Sublcass=ACK(4)
-* (From Caller) Full Packet, Type=IAX(6), Sublcass=ACK(4)
+* (To Caller) Full Packet, Type=Control(4), Subclass=RINGING
+* (From Caller) Full Packet, Type=IAX(6), Sublcass=ACK
+* (From Caller) Full Packet, Type=IAX(6), Sublcass=ACK
 * (From Caller) Full Packet, Type=Voice(2)
 * (To Caller) Type=IAX(6), Sublcass=ACK(4)
 * (From Caller) Mini voice packet
 * (From Caller) Mini voice packet
 * ...
-* (To Caller) Full Packet, Type=Control(4), Subclass=ANSWER(4)
-* (To Caller) Full Packet, Type=Control(4), Subclass=Stop Sounds(255)
+* (To Caller) Full Packet, Type=Control(4), Subclass=ANSWER
+* (To Caller) Full Packet, Type=Control(4), Subclass=Stop Sounds
 
 ## Sequence Number Notes
 
@@ -91,7 +95,7 @@ G.711 mu-law audio data
 * When a NEW is received, reset the outbound_seq to 1.
 * When sending a frame, set the ISeqno field to inbound_expected_seq.
 * When sending any frame send outbound_seq in the OSeqno field. After sending a frame **that is not an ACK** increment outbound_seq field. 
-* When a full frame is received, check the OSeqno field and increment the next_expected_seq.
+* When a full frame is received, check the OSeqno field vs the expected value and increment the inbound_expected_seq.
 
 ## Message Format/Semantics
 
@@ -110,6 +114,13 @@ a call token will be required in the NEW retry.
 G.711 μ-law payload contains the actual 8-bit μ-law encoded audio samples. The size of 
 this payload depends on the packetization interval.  20ms of audio at 8kHz a sampling
 rate is 160 bytes.
+
+### Voice Packet (Mini)
+
+At least one full voice packet must be sent before a mini packet is allowed. 
+
+A full voice packet is required when 16-bit timestamp of the mini packet wraps around
+to zero.
 
 ### AUTHREQ
 
