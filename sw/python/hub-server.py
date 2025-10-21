@@ -215,6 +215,9 @@ def encode_ulaw(pcm_data: bytes):
 def current_ms():
     return int(time.time() * 1000)
 
+def current_ms_frac():
+    return time.time() * 1000
+
 """
 # Unit test
 a = make_CALLTOKEN_frame(1, 8125, 19, 0, 1, make_call_token())
@@ -231,7 +234,7 @@ assert(d == d_prime)
 quit()
 """
 node_id = "61057"
-node_password = "xxxx"
+node_password = "xxxxxx"
 
 iax2_port = 4569
 reg_url = "https://register.allstarlink.org"
@@ -286,8 +289,9 @@ state_call_start_stamp = 0
 state_challenge = ""
 state_expected_inseq = 0
 state_outseq = 0
+state_audio_frame = 0
 state_audio_ptr = 0
-state_last_audio_stamp = 0
+state_audio_start_stamp = 0
 
 reg_node_msg = {
     "node": node_id,
@@ -316,16 +320,90 @@ sock.bind((UDP_IP, iax2_port))
 # This prevents the recvfrom() call below from blocking forever. We
 # use a short timeout to allow smooth progress on audio streams.
 sock.settimeout(0.001)
+sock.setblocking(False)
 
 print(f"Listening on IAX2 port {UDP_IP}:{iax2_port}")
 
 # ---- Main processing loop --------------------------------------------------
 
+last_gap = 0
+
 while True:
 
+    # Process any background activity
+    
+    if state == State.RINGING:
+
+        # Look for timeout
+        if current_ms() > state_timeout:
+
+            resp = make_ANSWER_frame(state_call_id, 
+                state_source_call_id,
+                state_call_start_ms + (current_ms() - state_call_start_stamp),
+                state_outseq, 
+                state_expected_inseq)
+            print("Sending ANSWER", resp, state_outseq, state_expected_inseq)
+            sock.sendto(resp, addr)
+            state_outseq += 1
+
+            resp = make_STOP_SOUNDS_frame(state_call_id, 
+                state_source_call_id,
+                state_call_start_ms + (current_ms() - state_call_start_stamp),
+                state_outseq, 
+                state_expected_inseq)
+            print("Sending STOP_SOUNDS", resp, state_outseq, state_expected_inseq)
+            sock.sendto(resp, addr)
+            state_outseq += 1
+
+            state = State.IN_CALL
+            state_audio_ptr = 0
+            state_audio_frame = 0
+            # Set the start time forward a bit
+            state_audio_start_stamp = current_ms_frac() + 100
+
+    # In this state we are in an active call
+    elif state == State.IN_CALL:
+
+        # Make progress on streaming out audio
+        now_ms_frac = current_ms_frac()
+        # Only do this every 20ms
+        target_ms_frac = (state_audio_start_stamp + (state_audio_frame * 20.0))
+
+        if state_audio_ptr < audio_data.size:
+            if now_ms_frac > target_ms_frac:    
+                # Shorten the last block if necessary
+                audio_block_size = 160
+                audio_left = audio_data.size - state_audio_ptr
+                if audio_left < audio_block_size:
+                    audio_block_size = audio_left
+                audio_block = audio_data[state_audio_ptr:state_audio_ptr + audio_block_size]
+                audio_block_ulaw = encode_ulaw(audio_block)
+
+                # For the first audio frame, make a full voice frame. 
+                if state_audio_frame == 0:
+                    resp = make_VOICE_frame(state_call_id, 
+                        state_source_call_id,
+                        state_call_start_ms + (current_ms() - state_call_start_stamp),
+                        state_outseq, 
+                        state_expected_inseq,
+                        audio_block_ulaw)
+                    sock.sendto(resp, addr)
+                    state_outseq += 1
+                # After the first we can use mini-frames
+                else:
+                    resp = make_VOICE_miniframe(state_call_id, 
+                        state_call_start_ms + (current_ms() - state_call_start_stamp),
+                        audio_block_ulaw)
+                    sock.sendto(resp, addr)
+
+                state_audio_ptr += audio_block_size
+                state_audio_frame += 1
+
+
+    # Look for new messages from the peer
     try:
         frame, addr = sock.recvfrom(1024)
-    except socket.timeout:
+    except BlockingIOError:
         continue
 
     if is_full_frame(frame):
@@ -368,7 +446,6 @@ while True:
             state_source_call_id = get_full_source_call(frame)
             state_call_start_stamp = current_ms()
             state_call_start_ms = get_full_timestamp(frame)
-            state_audio_ptr = 0
             # Send a CALLTOKEN challenge
             state_token = make_call_token()
             # NOTE: For now the call ID is set to 1
@@ -493,32 +570,6 @@ while True:
             else:
                 print("AUTHREP error")
 
-    # In this state we are generating ringing for some period
-    # of time.
-    elif state == State.RINGING:
-
-        # Look for timeout
-        if current_ms() > state_timeout:
-
-            resp = make_ANSWER_frame(state_call_id, 
-                state_source_call_id,
-                state_call_start_ms + (current_ms() - state_call_start_stamp),
-                state_outseq, 
-                state_expected_inseq)
-            print("Sending ANSWER", resp, state_outseq, state_expected_inseq)
-            sock.sendto(resp, addr)
-            state_outseq += 1
-
-            resp = make_STOP_SOUNDS_frame(state_call_id, 
-                state_source_call_id,
-                state_call_start_ms + (current_ms() - state_call_start_stamp),
-                state_outseq, 
-                state_expected_inseq)
-            print("Sending STOP_SOUNDS", resp, state_outseq, state_expected_inseq)
-            sock.sendto(resp, addr)
-            state_outseq += 1
-
-            state = State.IN_CALL
 
     # In this state we are in an active call
     elif state == State.IN_CALL:
@@ -533,37 +584,3 @@ while True:
             # IMPORTANT: We don't move the outseq forward!
 
             state = State.IDLE
-
-        # Make progress on streaming out audio
-        audio_block_size = 160
-        now_ms = current_ms()
-        if state_audio_ptr < audio_data.size:
-            # Only do this every 20ms
-            if now_ms - state_last_audio_stamp >= 20:
-                state_last_audio_stamp = now_ms
-                # Shorten the last block if necessary
-                audio_left = audio_data.size - state_audio_ptr
-                if audio_left < audio_block_size:
-                    audio_block_size = audio_left
-                audio_block = audio_data[state_audio_ptr:state_audio_ptr + audio_block_size]
-                audio_block_ulaw = encode_ulaw(audio_block)
-
-                # For the first audio frame, make a full voice frame. 
-                if state_audio_ptr == 0:
-                    resp = make_VOICE_frame(state_call_id, 
-                        state_source_call_id,
-                        state_call_start_ms + (current_ms() - state_call_start_stamp),
-                        state_outseq, 
-                        state_expected_inseq,
-                        audio_block_ulaw)
-                    sock.sendto(resp, addr)
-                    state_outseq += 1
-                # After the first we can use mini-frames
-                else:
-                    resp = make_VOICE_miniframe(state_call_id, 
-                        state_call_start_ms + (current_ms() - state_call_start_stamp),
-                        audio_block_ulaw)
-                    sock.sendto(resp, addr)
-
-                state_audio_ptr += audio_block_size
-
