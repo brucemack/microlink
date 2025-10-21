@@ -78,6 +78,14 @@ Here's the JSON message (the important part):
 * (To Caller) Full Packet, Type=Control(4), Subclass=ANSWER(4)
 * (To Caller) Full Packet, Type=Control(4), Subclass=Stop Sounds(255)
 
+## Sequence Number Notes
+
+* When a NEW is received, reset the inbound inbound_expected_seq to 1 (i.e next message).
+* When a NEW is received, reset the outbound_seq to 1.
+* When sending a frame, set the ISeqno field to inbound_expected_seq.
+* When sending any frame send outbound_seq in the OSeqno field. After sending a frame **that is not an ACK** increment outbound_seq field. 
+* When a full frame is received, check the OSeqno field and increment the next_expected_seq.
+
 ## Message Format/Semantics
 
 ### NEW

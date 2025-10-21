@@ -26,6 +26,12 @@ def get_full_dest_call(frame):
 def get_full_timestamp(frame):
     return (frame[4] << 24) | (frame[5] << 16) | (frame[6] << 8) | frame[7]
 
+def get_full_outseq(frame):
+    return frame[8]
+
+def get_full_inseq(frame):
+    return frame[9]
+
 def get_full_type(frame):
     return frame[10]
 
@@ -91,6 +97,18 @@ def decode_information_elements(data: bytes):
         raise Exception("Data format error")
     return result
 
+def is_NEW_frame(frame):
+    return is_full_frame(frame) and \
+        get_full_type(frame) == 6 and \
+        get_full_subclass_c_bit(frame) == False and \
+        get_full_subclass(frame) == 1
+
+def is_ACK_frame(frame):
+    return is_full_frame(frame) and \
+        get_full_type(frame) == 6 and \
+        get_full_subclass_c_bit(frame) == False and \
+        get_full_subclass(frame) == 4
+
 def make_CALLTOKEN_frame(source_call: int, dest_call: int, timestamp: int, 
     out_seq: int, in_seq: int, token):
     result = bytearray()
@@ -144,6 +162,74 @@ def make_AUTHREQ_frame(source_call: int, dest_call: int, timestamp: int,
     })
     return result
 
+def make_ACCEPT_frame(source_call: int, dest_call: int, timestamp: int,
+    out_seq: int, in_seq: int):
+    result = bytearray()
+    result += source_call.to_bytes(2, byteorder='big')
+    result[0] = result[0] | 0b10000000
+    result += dest_call.to_bytes(2, byteorder='big')
+    result[2] = result[2] & 0b01111111
+    result += timestamp.to_bytes(4, byteorder='big')
+    result += out_seq.to_bytes(1, byteorder='big')
+    result += in_seq.to_bytes(1, byteorder='big')
+    result += int(6).to_bytes(1, byteorder='big')
+    # Subclass
+    result += int(7).to_bytes(1, byteorder='big')
+    # Information elements
+    result += encode_information_elements({ 
+        9: int(4).to_bytes(4, byteorder='big'),
+        56: b'\x00\x00\x00\x00\x00\x00\x00\x00\x04'
+    })
+    return result
+
+def make_RINGING_frame(source_call: int, dest_call: int, timestamp: int,
+    out_seq: int, in_seq: int):
+    result = bytearray()
+    result += source_call.to_bytes(2, byteorder='big')
+    result[0] = result[0] | 0b10000000
+    result += dest_call.to_bytes(2, byteorder='big')
+    result[2] = result[2] & 0b01111111
+    result += timestamp.to_bytes(4, byteorder='big')
+    result += out_seq.to_bytes(1, byteorder='big')
+    result += in_seq.to_bytes(1, byteorder='big')
+    # Type is control
+    result += int(4).to_bytes(1, byteorder='big')
+    # Subclass
+    result += int(3).to_bytes(1, byteorder='big')
+    return result
+
+def make_ANSWER_frame(source_call: int, dest_call: int, timestamp: int,
+    out_seq: int, in_seq: int):
+    result = bytearray()
+    result += source_call.to_bytes(2, byteorder='big')
+    result[0] = result[0] | 0b10000000
+    result += dest_call.to_bytes(2, byteorder='big')
+    result[2] = result[2] & 0b01111111
+    result += timestamp.to_bytes(4, byteorder='big')
+    result += out_seq.to_bytes(1, byteorder='big')
+    result += in_seq.to_bytes(1, byteorder='big')
+    # Type is control
+    result += int(4).to_bytes(1, byteorder='big')
+    # Subclass
+    result += int(4).to_bytes(1, byteorder='big')
+    return result
+
+def make_STOP_SOUNDS_frame(source_call: int, dest_call: int, timestamp: int,
+    out_seq: int, in_seq: int):
+    result = bytearray()
+    result += source_call.to_bytes(2, byteorder='big')
+    result[0] = result[0] | 0b10000000
+    result += dest_call.to_bytes(2, byteorder='big')
+    result[2] = result[2] & 0b01111111
+    result += timestamp.to_bytes(4, byteorder='big')
+    result += out_seq.to_bytes(1, byteorder='big')
+    result += in_seq.to_bytes(1, byteorder='big')
+    # Type is control
+    result += int(4).to_bytes(1, byteorder='big')
+    # Subclass
+    result += int(255).to_bytes(1, byteorder='big')
+    return result
+
 def current_ms():
     return int(time.time() * 1000)
 
@@ -164,7 +250,7 @@ quit()
 """
 
 node_id = "61057"
-node_password = "xxxxxx"
+node_password = "microlink"
 
 iax2_port = 4569
 reg_url = "https://register.allstarlink.org"
@@ -183,7 +269,9 @@ public_key = serialization.load_pem_public_key(public_key_pem.encode("utf-8"))
 class State(Enum):
     IDLE = 1
     NEW1 = 2 
-    NEW2 = 3  
+    NEW2 = 3
+    RINGING = 4
+    IN_CALL = 5
 
 call_id_counter = 1
 state = State.IDLE
@@ -192,6 +280,8 @@ state_call_id = 0
 state_call_start_ms = 0
 state_call_start_stamp = 0
 state_challenge = ""
+state_expected_inseq = 0
+state_outseq = 0
 
 reg_node_msg = {
     "node": node_id,
@@ -214,29 +304,57 @@ response = requests.post(reg_url, json=reg_msg)
 print(response.text)
 
 UDP_IP = "0.0.0.0" 
-# Create a UDP socket
+# Create a UDP socket and bind 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-# Bind the socket to the specified IP and port
 sock.bind((UDP_IP, iax2_port))
+# This prevents the recvfrom() call below from blocking forever
+sock.settimeout(0.25)
 
-print(f"UDP server listening on {UDP_IP}:{iax2_port}")
+print(f"Listening on IAX2 port {UDP_IP}:{iax2_port}")
+
+# ---- Main processing loop --------------------------------------------------
 
 while True:
-    # Receive data from the socket (buffer size 1024 bytes)
-    frame, addr = sock.recvfrom(1024)
-    print(f"Received message from {addr}")
+
+    try:
+        frame, addr = sock.recvfrom(1024)
+    except socket.timeout:
+        continue
+
     if is_full_frame(frame):
-        print("Full frame", get_full_source_call(frame), get_full_r_bit(frame), get_full_dest_call(frame))
-        print("Type", get_full_type(frame))
-        print("Subclass", get_full_subclass(frame))
+
+        print("---------", f"Received message from {addr}")        
+        print("Full frame", get_full_r_bit(frame), get_full_source_call(frame), get_full_dest_call(frame))
+        print("Type", get_full_type(frame), "Subclass", get_full_subclass(frame))
+        print("Oseqno", get_full_outseq(frame), "Iseqno", get_full_inseq(frame))
+
+        # Deal with the inbound sequence number tracking.
+        # When a NEW is received the inbound sequence counter is reset.
+        if is_NEW_frame(frame):
+            state_expected_inseq = 1
+            state_outseq = 0
+
+        # When an ACK is received we can validate its OSeqno, but we don't move 
+        # the expectation forward since the sender isn't incrementing their sequence
+        # for an ACK.
+        elif is_ACK_frame(frame):
+            if not get_full_r_bit(frame):
+                if  get_full_outseq(frame) != state_expected_inseq:
+                    print("WARNING: Inbound sequence error")
+
+        # For all other frames we validate the sequence number
+        # and then move our expectation forward.
+        else:
+            if not get_full_r_bit(frame):
+                if  get_full_outseq(frame) != state_expected_inseq:
+                    print("WARNING: Inbound sequence error")
+                # Pay attention to wrap
+                state_expected_inseq = (get_full_outseq(frame) + 1) % 256
     else:
         print("Mini frame")
 
     if state == State.IDLE:
-        if is_full_frame(frame) and \
-            get_full_type(frame) == 6 and \
-            get_full_subclass_c_bit(frame) == False and \
-            get_full_subclass(frame) == 1:
+        if is_NEW_frame(frame):
             # Get call start information
             state_source_call_id = get_full_source_call(frame)
             state_call_start_stamp = current_ms()
@@ -247,10 +365,11 @@ while True:
             resp = make_CALLTOKEN_frame(1, 
                 state_source_call_id,
                 state_call_start_ms + (current_ms() - state_call_start_stamp),
-                0, 
-                1,                
+                state_outseq, 
+                state_expected_inseq,                
                 state_token)
-            print("Sending", resp)
+            print("Sending CALLTOKEN", resp, state_outseq, state_expected_inseq)
+            state_outseq += 1
             sock.sendto(resp, addr)
             state = State.NEW1
         else:
@@ -258,10 +377,7 @@ while True:
 
     # In this state we are waiting for a NEW with the right CALLTOKEN
     elif state == State.NEW1:
-        if is_full_frame(frame) and \
-            get_full_type(frame) == 6 and \
-            get_full_subclass_c_bit(frame) == False and \
-            get_full_subclass(frame) == 1:
+        if is_NEW_frame(frame):
 
             # Decode the information elements
             ies = decode_information_elements(frame[12:])
@@ -283,21 +399,22 @@ while True:
                 resp = make_ACK_frame(state_call_id, 
                     state_source_call_id,
                     state_call_start_ms + (current_ms() - state_call_start_stamp),
-                    0, 
-                    1)
-                print("Sending ACK", resp)
+                    state_outseq, 
+                    state_expected_inseq)
+                print("Sending ACK", resp, state_outseq, state_expected_inseq)
                 sock.sendto(resp, addr)
+                # IMPORTANT: We don't move the outseq forward!
 
                 # Send AUTHREQ
                 resp = make_AUTHREQ_frame(state_call_id, 
                     state_source_call_id,
                     state_call_start_ms + (current_ms() - state_call_start_stamp),
-                    0, 
-                    1,
+                    state_outseq, 
+                    state_expected_inseq,
                     state_challenge)
-                print("Sending AUTHREQ", resp)
+                print("Sending AUTHREQ", resp, state_outseq, state_expected_inseq)
                 sock.sendto(resp, addr)
-                
+                state_outseq += 1                
                 state = State.NEW2
 
             else:
@@ -319,7 +436,7 @@ while True:
             if get_full_source_call(frame) == state_source_call_id and \
                get_full_dest_call(frame) == state_call_id and \
                 17 in ies:
-                print("RSA challenge result", ies[17])
+
                 rsa_challenge_result = base64.b64decode(ies[17])
 
                 # Here is where the actual validation happens:
@@ -334,18 +451,60 @@ while True:
                 resp = make_ACK_frame(state_call_id, 
                     state_source_call_id,
                     state_call_start_ms + (current_ms() - state_call_start_stamp),
-                    1, 
-                    2)
-                print("Sending ACK", resp)
+                    state_outseq, 
+                    state_expected_inseq)
+                print("Sending ACK", resp, state_outseq, state_expected_inseq)
                 sock.sendto(resp, addr)
+                # IMPORTANT: We don't move the outseq forward!
+
+                # Send the ACCEPT
+                resp = make_ACCEPT_frame(state_call_id, 
+                    state_source_call_id,
+                    state_call_start_ms + (current_ms() - state_call_start_stamp),
+                    state_outseq, 
+                    state_expected_inseq)
+                print("Sending ACCEPT", resp, state_outseq, state_expected_inseq)
+                sock.sendto(resp, addr)
+                state_outseq += 1
+
+                # Send the RINGING
+                resp = make_RINGING_frame(state_call_id, 
+                    state_source_call_id,
+                    state_call_start_ms + (current_ms() - state_call_start_stamp),
+                    state_outseq, 
+                    state_expected_inseq)
+                print("Sending RINGING", resp, state_outseq, state_expected_inseq)
+                sock.sendto(resp, addr)
+                state_outseq += 1
+
+                state = State.RINGING
+                state_timeout = current_ms() + 1000
 
             else:
                 print("AUTHREP error")
 
+    # In this state we are waiting for some time to pass
+    elif state == State.RINGING:
+        if current_ms() > state_timeout:
 
+            # Send the ANSWER
+            resp = make_ANSWER_frame(state_call_id, 
+                state_source_call_id,
+                state_call_start_ms + (current_ms() - state_call_start_stamp),
+                state_outseq, 
+                state_expected_inseq)
+            print("Sending ANSWER", resp, state_outseq, state_expected_inseq)
+            sock.sendto(resp, addr)
+            state_outseq += 1
 
+            # Send the STOP_SOUNDS
+            resp = make_STOP_SOUNDS_frame(state_call_id, 
+                state_source_call_id,
+                state_call_start_ms + (current_ms() - state_call_start_stamp),
+                state_outseq, 
+                state_expected_inseq)
+            print("Sending STOP_SOUNDS", resp, state_outseq, state_expected_inseq)
+            sock.sendto(resp, addr)
+            state_outseq += 1
 
-
-
-
-
+            state = State.IN_CALL
