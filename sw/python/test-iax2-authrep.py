@@ -129,7 +129,7 @@ m_prime = (s ** e) % n
 #
 # Need to be able to multiply and take the modulo for very large numbers.
 #
-# The MModular Exponentiation Algorithm
+# The Modular Exponentiation Algorithm
 # -------------------------------------
 #
 # The most common approach is the right-to-left binary method, also known as 
