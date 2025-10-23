@@ -222,4 +222,5 @@ sent in the associated NEW command.
 # References
 
 * [A good blog analysis on INVITE flow](https://blog.wildix.com/sip-invite-method/)
+* [A good blog on SDP format](https://andrewjprokop.wordpress.com/2013/09/30/understanding-session-description-protocol-sdp/)
 
