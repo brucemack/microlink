@@ -723,6 +723,16 @@ a DC bias voltage
 on the microphone cable as is often the case when powering an electret/condenser
 microphone. If you don't use the DC block then a short should be installed instead.
 
+# AllStarLink Notes (Work In Process)
+
+So far everything on this page has been related to 
+EchoLink. I have made good progress on AllStarLink
+support.  At the moment the ASL firmware is separate
+from the EL firmware but I will merge them once
+things are working well.  More to follow later.
+
+* A possible audio interface: https://www.repeater-builder.com/products/usb-rim-lite.html
+
 # References
 
 * Official EchoLink Site: https://www.echolink.org/
