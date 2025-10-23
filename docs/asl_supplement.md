@@ -219,3 +219,7 @@ IE to indicate its desired CODEC to the originating
 peer.  The CODEC format MUST be one of the formats
 sent in the associated NEW command.
 
+# References
+
+* [A good blog analysis on INVITE flow](https://blog.wildix.com/sip-invite-method/)
+
