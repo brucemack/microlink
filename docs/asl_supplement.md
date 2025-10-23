@@ -201,3 +201,21 @@ public_key.verify(rsa_challenge_result,
 # If we get here the validation is good, otherwise an exception is raised
 print("AUTHREP signature validated, all good!")
 ```
+## CODEC Negotiation
+
+The protocol supports CODEC negotiation.  
+
+The caller specifies the supported CODECs in the NEW 
+message. The NEW message MUST specify the list of
+supported CODECs using the format IE.
+
+The CODEC designators are defined [in section 8.7 on
+Media Formats](https://datatracker.ietf.org/doc/html/rfc5456#section-8.7). A bitmap is used to allow
+multiple CODECs to be specified at the same time.
+
+The server designates the chosen CODEC in the ACCEPT
+message. An ACCEPT message MUST include the 'format' 
+IE to indicate its desired CODEC to the originating 
+peer.  The CODEC format MUST be one of the formats
+sent in the associated NEW command.
+
