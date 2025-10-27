@@ -223,4 +223,5 @@ sent in the associated NEW command.
 
 * [A good blog analysis on INVITE flow](https://blog.wildix.com/sip-invite-method/)
 * [A good blog on SDP format](https://andrewjprokop.wordpress.com/2013/09/30/understanding-session-description-protocol-sdp/)
-
+* https://aosabook.org/en/v1/asterisk.html
+* [ASL #Slack](https://allstarlink.slack.com/)

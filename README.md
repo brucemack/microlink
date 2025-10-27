@@ -732,6 +732,8 @@ from the EL firmware but I will merge them once
 things are working well.  More to follow later.
 
 * A possible audio interface: https://www.repeater-builder.com/products/usb-rim-lite.html
+* Docs on Linux audio testing: https://iotbytes.wordpress.com/connect-configure-and-test-usb-microphone-and-speaker-with-raspberry-pi/
+
 
 # References
 

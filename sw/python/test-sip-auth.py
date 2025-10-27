@@ -52,7 +52,6 @@ response="30ffb4415b99d73da5ef3badee2781d1"
 # Here we are following the steps outline in RFC 2616 section 3.2.2.1.
 # Please see https://datatracker.ietf.org/doc/html/rfc2617#section-3.2.2.1
 
-
 # A1 = username-value ":" realm-value ":" passwd-value
 a1 = username + ":" + realm + ":" + password
 # A2 = Method ":" digest-uri-value
