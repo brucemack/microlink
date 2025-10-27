@@ -6,6 +6,105 @@
 
 IAX2 runs on UDP port 4569. This is the only port that needs to be open from the outside.
 
+## ASL Node Query
+
+An HTTP get of this format: http://stats.allstarlink.org/api/stats/61057 will return a JSON message like this:
+
+```json
+{
+    "stats":{
+        "id":31620,
+        "node":61057,
+        "data": {
+            "apprptuptime":"409053",
+            "totalexecdcommands":"0",
+            "totalkeyups":"0",
+            "totaltxtime":"0",
+            "apprptvers":"3.5.5",
+            "timeouts":"0",
+            "links":[],
+            "keyed":false,
+            "time":"1761566153",
+            "seqno":"13638",
+            "nodes":null,
+            "totalkerchunks":"0",
+            "keytime":"409063",
+            "linkedNodes":[]
+        },
+        "created_at":"2024-04-03T15:06:30.000000Z",
+        "updated_at":"2025-10-27T11:55:53.000000Z",
+        "user_node":{
+            "Node_ID":74479,
+            "User_ID":"KC1FSZ",
+            "Status":"Active",
+            "name":"61057",
+            "ipaddr":"108.20.174.63",
+            "port":4569,
+            "regseconds":1761438377,
+            "iptime":"2025-10-07 19:49:05",
+            "node_frequency":"",
+            "node_tone":"",
+            "node_remotebase":false,
+            "node_freqagile":"0",
+            "callsign":"KC1FSZ",
+            "access_reverseautopatch":"0",
+            "access_telephoneportal":"1",
+            "access_webtransceiver":"1",
+            "access_functionlist":"0",
+            "is_nnx":"No",
+            "server":{
+                "Server_ID":44296,
+                "User_ID":"KC1FSZ",
+                "Server_Name":"microlink-1",
+                "Affiliation":"",
+                "SiteName":"",
+                "Logitude":"-71.29633",
+                "Latitude":"42.290464",
+                "Location":"Wellesley\/MA",
+                "TimeZone":null,
+                "udpport":4569,
+                "proxy_ip":null
+            }
+        }
+    },
+    "node":{
+        "Node_ID":74479,
+        "User_ID":"KC1FSZ",
+        "Status":"Active",
+        "name":"61057",
+        "ipaddr":"108.20.174.63",
+        "port":4569,
+        "regseconds":1761564172,
+        "iptime":"2025-10-07 19:49:05",
+        "node_frequency":"",
+        "node_tone":"",
+        "node_remotebase":false,
+        "node_freqagile":"0",
+        "callsign":"KC1FSZ",
+        "access_reverseautopatch":"0",
+        "access_telephoneportal":"1",
+        "access_webtransceiver":"1",
+        "access_functionlist":"0",
+        "is_nnx":"No",
+        "server":{
+            "Server_ID":44296,
+            "User_ID":"KC1FSZ",
+            "Server_Name":"microlink-1",
+            "Affiliation":"",
+            "SiteName":"",
+            "Logitude":"-71.29633",
+            "Latitude":"42.290464",
+            "Location":"Wellesley\/MA",
+            "TimeZone":null,
+            "udpport":4569,
+            "proxy_ip":null
+        }
+    },
+    "keyups":[],
+    "time":1.2359619140625
+}
+```
+
 ## Node Registration
 
 A JSON message is sent to the AllStarLink registry
