@@ -160,14 +160,14 @@ of audio.
 
 G.711 mu-law audio data 
 
-## Message Flows
+## Message Flows 
+
+### Call from AllStarLink Telephone Portal
 
 A network capture was made of a node receiving a call from the AllStarLink
 Telephone Portal. In WireShark it looks like this:
 
 ![ASL Capture 1](asl-capture-1.jpg)
-
-### New Call from AllStarLink Telephone Portal
 
 * (From Caller) Full Packet, Type=Control(4), Subclass=NEW
 * (To Caller)  Full Packet, Type=Control(4), Subclass=CALLTOKEN
@@ -187,6 +187,50 @@ Telephone Portal. In WireShark it looks like this:
 * ...
 * (To Caller) Full Packet, Type=Control(4), Subclass=ANSWER
 * (To Caller) Full Packet, Type=Control(4), Subclass=Stop Sounds
+
+### Call From Another ASL Node
+
+I connected to node 29999 using the telephone portal and pressed *361057 to
+request a connection to my 61057 node. 
+
+![IAX2 Capture 2](iax2-capture-2.jpg)
+
+Notes:
+* The usual CALLTOKEN challenge is used on the first NEW.
+* The second NEW contains 
+  - An IE with the username (6) of "radio"
+  - An IE with the desired CODEC
+* There is no AUTHREQ/AUTHREP challenge. It appears that the connection
+from the remote note is unauthenticated.
+* No RINGING phase. The ANSWER/stop sounds is sent immediately after the ACCEPT.
+* At the very start of the call we received these TEXT packet:
+    - !NEWKEY!
+    - T 29999 COMPLETE
+    - T 29999 CONNECTED,29999,61057
+* For more information about the TEXT protocol see: https://wiki.allstarlink.org/wiki/IAX_Text_Protocol
+* The "T" messages are telemetry. See: https://allstarlink.github.io/adv-topics/telemetry/.
+One important thing is that it is up to the receiving node to decide what to 
+do with these messages (for example, announce them). One of the documents mentions
+that a T STATUS message is sent in response to a *70 DTMF command, which makes
+me wonder whether the voicing of this information is completely local?
+* Per documentation "There are several messages being exchanged that alter the 
+behavior of the app_rpt application. It's unclear as to their purpose ... !NEWKEY!
+is meant to be some sort of handshake. When a party receives this command it should 
+send it back."
+* Immediately after receiving those TEXT packets, the following was sent, which 
+is consistent with the above comment in the docs:
+    - !NEWKEY!
+* There are some TEXT packets exchanged every 10 seconds. It looks like 
+a text packet with "L" is being sent every ~10 seconds. And from 29999 we get this
+every ~10 seconds:
+
+        L R1010,TKC1FSZ-P,T29283,T48335,T29285,T1951,T29284,T49999,T1980,T1950,R1020
+
+which is the list of notes currently connected. Per documentation _"Sent periodically by a node to broadcast all node linked to it."_
+* On remote-initiated disconnect a TEXT message is received: !DISCONNECT!
+* Immediately after the !DISCONNECT! is received a HANGUP is sent from local->remote.
+
+![IAX2 Capture 3](iax2-capture-3.jpg)
 
 ## Sequence Number Notes
 
