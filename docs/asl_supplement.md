@@ -362,6 +362,13 @@ IE to indicate its desired CODEC to the originating
 peer.  The CODEC format MUST be one of the formats
 sent in the associated NEW command.
 
+# Asterisk Architecture Notes
+
+* Channels, created by Channel Drivers
+* Call: a call can be one or more channels creating a 
+path of communication or activity through the Asterisk system.
+* Bridging, between two channels
+
 # References
 
 * [A good blog analysis on INVITE flow](https://blog.wildix.com/sip-invite-method/)
